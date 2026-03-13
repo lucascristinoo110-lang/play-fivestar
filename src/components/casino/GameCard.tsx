@@ -1,8 +1,27 @@
 import { Play, Flame, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
-import type { Game } from "@/data/games";
 
-export function GameCard({ game, index }: { game: Game; index: number }) {
+type GameData = {
+  id: string;
+  name: string;
+  provider: string;
+  category: string;
+  image_url: string | null;
+  is_hot: boolean;
+  is_new: boolean;
+};
+
+export function GameCard({ game, index }: { game: GameData; index: number }) {
+  // Fallback gradient for games without images
+  const gradients = [
+    "from-purple-600 to-blue-600",
+    "from-red-600 to-orange-500",
+    "from-green-600 to-teal-500",
+    "from-pink-600 to-rose-500",
+    "from-indigo-600 to-violet-500",
+    "from-amber-600 to-yellow-500",
+  ];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -12,12 +31,21 @@ export function GameCard({ game, index }: { game: Game; index: number }) {
     >
       {/* Image */}
       <div className="aspect-[3/4] overflow-hidden">
-        <img
-          src={game.image}
-          alt={game.name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
+        {game.image_url ? (
+          <img
+            src={game.image_url}
+            alt={game.name}
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+              (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
+            }}
+          />
+        ) : null}
+        <div className={`${game.image_url ? "hidden" : ""} w-full h-full bg-gradient-to-br ${gradients[index % gradients.length]} flex items-center justify-center`}>
+          <span className="text-3xl font-bold text-white/80">{game.name.charAt(0)}</span>
+        </div>
       </div>
 
       {/* Hover overlay */}
@@ -28,12 +56,12 @@ export function GameCard({ game, index }: { game: Game; index: number }) {
       </div>
 
       {/* Badges */}
-      {game.isHot && (
+      {game.is_hot && (
         <span className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-destructive/90 text-destructive-foreground text-[10px] font-bold uppercase">
           <Flame className="h-3 w-3" /> Hot
         </span>
       )}
-      {game.isNew && (
+      {game.is_new && !game.is_hot && (
         <span className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/90 text-primary-foreground text-[10px] font-bold uppercase">
           <Sparkles className="h-3 w-3" /> Novo
         </span>
