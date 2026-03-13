@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      games: {
+        Row: {
+          category: string
+          created_at: string | null
+          game_code: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_hot: boolean | null
+          is_new: boolean | null
+          name: string
+          provider: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          game_code?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_hot?: boolean | null
+          is_new?: boolean | null
+          name: string
+          provider?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          game_code?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_hot?: boolean | null
+          is_new?: boolean | null
+          name?: string
+          provider?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       kyc_documents: {
         Row: {
           created_at: string | null
