@@ -1,11 +1,13 @@
 import { 
   Home, Gamepad2, Flame, Star, Tv, Dice5, Rocket, 
-  Wallet, ArrowDownToLine, ArrowUpFromLine, Users, 
-  BarChart3, Settings, Shield, ChevronLeft, ChevronRight
+  Wallet, ArrowDownToLine, ArrowUpFromLine, ChevronLeft, ChevronRight,
+  LogIn, LogOut, Shield
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 const playerLinks = [
   { icon: Home, label: "Início", path: "/" },
@@ -23,16 +25,11 @@ const financeLinks = [
   { icon: ArrowUpFromLine, label: "Sacar", path: "/withdraw" },
 ];
 
-const adminLinks = [
-  { icon: BarChart3, label: "Dashboard", path: "/admin" },
-  { icon: Users, label: "Usuários", path: "/admin/users" },
-  { icon: Shield, label: "API Logs", path: "/admin/logs" },
-  { icon: Settings, label: "Configurações", path: "/admin/settings" },
-];
-
 export function CasinoSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const { user, isAdmin, signOut } = useAuth();
+  const { settings } = useSiteSettings();
 
   const isActive = (path: string) => location.pathname + location.search === path || location.pathname === path;
 
@@ -70,7 +67,13 @@ export function CasinoSidebar() {
       {/* Logo */}
       <div className="flex items-center justify-between h-16 px-4 border-b border-border/40">
         {!collapsed && (
-          <span className="text-xl font-bold text-gradient-green tracking-tight">NEXUS</span>
+          settings?.logo_url ? (
+            <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-8 object-contain" />
+          ) : (
+            <span className="text-xl font-bold text-gradient-green tracking-tight">
+              {settings?.site_name || "NEXUS"}
+            </span>
+          )
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
@@ -85,21 +88,40 @@ export function CasinoSidebar() {
         <SectionLabel>Jogos</SectionLabel>
         {playerLinks.map(link => <SidebarLink key={link.path} {...link} />)}
         
-        <SectionLabel>Financeiro</SectionLabel>
-        {financeLinks.map(link => <SidebarLink key={link.path} {...link} />)}
+        {user && (
+          <>
+            <SectionLabel>Financeiro</SectionLabel>
+            {financeLinks.map(link => <SidebarLink key={link.path} {...link} />)}
+          </>
+        )}
 
-        <SectionLabel>Admin</SectionLabel>
-        {adminLinks.map(link => <SidebarLink key={link.path} {...link} />)}
+        {isAdmin && (
+          <>
+            <SectionLabel>Admin</SectionLabel>
+            <SidebarLink icon={Shield} label="Painel Admin" path="/admin" />
+          </>
+        )}
       </nav>
 
       {/* Footer */}
-      {!collapsed && (
-        <div className="p-4 border-t border-border/40">
-          <p className="text-xs text-muted-foreground/50 text-center">
-            © 2026 Nexus Gaming
+      <div className="p-2 border-t border-border/40">
+        {user ? (
+          <button onClick={signOut} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-surface-hover")}>
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Sair</span>}
+          </button>
+        ) : (
+          <Link to="/login" className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-primary hover:bg-surface-hover")}>
+            <LogIn className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>Entrar</span>}
+          </Link>
+        )}
+        {!collapsed && (
+          <p className="text-xs text-muted-foreground/50 text-center mt-2">
+            © 2026 {settings?.site_name || "Nexus Gaming"}
           </p>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   );
 }
