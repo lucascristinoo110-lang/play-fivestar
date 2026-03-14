@@ -32,7 +32,7 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    if (!settings?.bspay_client_id || !settings?.bspay_client_secret) {
+    if (!settings?.bspay_client_id && !settings?.bspay_client_secret) {
       return new Response(JSON.stringify({
         pix_code: `00020126580014br.gov.bcb.pix0136${transaction_id}520400005303986540${Number(amount).toFixed(2)}5802BR`,
         message: "BSPAY not configured - demo mode",
@@ -43,37 +43,49 @@ serve(async (req) => {
 
     const apiUrl = settings.bspay_api_url || "https://api.bspay.co";
 
-    // BSPAY uses the client_secret directly as Bearer token
-    // The client_id is the API key / token
-    const bearerToken = settings.bspay_client_secret;
-
     // Build webhook URL for payment confirmation
     const webhookUrl = `${supabaseUrl}/functions/v1/bspay-webhook`;
 
-    // Create PIX charge directly - no OAuth needed
-    const pixResponse = await fetch(`${apiUrl}/v2/pix/qrcode`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${bearerToken}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        amount: Number(amount),
-        external_id: transaction_id,
-        postbackUrl: webhookUrl,
-        payerQuestion: `Depósito - ${transaction_id}`,
-      }),
-    });
+    // Alguns painéis da BSPAY usam client_id como chave e outros client_secret.
+    // Tentamos ambos para evitar falha por configuração invertida no admin.
+    const authCandidates = [
+      { label: "client_secret", token: settings?.bspay_client_secret?.trim() },
+      { label: "client_id", token: settings?.bspay_client_id?.trim() },
+    ].filter((item, index, arr) => item.token && arr.findIndex((x) => x.token === item.token) === index) as Array<{ label: string; token: string }>;
 
-    if (!pixResponse.ok) {
+    let pixData: any = null;
+    let lastError = "";
+
+    for (const candidate of authCandidates) {
+      const pixResponse = await fetch(`${apiUrl}/v2/pix/qrcode`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${candidate.token}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          external_id: transaction_id,
+          postbackUrl: webhookUrl,
+          payerQuestion: `Depósito - ${transaction_id}`,
+        }),
+      });
+
+      if (pixResponse.ok) {
+        pixData = await pixResponse.json();
+        console.log(`BSPAY PIX response (auth: ${candidate.label}):`, JSON.stringify(pixData));
+        break;
+      }
+
       const pixError = await pixResponse.text();
-      console.error("BSPAY PIX error:", pixResponse.status, pixError);
-      throw new Error(`BSPAY PIX creation failed [${pixResponse.status}]: ${pixError}`);
+      lastError = `BSPAY PIX creation failed [${pixResponse.status}] (${candidate.label}): ${pixError}`;
+      console.error("BSPAY PIX error:", lastError);
     }
 
-    const pixData = await pixResponse.json();
-    console.log("BSPAY PIX response:", JSON.stringify(pixData));
+    if (!pixData) {
+      throw new Error(lastError || "BSPAY PIX creation failed");
+    }
 
     // Update transaction with external references
     await supabase
