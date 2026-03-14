@@ -46,7 +46,6 @@ export function GameGrid({ searchQuery }: { searchQuery: string }) {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <CategoryTabs active={category} onChange={setCategory} />
-        <ProviderTabs active={provider} onChange={setProvider} />
       </div>
 
       {loading ? (

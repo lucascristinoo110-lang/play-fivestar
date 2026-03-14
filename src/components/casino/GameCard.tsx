@@ -70,7 +70,6 @@ export function GameCard({ game, index }: { game: GameData; index: number }) {
       {/* Info */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-transparent p-3 pt-8">
         <p className="text-xs font-semibold text-foreground truncate">{game.name}</p>
-        <p className="text-[10px] text-muted-foreground capitalize">{game.provider}</p>
       </div>
     </motion.div>
   );
