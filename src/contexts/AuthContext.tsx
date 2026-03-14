@@ -108,6 +108,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signOut() {
+    if (profileChannelRef.current) {
+      supabase.removeChannel(profileChannelRef.current);
+      profileChannelRef.current = null;
+    }
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
