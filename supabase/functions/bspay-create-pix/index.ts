@@ -29,7 +29,7 @@ function uniqueStrings(values: Array<string | null | undefined>) {
 }
 
 async function fetchOAuthTokens(apiUrl: string, clientId: string, clientSecret: string) {
-  const endpoints = ["/oauth/token", "/v2/oauth/token"];
+  const endpoint = `${apiUrl}/v2/oauth/token`;
   const tokens: string[] = [];
 
   const addToken = (source: string, value?: string) => {
@@ -42,92 +42,57 @@ async function fetchOAuthTokens(apiUrl: string, clientId: string, clientSecret: 
 
   const basicAuth = btoa(`${clientId}:${clientSecret}`);
 
-  for (const endpoint of endpoints) {
-    const url = `${apiUrl}${endpoint}`;
+  // Basic auth (observado como formato aceito)
+  try {
+    const formBody = new URLSearchParams({ grant_type: "client_credentials" });
 
-    // Form URL encoded com client_id + client_secret
-    try {
-      const formBody = new URLSearchParams({
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+        "Authorization": `Basic ${basicAuth}`,
+      },
+      body: formBody.toString(),
+    });
+
+    const rawText = await response.text();
+    const parsed = parseJsonSafe(rawText);
+
+    if (response.ok) {
+      addToken("basic", parsed?.access_token || parsed?.token);
+    } else {
+      console.error(`BSPAY OAuth erro (basic) [${response.status}]:`, rawText);
+    }
+  } catch (error) {
+    console.error("BSPAY OAuth falha (basic):", error);
+  }
+
+  // Fallback JSON
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+      body: JSON.stringify({
         grant_type: "client_credentials",
         client_id: clientId,
         client_secret: clientSecret,
-      });
+      }),
+    });
 
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json",
-        },
-        body: formBody.toString(),
-      });
+    const rawText = await response.text();
+    const parsed = parseJsonSafe(rawText);
 
-      const rawText = await response.text();
-      const parsed = parseJsonSafe(rawText);
-
-      if (response.ok) {
-        addToken(`${endpoint}:form`, parsed?.access_token || parsed?.token);
-      } else {
-        console.error(`BSPAY OAuth erro (${endpoint}:form) [${response.status}]:`, rawText);
-      }
-    } catch (error) {
-      console.error(`BSPAY OAuth falha (${endpoint}:form):`, error);
+    if (response.ok) {
+      addToken("json", parsed?.access_token || parsed?.token);
+    } else {
+      console.error(`BSPAY OAuth erro (json) [${response.status}]:`, rawText);
     }
-
-    // Basic auth
-    try {
-      const formBody = new URLSearchParams({
-        grant_type: "client_credentials",
-      });
-
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json",
-          "Authorization": `Basic ${basicAuth}`,
-        },
-        body: formBody.toString(),
-      });
-
-      const rawText = await response.text();
-      const parsed = parseJsonSafe(rawText);
-
-      if (response.ok) {
-        addToken(`${endpoint}:basic`, parsed?.access_token || parsed?.token);
-      } else {
-        console.error(`BSPAY OAuth erro (${endpoint}:basic) [${response.status}]:`, rawText);
-      }
-    } catch (error) {
-      console.error(`BSPAY OAuth falha (${endpoint}:basic):`, error);
-    }
-
-    // JSON fallback
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: JSON.stringify({
-          grant_type: "client_credentials",
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
-      });
-
-      const rawText = await response.text();
-      const parsed = parseJsonSafe(rawText);
-
-      if (response.ok) {
-        addToken(`${endpoint}:json`, parsed?.access_token || parsed?.token);
-      } else {
-        console.error(`BSPAY OAuth erro (${endpoint}:json) [${response.status}]:`, rawText);
-      }
-    } catch (error) {
-      console.error(`BSPAY OAuth falha (${endpoint}:json):`, error);
-    }
+  } catch (error) {
+    console.error("BSPAY OAuth falha (json):", error);
   }
 
   return tokens;
@@ -137,19 +102,8 @@ function buildAuthCandidates(tokens: string[]) {
   const candidates: AuthCandidate[] = [];
 
   for (const token of tokens) {
+    // Prioriza modo que chegou mais longe na API (retornou validação de payload)
     candidates.push(
-      {
-        label: "bearer",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-        },
-      },
-      {
-        label: "raw_authorization",
-        headers: {
-          "Authorization": token,
-        },
-      },
       {
         label: "bearer_x_api_key",
         headers: {
@@ -157,10 +111,22 @@ function buildAuthCandidates(tokens: string[]) {
           "x-api-key": token,
         },
       },
+      {
+        label: "bearer",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+      },
     );
   }
 
   return candidates;
+}
+
+function normalizeDocument(value?: string | null) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length >= 11) return digits.slice(0, 14);
+  return "00000000000";
 }
 
 serve(async (req) => {
@@ -182,11 +148,18 @@ serve(async (req) => {
       });
     }
 
-    const { data: settings } = await supabase
-      .from("site_settings")
-      .select("bspay_api_url, bspay_client_id, bspay_client_secret")
-      .limit(1)
-      .single();
+    const [{ data: settings }, { data: transaction }] = await Promise.all([
+      supabase
+        .from("site_settings")
+        .select("bspay_api_url, bspay_client_id, bspay_client_secret")
+        .limit(1)
+        .single(),
+      supabase
+        .from("transactions")
+        .select("id, user_id")
+        .eq("id", transaction_id)
+        .single(),
+    ]);
 
     const clientId = settings?.bspay_client_id?.trim() ?? "";
     const clientSecret = settings?.bspay_client_secret?.trim() ?? "";
@@ -200,6 +173,19 @@ serve(async (req) => {
       });
     }
 
+    if (!transaction) {
+      return new Response(JSON.stringify({ error: "Transação não encontrada." }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name, email, cpf")
+      .eq("user_id", transaction.user_id)
+      .single();
+
     const apiUrl = resolveApiUrl(settings?.bspay_api_url);
     const webhookUrl = `${supabaseUrl}/functions/v1/bspay-webhook`;
 
@@ -212,53 +198,50 @@ serve(async (req) => {
     }
 
     const authCandidates = buildAuthCandidates(allTokens);
-    const pixEndpoints = ["/v2/pix/qrcode", "/api/v2/pix/qrcode"];
 
     let pixData: any = null;
     let lastError = "";
 
-    for (const endpoint of pixEndpoints) {
-      for (const auth of authCandidates) {
-        const url = `${apiUrl}${endpoint}`;
-
-        const pixResponse = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            ...auth.headers,
+    for (const auth of authCandidates) {
+      const pixResponse = await fetch(`${apiUrl}/v2/pix/qrcode`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          ...auth.headers,
+        },
+        body: JSON.stringify({
+          amount: Number(amount),
+          external_id: transaction_id,
+          postbackUrl: webhookUrl,
+          payerQuestion: `Depósito - ${transaction_id}`,
+          payer: {
+            name: profile?.display_name || "Cliente",
+            document: normalizeDocument(profile?.cpf),
+            email: profile?.email || "cliente@exemplo.com",
           },
-          body: JSON.stringify({
-            amount: Number(amount),
-            external_id: transaction_id,
-            postbackUrl: webhookUrl,
-            callback_url: webhookUrl,
-            payerQuestion: `Depósito - ${transaction_id}`,
-          }),
-        });
+        }),
+      });
 
-        const rawText = await pixResponse.text();
-        const parsed = parseJsonSafe(rawText) ?? { raw: rawText };
+      const rawText = await pixResponse.text();
+      const parsed = parseJsonSafe(rawText) ?? { raw: rawText };
 
-        const hasPixCode = Boolean(
-          parsed?.pixCopiaECola ||
-            parsed?.pix_copy_paste ||
-            parsed?.qrCode ||
-            parsed?.qr_code ||
-            parsed?.pix_code,
-        );
+      const hasPixCode = Boolean(
+        parsed?.pixCopiaECola ||
+          parsed?.pix_copy_paste ||
+          parsed?.qrCode ||
+          parsed?.qr_code ||
+          parsed?.pix_code,
+      );
 
-        if (pixResponse.ok && hasPixCode) {
-          console.log(`BSPAY PIX criado com sucesso (${endpoint} | ${auth.label})`);
-          pixData = parsed;
-          break;
-        }
-
-        lastError = `BSPAY PIX falhou [${pixResponse.status}] (${endpoint} | ${auth.label}): ${rawText}`;
-        console.error(lastError);
+      if (pixResponse.ok && hasPixCode) {
+        console.log(`BSPAY PIX criado com sucesso (${auth.label})`);
+        pixData = parsed;
+        break;
       }
 
-      if (pixData) break;
+      lastError = `BSPAY PIX falhou [${pixResponse.status}] (${auth.label}): ${rawText}`;
+      console.error(lastError);
     }
 
     if (!pixData) {
