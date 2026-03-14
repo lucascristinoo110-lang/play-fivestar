@@ -18,11 +18,26 @@ export default function AdminAppearancePage() {
 
   async function uploadFile(file: File, name: string, field: string) {
     if (!file || !settings) return;
-    const ext = file.name.split(".").pop();
-    const path = `${name}.${ext}`;
-    const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
-    if (error) { toast({ title: "Erro no upload", description: error.message, variant: "destructive" }); return; }
-    const { data: { publicUrl } } = supabase.storage.from("site-assets").getPublicUrl(path);
+
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const normalizedExt = ext === "jpeg" ? "jpg" : ext;
+    const path = `${name}-${Date.now()}.${normalizedExt}`;
+
+    const { error } = await supabase.storage.from("site-assets").upload(path, file, {
+      upsert: true,
+      contentType: file.type || `image/${normalizedExt}`,
+      cacheControl: "3600",
+    });
+
+    if (error) {
+      toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("site-assets").getPublicUrl(path);
+
     await supabase.from("site_settings").update({ [field]: publicUrl }).eq("id", settings.id);
     setSettings({ ...settings, [field]: publicUrl });
     toast({ title: "Arquivo atualizado!" });
