@@ -1,18 +1,25 @@
-import { Search, Bell, User, Wallet, LogIn, Menu } from "lucide-react";
+import { Search, Bell, User, Wallet, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { AuthMode } from "./AuthOverlayModal";
 
-export function TopBar({ onSearch, onDeposit, onMenuToggle }: { onSearch: (q: string) => void; onDeposit?: () => void; onMenuToggle?: () => void }) {
+type TopBarProps = {
+  onSearch: (q: string) => void;
+  onDeposit?: () => void;
+  onMenuToggle?: () => void;
+  onOpenAuth?: (mode: AuthMode) => void;
+};
+
+export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBarProps) {
   const { user, profile } = useAuth();
   const balance = profile?.balance ?? 0;
   const isMobile = useIsMobile();
 
   return (
     <header className="sticky top-0 z-30 h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 gap-2 border-b border-border/40 bg-background/80 backdrop-blur-xl">
-      {/* Mobile menu button */}
       {isMobile && (
         <button onClick={onMenuToggle} className="p-2 rounded-lg hover:bg-secondary text-muted-foreground shrink-0">
           <Menu className="h-5 w-5" />
@@ -60,11 +67,11 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle }: { onSearch: (q: st
           </>
         ) : (
           <>
-            <Button size="sm" variant="ghost" className="text-xs h-8 px-2" asChild>
-              <Link to="/login"><LogIn className="h-4 w-4 mr-1" /> Entrar</Link>
+            <Button size="sm" variant="ghost" className="text-xs h-8 px-2" onClick={() => onOpenAuth?.("login")}>
+              Entrar
             </Button>
-            <Button size="sm" className="bg-primary text-primary-foreground text-xs h-8 px-2 sm:px-3" asChild>
-              <Link to="/register">Cadastrar</Link>
+            <Button size="sm" className="bg-primary text-primary-foreground text-xs h-8 px-2 sm:px-3" onClick={() => onOpenAuth?.("register")}>
+              Cadastrar
             </Button>
           </>
         )}
