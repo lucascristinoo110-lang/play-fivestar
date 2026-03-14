@@ -49,6 +49,11 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/football" element={<Football />} />
             <Route path="/affiliate" element={<AffiliateDashboard />} />
+            <Route path="/privacidade" element={<PrivacyPolicy />} />
+            <Route path="/termos" element={<TermsConditions />} />
+            <Route path="/suporte" element={<PlayerSupport />} />
+            <Route path="/denuncias" element={<Complaints />} />
+            <Route path="/ouvidoria" element={<Ombudsman />} />
             <Route path="/rei" element={<AdminLayout />}>
               <Route index element={<AdminDashboardPage />} />
               <Route path="users" element={<AdminUsersPage />} />
