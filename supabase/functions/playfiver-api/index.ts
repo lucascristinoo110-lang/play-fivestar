@@ -27,18 +27,12 @@ serve(async (req) => {
       .limit(1)
       .single();
 
-    const agentToken = settings?.playfiver_api_key;
-    const apiUrl = settings?.playfiver_api_url || PLAYFIVER_API;
+    const rawApiUrl = settings?.playfiver_api_url?.trim();
+    const apiUrl = rawApiUrl && /^https?:\/\//.test(rawApiUrl) ? rawApiUrl : PLAYFIVER_API;
 
-    if (!agentToken) {
-      return new Response(JSON.stringify({ error: "Playfiver não configurado. Configure o Agent Token no painel admin." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Parse agentToken - format: "agentToken:secretKey"
-    const [token, secretKey] = agentToken.includes(":") ? agentToken.split(":") : [agentToken, ""];
+    const credential = settings?.playfiver_api_key?.trim() || "";
+    // Formato esperado no admin: agentToken:secretKey
+    const [token, secretKey] = credential.includes(":") ? credential.split(":") : [credential, ""];
 
     // ACTION: list_games - fetch all games from Playfiver
     if (action === "list_games") {
