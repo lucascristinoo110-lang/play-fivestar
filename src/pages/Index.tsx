@@ -1,38 +1,54 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CasinoSidebar } from "@/components/casino/CasinoSidebar";
 import { TopBar } from "@/components/casino/TopBar";
 import { HeroBanner } from "@/components/casino/HeroBanner";
 import { GameGrid } from "@/components/casino/GameGrid";
 import { RecentWinsCarousel } from "@/components/casino/RecentWinsCarousel";
-import { LiveCasinoSection } from "@/components/casino/LiveCasinoSection";
 import { DepositModal } from "@/components/casino/DepositModal";
 import { AgeVerificationModal } from "@/components/casino/AgeVerificationModal";
+import { AuthOverlayModal, type AuthMode } from "@/components/casino/AuthOverlayModal";
+import { SportsHighlights } from "@/components/casino/SportsHighlights";
+import { CasinoFooter } from "@/components/casino/CasinoFooter";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Menu, X } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 const Index = () => {
+  const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [depositOpen, setDepositOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const { user } = useAuth();
   const isMobile = useIsMobile();
 
+  const forcedFilter = useMemo(() => {
+    const category = searchParams.get("category");
+    const filter = searchParams.get("filter");
+
+    if (filter === "hot" || filter === "new") return filter;
+    if (category === "slots" || category === "live" || category === "table" || category === "crash") return category;
+    return null;
+  }, [searchParams]);
+
   return (
     <div className="flex min-h-screen w-full bg-background">
-      {/* Age verification for non-logged users */}
       {!user && <AgeVerificationModal />}
 
-      {/* Mobile sidebar overlay */}
+      {!user && authMode && (
+        <AuthOverlayModal
+          open={!!authMode}
+          mode={authMode}
+          onModeChange={setAuthMode}
+          onClose={() => setAuthMode(null)}
+        />
+      )}
+
       {isMobile && sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
-      <div className={`
-        ${isMobile ? 'fixed inset-y-0 left-0 z-50 transition-transform duration-200' : ''}
-        ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
-      `}>
+      <div className={`${isMobile ? "fixed inset-y-0 left-0 z-50 transition-transform duration-200" : ""} ${isMobile && !sidebarOpen ? "-translate-x-full" : "translate-x-0"}`}>
         <CasinoSidebar onClose={() => setSidebarOpen(false)} />
       </div>
 
@@ -41,14 +57,18 @@ const Index = () => {
           onSearch={setSearchQuery}
           onDeposit={() => setDepositOpen(true)}
           onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+          onOpenAuth={setAuthMode}
         />
+
         <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
           <HeroBanner />
+          <SportsHighlights />
           <RecentWinsCarousel />
-          <GameGrid searchQuery={searchQuery} />
-          <LiveCasinoSection />
+          <GameGrid searchQuery={searchQuery} forcedFilter={forcedFilter} />
+          <CasinoFooter />
         </main>
       </div>
+
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
     </div>
   );

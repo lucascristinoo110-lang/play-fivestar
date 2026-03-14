@@ -1,8 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { GameCard } from "./GameCard";
-import { CategoryTabs, type CategoryFilter } from "./CategoryTabs";
 import { GameLauncher } from "./GameLauncher";
 import { toast } from "@/hooks/use-toast";
 
@@ -18,36 +17,159 @@ type Game = {
   sort_order: number;
 };
 
-export function GameGrid({ searchQuery }: { searchQuery: string }) {
+type FilterType = "hot" | "new" | "slots" | "live" | "table" | "crash" | null;
+
+type GameSection = {
+  id: string;
+  title: string;
+  subtitle: string;
+  games: Game[];
+};
+
+type QueryMode = "featured" | "search" | "filter";
+
+const GAME_FIELDS = "id,name,provider,category,image_url,game_code,is_hot,is_new,sort_order";
+
+function normalizeImageUrl(url: string | null) {
+  if (!url) return null;
+
+  const [base, search = ""] = url.split("?");
+  if (base.includes("imagensfivers.com") && /\.(png|jpe?g)$/i.test(base)) {
+    const webp = base.replace(/\.(png|jpe?g)$/i, ".webp");
+    return `${webp}${search ? `?${search}` : ""}`;
+  }
+
+  return url;
+}
+
+function normalizeGames(data: any[] | null | undefined): Game[] {
+  return (data || []).map((game) => ({
+    id: String(game.id),
+    name: String(game.name || ""),
+    provider: String(game.provider || ""),
+    category: String(game.category || "slots"),
+    image_url: normalizeImageUrl(game.image_url || null),
+    game_code: game.game_code || null,
+    is_hot: Boolean(game.is_hot),
+    is_new: Boolean(game.is_new),
+    sort_order: Number(game.sort_order || 0),
+  }));
+}
+
+function getFilterTitle(filter: FilterType) {
+  switch (filter) {
+    case "hot":
+      return "Mais Jogados";
+    case "new":
+      return "Novos Jogos";
+    case "slots":
+      return "Slots em Destaque";
+    case "live":
+      return "Cassino ao Vivo";
+    case "table":
+      return "Jogos de Mesa";
+    case "crash":
+      return "Crash em Alta";
+    default:
+      return "Jogos";
+  }
+}
+
+export function GameGrid({ searchQuery, forcedFilter }: { searchQuery: string; forcedFilter?: FilterType }) {
   const { user } = useAuth();
-  const [category, setCategory] = useState<CategoryFilter>("all");
-  const [games, setGames] = useState<Game[]>([]);
+
+  const [mode, setMode] = useState<QueryMode>("featured");
   const [loading, setLoading] = useState(true);
+  const [featuredSections, setFeaturedSections] = useState<GameSection[]>([]);
+  const [filteredGames, setFilteredGames] = useState<Game[]>([]);
+
   const [launchUrl, setLaunchUrl] = useState<string | null>(null);
   const [launchName, setLaunchName] = useState("");
   const [launching, setLaunching] = useState(false);
 
-  useEffect(() => {
-    supabase
-      .from("games")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order")
-      .then(({ data }) => {
-        setGames((data as Game[]) || []);
-        setLoading(false);
-      });
-  }, []);
+  const trimmedSearch = useMemo(() => searchQuery.trim(), [searchQuery]);
 
-  const filtered = useMemo(() => {
-    return games.filter((g) => {
-      if (category === "hot" && !g.is_hot) return false;
-      if (category === "new" && !g.is_new) return false;
-      if (category !== "all" && category !== "hot" && category !== "new" && g.category !== category) return false;
-      if (searchQuery && !g.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      return true;
-    });
-  }, [category, searchQuery, games]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadFeatured() {
+      setMode("featured");
+      setLoading(true);
+
+      const [hot, slots, live, crash] = await Promise.all([
+        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true).order("sort_order").limit(12),
+        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots").order("sort_order").limit(12),
+        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "live").order("sort_order").limit(12),
+        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash").order("sort_order").limit(12),
+      ]);
+
+      if (cancelled) return;
+
+      const sections: GameSection[] = [
+        { id: "hot", title: "Mais Jogados Agora", subtitle: "Jogos com maior tração no cassino", games: normalizeGames(hot.data) },
+        { id: "slots", title: "Slots Campeões", subtitle: "Títulos que mais convertem em sessão", games: normalizeGames(slots.data) },
+        { id: "live", title: "Ao Vivo em Alta", subtitle: "Mesas e transmissões com alta procura", games: normalizeGames(live.data) },
+        { id: "crash", title: "Crash e Multiplicadores", subtitle: "Sessão para gatilho de ação rápida", games: normalizeGames(crash.data) },
+      ].filter((section) => section.games.length > 0);
+
+      setFeaturedSections(sections);
+      setLoading(false);
+    }
+
+    async function loadByFilter(filter: FilterType) {
+      setMode("filter");
+      setLoading(true);
+
+      let query = supabase.from("games").select(GAME_FIELDS).eq("is_active", true);
+      if (filter === "hot") query = query.eq("is_hot", true);
+      else if (filter === "new") query = query.eq("is_new", true);
+      else if (filter) query = query.eq("category", filter);
+
+      const { data } = await query.order("sort_order").limit(48);
+      if (cancelled) return;
+
+      setFilteredGames(normalizeGames(data));
+      setLoading(false);
+    }
+
+    async function loadSearch(queryText: string) {
+      setMode("search");
+      setLoading(true);
+
+      const { data } = await supabase
+        .from("games")
+        .select(GAME_FIELDS)
+        .eq("is_active", true)
+        .ilike("name", `%${queryText}%`)
+        .order("is_hot", { ascending: false })
+        .order("sort_order")
+        .limit(60);
+
+      if (cancelled) return;
+
+      setFilteredGames(normalizeGames(data));
+      setLoading(false);
+    }
+
+    const debounce = setTimeout(() => {
+      if (trimmedSearch.length >= 2) {
+        loadSearch(trimmedSearch);
+        return;
+      }
+
+      if (forcedFilter) {
+        loadByFilter(forcedFilter);
+        return;
+      }
+
+      loadFeatured();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(debounce);
+    };
+  }, [trimmedSearch, forcedFilter]);
 
   async function handlePlay(game: Game) {
     if (!user) {
@@ -79,29 +201,57 @@ export function GameGrid({ searchQuery }: { searchQuery: string }) {
       setLaunchUrl(data.launch_url);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setLaunching(false);
     }
-    setLaunching(false);
   }
+
+  const skeletonGrid = (
+    <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className="aspect-[3/4] rounded-xl shimmer" />
+      ))}
+    </div>
+  );
 
   return (
     <>
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <CategoryTabs active={category} onChange={setCategory} />
-        </div>
+      <div className="space-y-5">
+        {!trimmedSearch && (
+          <p className="text-xs text-muted-foreground">
+            Exibindo apenas sessões principais para performance no mobile. Pesquise com 2+ letras para acessar o catálogo completo.
+          </p>
+        )}
 
         {loading ? (
-          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] rounded-xl shimmer" />
+          skeletonGrid
+        ) : mode === "featured" ? (
+          <div className="space-y-6">
+            {featuredSections.map((section) => (
+              <section key={section.id} className="space-y-2">
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold text-foreground">{section.title}</h2>
+                  <p className="text-[11px] sm:text-xs text-muted-foreground">{section.subtitle}</p>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+                  {section.games.map((game, i) => (
+                    <GameCard key={`${section.id}-${game.id}`} game={game} index={i} onPlay={handlePlay} />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
-        ) : filtered.length > 0 ? (
-          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
-            {filtered.map((game, i) => (
-              <GameCard key={game.id} game={game} index={i} onPlay={handlePlay} />
-            ))}
-          </div>
+        ) : filteredGames.length > 0 ? (
+          <section className="space-y-2">
+            <h2 className="text-sm sm:text-base font-bold text-foreground">
+              {mode === "search" ? `Resultado para "${trimmedSearch}"` : getFilterTitle(forcedFilter || null)}
+            </h2>
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+              {filteredGames.map((game, i) => (
+                <GameCard key={game.id} game={game} index={i} onPlay={handlePlay} />
+              ))}
+            </div>
+          </section>
         ) : (
           <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">
             Nenhum jogo encontrado.
@@ -109,16 +259,8 @@ export function GameGrid({ searchQuery }: { searchQuery: string }) {
         )}
       </div>
 
-      {/* Game Launcher */}
-      {launchUrl && (
-        <GameLauncher
-          url={launchUrl}
-          gameName={launchName}
-          onClose={() => setLaunchUrl(null)}
-        />
-      )}
+      {launchUrl && <GameLauncher url={launchUrl} gameName={launchName} onClose={() => setLaunchUrl(null)} />}
 
-      {/* Launching overlay */}
       {launching && (
         <div className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center space-y-3">

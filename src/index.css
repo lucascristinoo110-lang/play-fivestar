@@ -124,4 +124,15 @@
   .game-card-hover:hover {
     transform: scale(1.02);
   }
+
+  .marquee-track {
+    width: max-content;
+    animation: marquee-scroll 26s linear infinite;
+    will-change: transform;
+  }
+
+  @keyframes marquee-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
 }
