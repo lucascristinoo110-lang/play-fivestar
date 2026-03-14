@@ -134,11 +134,17 @@ export default function AdminGamesPage() {
 
       {/* Games management */}
       <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-sm font-semibold text-foreground">Jogos Cadastrados ({games.length})</h2>
-          <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }}>
-            <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={importFromPlayfiver} disabled={importing}>
+              {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+              Importar da Playfiver
+            </Button>
+            <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
+            </Button>
+          </div>
         </div>
 
         {/* Game form */}
