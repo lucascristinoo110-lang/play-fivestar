@@ -1,13 +1,14 @@
 import { 
   Home, Gamepad2, Flame, Star, Tv, Dice5, Rocket, 
   Wallet, ArrowDownToLine, ArrowUpFromLine, ChevronLeft, ChevronRight,
-  LogIn, LogOut, Shield, User
+  LogIn, LogOut, User, X
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const playerLinks = [
   { icon: Home, label: "Início", path: "/" },
@@ -26,17 +27,23 @@ const financeLinks = [
   { icon: ArrowUpFromLine, label: "Sacar", path: "/profile?tab=kyc" },
 ];
 
-export function CasinoSidebar() {
+export function CasinoSidebar({ onClose }: { onClose?: () => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const { user, isAdmin, signOut } = useAuth();
   const { settings } = useSiteSettings();
+  const isMobile = useIsMobile();
 
   const isActive = (path: string) => location.pathname + location.search === path || location.pathname === path;
+
+  const handleLinkClick = () => {
+    if (isMobile && onClose) onClose();
+  };
 
   const SidebarLink = ({ icon: Icon, label, path }: { icon: any; label: string; path: string }) => (
     <Link
       to={path}
+      onClick={handleLinkClick}
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150",
         "hover:bg-surface-hover",
@@ -61,27 +68,34 @@ export function CasinoSidebar() {
   return (
     <aside
       className={cn(
-        "h-screen sticky top-0 flex flex-col border-r border-border/40 bg-sidebar transition-all duration-200",
-        collapsed ? "w-16" : "w-60"
+        "h-screen flex flex-col border-r border-border/40 bg-sidebar transition-all duration-200",
+        isMobile ? "w-60" : collapsed ? "w-16" : "w-60",
+        !isMobile && "sticky top-0"
       )}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-border/40">
+      <div className="flex items-center justify-between h-14 sm:h-16 px-4 border-b border-border/40">
         {!collapsed && (
           settings?.logo_url ? (
-            <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-8 object-contain" />
+            <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 sm:h-10 object-contain" />
           ) : (
-            <span className="text-xl font-bold text-gradient-green tracking-tight">
+            <span className="text-lg sm:text-xl font-bold text-gradient-green tracking-tight">
               {settings?.site_name || "NEXUS"}
             </span>
           )
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
+        {isMobile ? (
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        ) : (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        )}
       </div>
 
       {/* Nav */}
@@ -95,18 +109,17 @@ export function CasinoSidebar() {
             {financeLinks.map(link => <SidebarLink key={link.path + link.label} {...link} />)}
           </>
         )}
-
       </nav>
 
       {/* Footer */}
       <div className="p-2 border-t border-border/40">
         {user ? (
-          <button onClick={signOut} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-surface-hover")}>
+          <button onClick={() => { signOut(); handleLinkClick(); }} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-muted-foreground hover:bg-surface-hover")}>
             <LogOut className="h-4 w-4 shrink-0" />
             {!collapsed && <span>Sair</span>}
           </button>
         ) : (
-          <Link to="/login" className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-primary hover:bg-surface-hover")}>
+          <Link to="/login" onClick={handleLinkClick} className={cn("flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-primary hover:bg-surface-hover")}>
             <LogIn className="h-4 w-4 shrink-0" />
             {!collapsed && <span>Entrar</span>}
           </Link>
