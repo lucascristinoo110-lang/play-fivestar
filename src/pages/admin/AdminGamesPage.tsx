@@ -94,6 +94,44 @@ export default function AdminGamesPage() {
     loadData();
   }
 
+  async function importFromPlayfiver() {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("playfiver-api", {
+        body: { action: "list_games" },
+      });
+
+      if (error || !data?.data) {
+        throw new Error(data?.error || "Erro ao buscar jogos da Playfiver");
+      }
+
+      const apiGames = data.data as any[];
+      let imported = 0;
+
+      for (const g of apiGames) {
+        const existing = games.find(eg => eg.game_code === g.game_code && eg.provider === (g.provider?.name || "playfiver"));
+        if (!existing) {
+          await supabase.from("games").insert({
+            name: g.name,
+            provider: g.provider?.name || "playfiver",
+            category: "slots",
+            image_url: g.image_url || null,
+            game_code: g.game_code,
+            is_new: true,
+            sort_order: imported,
+          });
+          imported++;
+        }
+      }
+
+      toast({ title: `${imported} jogos importados da Playfiver!`, description: `${apiGames.length} jogos encontrados, ${imported} novos.` });
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+    setImporting(false);
+  }
+
   if (!settings) return <p className="text-muted-foreground">Carregando...</p>;
 
   const field = (label: string, key: string, placeholder: string) => (
