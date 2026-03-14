@@ -1,5 +1,3 @@
-import { useIsMobile } from "@/hooks/use-mobile";
-
 const recentWins = [
   { player: "J***a", game: "Fortune Tiger", amount: 1250.0, img: "🐯" },
   { player: "M***o", game: "Gates of Olympus", amount: 3420.5, img: "⚡" },
@@ -12,8 +10,6 @@ const recentWins = [
 const items = [...recentWins, ...recentWins];
 
 export function RecentWinsCarousel() {
-  const isMobile = useIsMobile();
-
   return (
     <div className="relative overflow-hidden rounded-xl bg-card border border-border/40 card-shadow py-2 sm:py-3">
       <div className="flex items-center gap-2 px-3 sm:px-4 mb-1.5 sm:mb-2">
@@ -21,10 +17,8 @@ export function RecentWinsCarousel() {
       </div>
 
       <div className="overflow-hidden">
-        <div
-          className={`flex gap-2 sm:gap-3 px-3 sm:px-4 ${isMobile ? "overflow-x-auto pb-1" : "marquee-track"}`}
-        >
-          {(isMobile ? recentWins : items).map((win, i) => (
+        <div className="flex gap-2 sm:gap-3 px-3 sm:px-4 marquee-track">
+          {items.map((win, i) => (
             <div
               key={`${win.player}-${i}`}
               className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 bg-secondary/60 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 border border-border/20"

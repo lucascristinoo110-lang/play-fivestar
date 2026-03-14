@@ -1,26 +1,44 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Activity, CalendarClock, ChevronRight, Trophy } from "lucide-react";
+import { CalendarClock, ChevronRight, Trophy } from "lucide-react";
 
 type SportsMatch = {
   id: string;
   league: string;
   home: string;
   away: string;
+  homeBadge: string;
+  awayBadge: string;
   kickoff: string;
   odds: { home: number; draw: number; away: number };
 };
 
 const FALLBACK_MATCHES: SportsMatch[] = [
-  { id: "f1", league: "Brasil Série A", home: "Flamengo", away: "Palmeiras", kickoff: new Date(Date.now() + 3 * 3600000).toISOString(), odds: { home: 2.05, draw: 3.18, away: 3.22 } },
-  { id: "f2", league: "Brasil Série A", home: "Corinthians", away: "São Paulo", kickoff: new Date(Date.now() + 7 * 3600000).toISOString(), odds: { home: 2.34, draw: 3.01, away: 2.98 } },
-  { id: "f3", league: "Copa Libertadores", home: "Atlético-MG", away: "River Plate", kickoff: new Date(Date.now() + 11 * 3600000).toISOString(), odds: { home: 2.61, draw: 3.11, away: 2.52 } },
-  { id: "f4", league: "Champions League", home: "Real Madrid", away: "Manchester City", kickoff: new Date(Date.now() + 16 * 3600000).toISOString(), odds: { home: 2.74, draw: 3.27, away: 2.3 } },
+  { id: "f1", league: "Brasil Série A", home: "Flamengo", away: "Palmeiras", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 3 * 3600000).toISOString(), odds: { home: 2.05, draw: 3.18, away: 3.22 } },
+  { id: "f2", league: "Brasil Série A", home: "Corinthians", away: "São Paulo", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 7 * 3600000).toISOString(), odds: { home: 2.34, draw: 3.01, away: 2.98 } },
+  { id: "f3", league: "Copa Libertadores", home: "Atlético-MG", away: "River Plate", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 11 * 3600000).toISOString(), odds: { home: 2.61, draw: 3.11, away: 2.52 } },
+  { id: "f4", league: "Champions League", home: "Real Madrid", away: "Manchester City", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 16 * 3600000).toISOString(), odds: { home: 2.74, draw: 3.27, away: 2.3 } },
 ];
 
 function deterministicOdds(home: string, away: string) {
   const seed = `${home}-${away}`.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  return { home: Number((1.7 + (seed % 95) / 100).toFixed(2)), draw: Number((2.8 + (seed % 55) / 100).toFixed(2)), away: Number((1.8 + ((seed * 3) % 95) / 100).toFixed(2)) };
+  return {
+    home: Number((1.7 + (seed % 95) / 100).toFixed(2)),
+    draw: Number((2.8 + (seed % 55) / 100).toFixed(2)),
+    away: Number((1.8 + ((seed * 3) % 95) / 100).toFixed(2)),
+  };
+}
+
+function TeamBadge({ src, name }: { src: string; name: string }) {
+  if (src) {
+    return <img src={src} alt={name} className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-full bg-secondary/50" loading="lazy" />;
+  }
+  // Fallback: first 2 letters
+  return (
+    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground border border-border/30">
+      {name.slice(0, 2).toUpperCase()}
+    </div>
+  );
 }
 
 export function SportsHighlights() {
@@ -49,6 +67,8 @@ export function SportsHighlights() {
             league: String(e.strLeague || "Futebol"),
             home: e.strHomeTeam,
             away: e.strAwayTeam,
+            homeBadge: e.strHomeTeamBadge || "",
+            awayBadge: e.strAwayTeamBadge || "",
             kickoff: e.strTimestamp || e.dateEvent,
             odds: deterministicOdds(e.strHomeTeam, e.strAwayTeam),
           }))
@@ -70,7 +90,11 @@ export function SportsHighlights() {
   }, [matches]);
 
   const m = matches[activeIndex] || FALLBACK_MATCHES[0];
-  const hyp = useMemo(() => ({ home: (100 * m.odds.home).toFixed(2), draw: (100 * m.odds.draw).toFixed(2), away: (100 * m.odds.away).toFixed(2) }), [m]);
+  const hyp = useMemo(() => ({
+    home: (100 * m.odds.home).toFixed(2),
+    draw: (100 * m.odds.draw).toFixed(2),
+    away: (100 * m.odds.away).toFixed(2),
+  }), [m]);
 
   return (
     <section id="futebol" className="space-y-3">
@@ -85,20 +109,34 @@ export function SportsHighlights() {
       </div>
 
       <button onClick={() => navigate("/football")} className="w-full text-left rounded-xl border border-border/40 bg-card card-shadow p-4 hover:bg-surface-hover transition-colors">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{m.league}</p>
-            <p className="text-lg sm:text-xl font-bold text-foreground mt-1">
-              {m.home} <span className="text-muted-foreground">vs</span> {m.away}
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1.5">
-              <CalendarClock className="h-3.5 w-3.5" />
+        {/* League */}
+        <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{m.league}</p>
+
+        {/* Teams with badges */}
+        <div className="flex items-center justify-between mt-3">
+          {/* Home */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <TeamBadge src={m.homeBadge} name={m.home} />
+            <span className="text-sm sm:text-base font-bold text-foreground truncate">{m.home}</span>
+          </div>
+
+          {/* VS */}
+          <div className="px-3 text-center shrink-0">
+            <span className="text-xs font-bold text-muted-foreground">VS</span>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+              <CalendarClock className="h-3 w-3" />
               {new Date(m.kickoff).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+
+          {/* Away */}
+          <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+            <span className="text-sm sm:text-base font-bold text-foreground truncate text-right">{m.away}</span>
+            <TeamBadge src={m.awayBadge} name={m.away} />
+          </div>
         </div>
 
+        {/* Odds */}
         <div className="grid grid-cols-3 gap-2 mt-4">
           {[{ l: "Casa", v: m.odds.home }, { l: "Empate", v: m.odds.draw }, { l: "Fora", v: m.odds.away }].map(o => (
             <div key={o.l} className="rounded-lg bg-secondary border border-border/30 p-2 text-center">
@@ -108,15 +146,27 @@ export function SportsHighlights() {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-2 mt-3">
+        {/* Hypothetical returns */}
+        <div className="grid grid-cols-3 gap-2 mt-2">
           {[{ l: "Casa", v: hyp.home }, { l: "Empate", v: hyp.draw }, { l: "Fora", v: hyp.away }].map(o => (
-            <div key={o.l} className="rounded-md bg-primary/10 border border-primary/20 p-2 text-center">
-              <p className="text-[10px] text-muted-foreground">Retorno R$100 ({o.l})</p>
-              <p className="text-xs font-semibold text-primary">R$ {o.v}</p>
+            <div key={o.l} className="rounded-md bg-primary/10 border border-primary/20 p-1.5 text-center">
+              <p className="text-[9px] text-muted-foreground">R$100 → {o.l}</p>
+              <p className="text-[11px] font-semibold text-primary">R$ {o.v}</p>
             </div>
           ))}
         </div>
       </button>
+
+      {/* Match dots indicator */}
+      <div className="flex justify-center gap-1.5">
+        {matches.slice(0, 8).map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setActiveIndex(i)}
+            className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeIndex ? "bg-primary w-4" : "bg-foreground/20"}`}
+          />
+        ))}
+      </div>
     </section>
   );
 }
