@@ -44,12 +44,12 @@ export default function AdminBspayPage() {
             <Input value={settings.bspay_api_url ?? ""} onChange={e => setSettings({ ...settings, bspay_api_url: e.target.value })} placeholder="https://api.bspay.co" className="bg-secondary border-border/40 h-9 text-sm font-mono" />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Client ID</Label>
+            <Label className="text-xs">Client ID (identificador)</Label>
             <Input value={settings.bspay_client_id ?? ""} onChange={e => setSettings({ ...settings, bspay_client_id: e.target.value })} placeholder="Seu client_id" className="bg-secondary border-border/40 h-9 text-sm font-mono" />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Client Secret</Label>
-            <Input type="password" value={settings.bspay_client_secret ?? ""} onChange={e => setSettings({ ...settings, bspay_client_secret: e.target.value })} placeholder="Seu client_secret" className="bg-secondary border-border/40 h-9 text-sm font-mono" />
+            <Label className="text-xs">Client Secret (Token Bearer da API)</Label>
+            <Input type="password" value={settings.bspay_client_secret ?? ""} onChange={e => setSettings({ ...settings, bspay_client_secret: e.target.value })} placeholder="Seu token/secret" className="bg-secondary border-border/40 h-9 text-sm font-mono" />
           </div>
         </div>
       </div>
