@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GameCard } from "./GameCard";
 import { CategoryTabs, type CategoryFilter } from "./CategoryTabs";
-import { ProviderTabs, type ProviderFilter } from "./ProviderTabs";
 
 type Game = {
   id: string;
