@@ -96,12 +96,6 @@ export function CasinoSidebar() {
           </>
         )}
 
-        {isAdmin && (
-          <>
-            <SectionLabel>Admin</SectionLabel>
-            <SidebarLink icon={Shield} label="Painel Admin" path="/admin" />
-          </>
-        )}
       </nav>
 
       {/* Footer */}
