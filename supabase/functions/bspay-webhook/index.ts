@@ -19,8 +19,22 @@ serve(async (req) => {
     const payload = await req.json();
     console.log("BSPAY webhook received:", JSON.stringify(payload));
 
-    const externalId = payload.external_id || payload.transaction_id;
-    const status = payload.status;
+    const externalId =
+      payload.external_id ||
+      payload.transaction_id ||
+      payload.transactionId ||
+      payload.id ||
+      payload.data?.external_id ||
+      payload.data?.transaction_id;
+
+    const rawStatus =
+      payload.status ||
+      payload.payment_status ||
+      payload.paymentStatus ||
+      payload.data?.status ||
+      payload.event;
+
+    const status = String(rawStatus || "").toLowerCase();
 
     if (!externalId) {
       return new Response(JSON.stringify({ error: "Missing external_id" }), {
@@ -51,7 +65,7 @@ serve(async (req) => {
     }
 
     // Check if payment was confirmed
-    const isConfirmed = status === "paid" || status === "completed" || status === "approved" || status === "confirmed";
+    const isConfirmed = ["paid", "completed", "approved", "confirmed", "success", "succeeded"].includes(status);
 
     if (isConfirmed) {
       // Update transaction status
@@ -75,7 +89,7 @@ serve(async (req) => {
         .eq("user_id", transaction.user_id);
 
       console.log(`Deposit confirmed: user ${transaction.user_id}, amount ${transaction.amount}, new balance ${newBalance}`);
-    } else if (status === "failed" || status === "expired" || status === "cancelled") {
+    } else if (["failed", "expired", "cancelled", "canceled", "rejected"].includes(status)) {
       await supabase
         .from("transactions")
         .update({ status: "failed", metadata: payload })
