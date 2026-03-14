@@ -38,10 +38,19 @@ export default function Profile() {
   const [withdrawPixKey, setWithdrawPixKey] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
 
+  async function loadUserData(userId: string) {
+    const [{ data: tx }, { data: docs }] = await Promise.all([
+      supabase.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("kyc_documents").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    ]);
+
+    setTransactions((tx as Transaction[]) || []);
+    setKycDocs((docs as KycDoc[]) || []);
+  }
+
   useEffect(() => {
     if (!user) return;
-    supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50).then(({ data }) => setTransactions((data as Transaction[]) || []));
-    supabase.from("kyc_documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => setKycDocs((data as KycDoc[]) || []));
+    loadUserData(user.id);
   }, [user]);
 
   if (authLoading) return null;
