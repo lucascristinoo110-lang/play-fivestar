@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Save, Gamepad2, Plus, Trash2, Edit2, X } from "lucide-react";
+import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2 } from "lucide-react";
 
 type GameRow = {
   id: string;
@@ -23,6 +23,7 @@ export default function AdminGamesPage() {
   const [settings, setSettings] = useState<any>(null);
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editGame, setEditGame] = useState<Partial<GameRow> | null>(null);
 
@@ -93,6 +94,44 @@ export default function AdminGamesPage() {
     loadData();
   }
 
+  async function importFromPlayfiver() {
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("playfiver-api", {
+        body: { action: "list_games" },
+      });
+
+      if (error || !data?.data) {
+        throw new Error(data?.error || "Erro ao buscar jogos da Playfiver");
+      }
+
+      const apiGames = data.data as any[];
+      let imported = 0;
+
+      for (const g of apiGames) {
+        const existing = games.find(eg => eg.game_code === g.game_code && eg.provider === (g.provider?.name || "playfiver"));
+        if (!existing) {
+          await supabase.from("games").insert({
+            name: g.name,
+            provider: g.provider?.name || "playfiver",
+            category: "slots",
+            image_url: g.image_url || null,
+            game_code: g.game_code,
+            is_new: true,
+            sort_order: imported,
+          });
+          imported++;
+        }
+      }
+
+      toast({ title: `${imported} jogos importados da Playfiver!`, description: `${apiGames.length} jogos encontrados, ${imported} novos.` });
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+    setImporting(false);
+  }
+
   if (!settings) return <p className="text-muted-foreground">Carregando...</p>;
 
   const field = (label: string, key: string, placeholder: string) => (
@@ -133,11 +172,17 @@ export default function AdminGamesPage() {
 
       {/* Games management */}
       <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-sm font-semibold text-foreground">Jogos Cadastrados ({games.length})</h2>
-          <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }}>
-            <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={importFromPlayfiver} disabled={importing}>
+              {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+              Importar da Playfiver
+            </Button>
+            <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }}>
+              <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
+            </Button>
+          </div>
         </div>
 
         {/* Game form */}
