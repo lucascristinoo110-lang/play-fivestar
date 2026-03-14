@@ -227,13 +227,42 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <Button onClick={() => setDepositOpen(true)} className="bg-primary text-primary-foreground font-semibold flex-1">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button onClick={() => setDepositOpen(true)} className="bg-primary text-primary-foreground font-semibold w-full">
                   <ArrowDownToLine className="h-4 w-4 mr-2" /> Depositar
                 </Button>
-                <Button variant="outline" className="flex-1 border-border/40" onClick={() => setTab("kyc")}>
+                <Button variant="outline" className="border-border/40 w-full" onClick={() => setTab("kyc")}>
                   <Shield className="h-4 w-4 mr-2" /> Verificar Identidade
                 </Button>
+              </div>
+
+              <div className="rounded-xl bg-card border border-border/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-foreground">Solicitar saque via PIX</h4>
+                  <span className="text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Valor do saque"
+                    className="bg-secondary border-border/40"
+                  />
+                  <Input
+                    value={withdrawPixKey}
+                    onChange={(e) => setWithdrawPixKey(e.target.value)}
+                    placeholder="Chave PIX (opcional)"
+                    className="bg-secondary border-border/40"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-muted-foreground">Saques entram como pendentes até aprovação no admin.</p>
+                  <Button onClick={handleWithdrawRequest} disabled={withdrawing || !withdrawAmount} className="bg-primary text-primary-foreground font-semibold">
+                    <ArrowUpFromLine className="h-4 w-4 mr-2" /> {withdrawing ? "Enviando..." : "Solicitar saque"}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
