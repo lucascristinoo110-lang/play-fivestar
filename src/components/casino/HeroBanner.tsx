@@ -48,7 +48,7 @@ export function HeroBanner() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative h-36 sm:h-48 md:h-56 lg:h-64 w-full"
+        className="relative w-full aspect-[16/5]"
       >
         <img
           src={b.image_url}
