@@ -50,7 +50,7 @@ export function AgeVerificationModal() {
             />
           ) : (
             <span className="text-3xl font-bold text-primary-foreground tracking-tight">
-              {settings?.site_name || "NEXUS"}
+              {settings?.site_name || ""}
             </span>
           )}
         </div>

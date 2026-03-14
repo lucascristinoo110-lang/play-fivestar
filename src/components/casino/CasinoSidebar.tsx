@@ -120,7 +120,7 @@ export function CasinoSidebar({ onClose }: { onClose?: () => void }) {
             {!collapsed && <span>Entrar</span>}
           </Link>
         )}
-        {!collapsed && <p className="text-xs text-muted-foreground/50 text-center mt-2">© 2026 {settings?.site_name || "Nexus Gaming"}</p>}
+        {!collapsed && <p className="text-xs text-muted-foreground/50 text-center mt-2">© 2026 {settings?.site_name || ""}</p>}
       </div>
     </aside>
   );
