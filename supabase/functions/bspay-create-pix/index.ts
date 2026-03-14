@@ -230,6 +230,7 @@ serve(async (req) => {
         parsed?.pixCopiaECola ||
           parsed?.pix_copy_paste ||
           parsed?.qrCode ||
+          parsed?.qrcode ||
           parsed?.qr_code ||
           parsed?.pix_code,
       );
