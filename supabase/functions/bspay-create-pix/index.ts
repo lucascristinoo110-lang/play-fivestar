@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -33,7 +33,6 @@ serve(async (req) => {
       .single();
 
     if (!settings?.bspay_client_id || !settings?.bspay_client_secret) {
-      // Return a demo PIX code when BSPAY is not configured
       return new Response(JSON.stringify({
         pix_code: `00020126580014br.gov.bcb.pix0136${transaction_id}520400005303986540${Number(amount).toFixed(2)}5802BR`,
         message: "BSPAY not configured - demo mode",
@@ -44,58 +43,51 @@ serve(async (req) => {
 
     const apiUrl = settings.bspay_api_url || "https://api.bspay.co";
 
-    // Authenticate with BSPAY
-    const authResponse = await fetch(`${apiUrl}/v2/oauth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: settings.bspay_client_id,
-        client_secret: settings.bspay_client_secret,
-        grant_type: "client_credentials",
-      }),
-    });
+    // BSPAY uses the client_secret directly as Bearer token
+    // The client_id is the API key / token
+    const bearerToken = settings.bspay_client_secret;
 
-    if (!authResponse.ok) {
-      const authError = await authResponse.text();
-      throw new Error(`BSPAY auth failed [${authResponse.status}]: ${authError}`);
-    }
+    // Build webhook URL for payment confirmation
+    const webhookUrl = `${supabaseUrl}/functions/v1/bspay-webhook`;
 
-    const { access_token } = await authResponse.json();
-
-    // Create PIX charge
+    // Create PIX charge directly - no OAuth needed
     const pixResponse = await fetch(`${apiUrl}/v2/pix/qrcode`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${access_token}`,
+        "Authorization": `Bearer ${bearerToken}`,
         "Content-Type": "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify({
         amount: Number(amount),
         external_id: transaction_id,
-        description: `Depósito - ${transaction_id}`,
+        postbackUrl: webhookUrl,
+        payerQuestion: `Depósito - ${transaction_id}`,
       }),
     });
 
     if (!pixResponse.ok) {
       const pixError = await pixResponse.text();
+      console.error("BSPAY PIX error:", pixResponse.status, pixError);
       throw new Error(`BSPAY PIX creation failed [${pixResponse.status}]: ${pixError}`);
     }
 
     const pixData = await pixResponse.json();
+    console.log("BSPAY PIX response:", JSON.stringify(pixData));
 
-    // Update transaction with external_id
+    // Update transaction with external references
     await supabase
       .from("transactions")
       .update({
-        external_id: pixData.id || pixData.transaction_id,
+        external_id: pixData.transactionId || pixData.transaction_id || pixData.id,
         metadata: pixData,
       })
       .eq("id", transaction_id);
 
     return new Response(JSON.stringify({
-      pix_code: pixData.pix_copy_paste || pixData.qr_code || pixData.pix_code,
-      qr_code_image: pixData.qr_code_image || pixData.qr_code_base64,
-      transaction_id: pixData.id,
+      pix_code: pixData.pixCopiaECola || pixData.pix_copy_paste || pixData.qrCode || pixData.qr_code || pixData.pix_code,
+      qr_code_image: pixData.qrCodeImage || pixData.qr_code_image || pixData.qr_code_base64,
+      transaction_id: pixData.transactionId || pixData.id,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
