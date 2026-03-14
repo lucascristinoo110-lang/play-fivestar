@@ -36,11 +36,16 @@ export function AgeVerificationModal() {
         className="w-full max-w-sm rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden text-center"
       >
         <div className="p-8 space-y-6">
-          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto overflow-hidden">
+          {/* Logo without circle - bigger */}
+          <div className="flex items-center justify-center mx-auto">
             {settings?.logo_url ? (
-              <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 w-auto object-contain" />
+              <img
+                src={settings.logo_url}
+                alt={settings?.site_name || "Logo"}
+                className="h-20 w-auto object-contain"
+              />
             ) : (
-              <ShieldAlert className="h-8 w-8 text-primary" />
+              <ShieldAlert className="h-12 w-12 text-primary" />
             )}
           </div>
 
