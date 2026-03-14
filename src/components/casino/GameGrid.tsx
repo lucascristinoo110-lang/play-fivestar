@@ -221,6 +221,18 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
   return (
     <>
       <div className="space-y-5">
+        {/* Mobile search inline */}
+        {isMobile && onSearch && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar jogos..."
+              className="pl-10 bg-secondary border-border/40 text-sm h-9 focus-visible:ring-primary/30"
+              onChange={(e) => onSearch(e.target.value)}
+            />
+          </div>
+        )}
+
         {!trimmedSearch && (
           <p className="text-xs text-muted-foreground">
             Exibindo apenas sessões principais para performance no mobile. Pesquise com 2+ letras para acessar o catálogo completo.

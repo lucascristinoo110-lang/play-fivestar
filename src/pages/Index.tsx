@@ -65,7 +65,7 @@ const Index = () => {
           <HeroBanner />
           <SportsHighlights />
           <RecentWinsCarousel />
-          <GameGrid searchQuery={searchQuery} forcedFilter={forcedFilter} />
+          <GameGrid searchQuery={searchQuery} forcedFilter={forcedFilter} onSearch={setSearchQuery} />
           <CasinoFooter />
         </main>
       </div>

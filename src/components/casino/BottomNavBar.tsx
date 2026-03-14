@@ -1,10 +1,12 @@
-import { Tv, Trophy, Gamepad2, Ticket, Wallet } from "lucide-react";
+import { Tv, Trophy, Gamepad2, Ticket, Wallet, LogIn } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import type { AuthMode } from "./AuthOverlayModal";
 
 type BottomNavBarProps = {
   onDeposit: () => void;
+  onOpenAuth?: (mode: AuthMode) => void;
 };
 
 const navItems = [
