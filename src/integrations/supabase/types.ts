@@ -97,6 +97,51 @@ export type Database = {
         }
         Relationships: []
       }
+      bets: {
+        Row: {
+          amount: number
+          bet_type: string
+          created_at: string | null
+          id: string
+          match_data: Json
+          match_id: string
+          odds: number
+          potential_win: number
+          settled_at: string | null
+          status: string
+          ticket_number: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bet_type: string
+          created_at?: string | null
+          id?: string
+          match_data?: Json
+          match_id: string
+          odds: number
+          potential_win: number
+          settled_at?: string | null
+          status?: string
+          ticket_number: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bet_type?: string
+          created_at?: string | null
+          id?: string
+          match_data?: Json
+          match_id?: string
+          odds?: number
+          potential_win?: number
+          settled_at?: string | null
+          status?: string
+          ticket_number?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           category: string
