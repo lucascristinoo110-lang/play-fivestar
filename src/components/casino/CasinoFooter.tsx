@@ -82,15 +82,15 @@ export function CasinoFooter() {
       {/* Bottom links */}
       <div className="px-4 sm:px-8 py-4">
         <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs text-muted-foreground">
-          <a href="#" className="hover:text-foreground transition-colors">Ouvidoria</a>
+          <Link to="/ouvidoria" className="hover:text-foreground transition-colors">Ouvidoria</Link>
           <span className="text-border">|</span>
-          <a href="#" className="hover:text-foreground transition-colors">Denúncias</a>
+          <Link to="/denuncias" className="hover:text-foreground transition-colors">Denúncias</Link>
           <span className="text-border">|</span>
-          <a href="#" className="hover:text-foreground transition-colors">Suporte ao Jogador</a>
+          <Link to="/suporte" className="hover:text-foreground transition-colors">Suporte ao Jogador</Link>
           <span className="text-border">|</span>
-          <a href="#" className="hover:text-foreground transition-colors">Política de Privacidade</a>
+          <Link to="/privacidade" className="hover:text-foreground transition-colors">Política de Privacidade</Link>
           <span className="text-border">|</span>
-          <a href="#" className="hover:text-foreground transition-colors">Termos e Condições</a>
+          <Link to="/termos" className="hover:text-foreground transition-colors">Termos e Condições</Link>
         </div>
       </div>
     </footer>
