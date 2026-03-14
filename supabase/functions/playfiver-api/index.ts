@@ -82,6 +82,15 @@ serve(async (req) => {
         });
       }
 
+      if (!token || !secretKey) {
+        return new Response(JSON.stringify({
+          error: "Playfiver não configurado corretamente. Use o formato agentToken:secretKey no painel admin.",
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Get user profile for balance
       const { data: profile } = await supabase
         .from("profiles")
