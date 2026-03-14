@@ -1,6 +1,5 @@
 import { forwardRef } from "react";
 import { Play, Flame, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
 
 type GameData = {
   id: string;
@@ -19,40 +18,29 @@ type GameCardProps = {
   onPlay?: (game: GameData) => void;
 };
 
-export const GameCard = forwardRef<HTMLDivElement, GameCardProps>(({ game, index, onPlay }, ref) => {
-  const gradients = [
-    "from-purple-600 to-blue-600",
-    "from-red-600 to-orange-500",
-    "from-green-600 to-teal-500",
-    "from-pink-600 to-rose-500",
-    "from-indigo-600 to-violet-500",
-    "from-amber-600 to-yellow-500",
-  ];
-
+export const GameCard = forwardRef<HTMLDivElement, GameCardProps>(({ game, onPlay }, ref) => {
   return (
-    <motion.div
+    <div
       ref={ref}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.3) }}
       className="group relative rounded-xl overflow-hidden card-shadow game-card-hover cursor-pointer"
       onClick={() => onPlay?.(game)}
     >
-      <div className="aspect-[3/4] overflow-hidden">
+      <div className="aspect-[3/4] overflow-hidden bg-secondary">
         {game.image_url ? (
           <img
             src={game.image_url}
             alt={game.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
               (e.target as HTMLImageElement).nextElementSibling?.classList.remove("hidden");
             }}
           />
         ) : null}
-        <div className={`${game.image_url ? "hidden" : ""} w-full h-full bg-gradient-to-br ${gradients[index % gradients.length]} flex items-center justify-center`}>
-          <span className="text-2xl sm:text-3xl font-bold text-white/80">{game.name.charAt(0)}</span>
+        <div className={`${game.image_url ? "hidden" : ""} w-full h-full bg-secondary flex items-center justify-center`}>
+          <span className="text-2xl sm:text-3xl font-bold text-foreground/70">{game.name.charAt(0)}</span>
         </div>
       </div>
 
@@ -76,7 +64,7 @@ export const GameCard = forwardRef<HTMLDivElement, GameCardProps>(({ game, index
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-transparent p-2 sm:p-3 pt-6 sm:pt-8">
         <p className="text-[10px] sm:text-xs font-semibold text-foreground truncate">{game.name}</p>
       </div>
-    </motion.div>
+    </div>
   );
 });
 

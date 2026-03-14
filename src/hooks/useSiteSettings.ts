@@ -1,28 +1,83 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+type PublicSiteSettings = {
+  id: string;
+  site_name: string | null;
+  logo_url: string | null;
+  favicon_url: string | null;
+  primary_color: string | null;
+  secondary_color: string | null;
+  accent_color: string | null;
+  background_color: string | null;
+  min_deposit: number | null;
+  max_deposit: number | null;
+  min_withdraw: number | null;
+  max_withdraw: number | null;
+  maintenance_mode: boolean | null;
+  deposit_banner_url: string | null;
+};
+
+let cachedSettings: PublicSiteSettings | null = null;
+let inflightRequest: Promise<PublicSiteSettings | null> | null = null;
+
+function applyThemeFromSettings(data: PublicSiteSettings | null) {
+  if (!data) return;
+  const root = document.documentElement;
+  if (data.primary_color) root.style.setProperty("--primary", data.primary_color);
+  if (data.secondary_color) root.style.setProperty("--secondary", data.secondary_color);
+  if (data.accent_color) root.style.setProperty("--accent", data.accent_color);
+  if (data.background_color) root.style.setProperty("--background", data.background_color);
+}
+
+async function loadPublicSettings() {
+  if (cachedSettings) return cachedSettings;
+  if (inflightRequest) return inflightRequest;
+
+  inflightRequest = supabase
+    .from("site_settings")
+    .select("id,site_name,logo_url,favicon_url,primary_color,secondary_color,accent_color,background_color,min_deposit,max_deposit,min_withdraw,max_withdraw,maintenance_mode,deposit_banner_url")
+    .limit(1)
+    .single()
+    .then(({ data }) => {
+      cachedSettings = (data as PublicSiteSettings | null) ?? null;
+      applyThemeFromSettings(cachedSettings);
+      inflightRequest = null;
+      return cachedSettings;
+    })
+    .catch(() => {
+      inflightRequest = null;
+      return null;
+    });
+
+  return inflightRequest;
+}
+
 export function useSiteSettings() {
-  const [settings, setSettings] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<PublicSiteSettings | null>(cachedSettings);
+  const [loading, setLoading] = useState(!cachedSettings);
 
   useEffect(() => {
-    fetchSettings();
+    let active = true;
+
+    loadPublicSettings().then((data) => {
+      if (!active) return;
+      setSettings(data);
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
-  async function fetchSettings() {
-    const { data } = await supabase.from("site_settings").select("*").limit(1).single();
+  async function refetch() {
+    cachedSettings = null;
+    const data = await loadPublicSettings();
     setSettings(data);
     setLoading(false);
-
-    // Apply dynamic colors
-    if (data) {
-      const root = document.documentElement;
-      if (data.primary_color) root.style.setProperty("--primary", data.primary_color);
-      if (data.secondary_color) root.style.setProperty("--secondary", data.secondary_color);
-      if (data.accent_color) root.style.setProperty("--accent", data.accent_color);
-      if (data.background_color) root.style.setProperty("--background", data.background_color);
-    }
+    return data;
   }
 
-  return { settings, loading, refetch: fetchSettings };
+  return { settings, loading, refetch };
 }

@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { X, Check, ShieldAlert } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export function AgeVerificationModal() {
   const [show, setShow] = useState(false);
   const [blocked, setBlocked] = useState(false);
+  const { settings } = useSiteSettings();
 
   useEffect(() => {
     const verified = localStorage.getItem("age-verified");
@@ -34,8 +36,12 @@ export function AgeVerificationModal() {
         className="w-full max-w-sm rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden text-center"
       >
         <div className="p-8 space-y-6">
-          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
-            <ShieldAlert className="h-8 w-8 text-primary" />
+          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto overflow-hidden">
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 w-auto object-contain" />
+            ) : (
+              <ShieldAlert className="h-8 w-8 text-primary" />
+            )}
           </div>
 
           {blocked ? (

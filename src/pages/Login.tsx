@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { LogIn, Eye, EyeOff } from "lucide-react";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,6 +14,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { settings } = useSiteSettings();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -30,20 +32,24 @@ export default function Login() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gradient-green tracking-tight">NEXUS</h1>
+          {settings?.logo_url ? (
+            <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 mx-auto object-contain" />
+          ) : (
+            <h1 className="text-3xl font-bold text-gradient-green tracking-tight">NEXUS</h1>
+          )}
           <p className="text-muted-foreground text-sm mt-2">Entre na sua conta</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4 rounded-xl bg-card border border-border/40 p-6 card-shadow">
           <div className="space-y-2">
             <Label htmlFor="email">E-mail</Label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required className="bg-secondary border-border/40" />
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required className="bg-secondary border-border/40" />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="password">Senha</Label>
             <div className="relative">
-              <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required className="bg-secondary border-border/40 pr-10" />
+              <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required className="bg-secondary border-border/40 pr-10" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
