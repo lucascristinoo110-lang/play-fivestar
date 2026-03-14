@@ -76,13 +76,15 @@ export function CasinoSidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="flex items-center justify-between h-14 sm:h-16 px-4 border-b border-border/40">
         {!collapsed && (
-          settings?.logo_url ? (
-            <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 sm:h-10 object-contain" />
-          ) : (
-            <span className="text-lg sm:text-xl font-bold text-gradient-green tracking-tight">
-              {settings?.site_name || "NEXUS"}
-            </span>
-          )
+          <Link to="/" onClick={handleLinkClick} className="min-w-0">
+            {settings?.logo_url ? (
+              <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 sm:h-10 object-contain" />
+            ) : (
+              <span className="text-lg sm:text-xl font-bold text-gradient-green tracking-tight">
+                {settings?.site_name || "NEXUS"}
+              </span>
+            )}
+          </Link>
         )}
         {isMobile ? (
           <button onClick={onClose} className="p-1.5 rounded-md hover:bg-surface-hover text-muted-foreground">
