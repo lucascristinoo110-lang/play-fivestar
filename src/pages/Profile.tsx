@@ -91,6 +91,45 @@ export default function Profile() {
     }
   }
 
+  async function handleWithdrawRequest() {
+    if (!user) return;
+
+    const amount = Number(withdrawAmount);
+
+    if (!amount || amount <= 0) {
+      toast({ title: "Valor inválido", description: "Informe um valor válido para saque.", variant: "destructive" });
+      return;
+    }
+
+    if (amount > availableToWithdraw) {
+      toast({ title: "Saldo insuficiente", description: "Você não possui saldo disponível para este saque.", variant: "destructive" });
+      return;
+    }
+
+    setWithdrawing(true);
+
+    const { error } = await supabase.from("transactions").insert({
+      user_id: user.id,
+      type: "withdraw",
+      amount,
+      payment_method: "pix",
+      status: "pending",
+      metadata: withdrawPixKey ? { pix_key: withdrawPixKey } : {},
+    });
+
+    setWithdrawing(false);
+
+    if (error) {
+      toast({ title: "Erro ao solicitar saque", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setWithdrawAmount("");
+    setWithdrawPixKey("");
+    toast({ title: "Saque solicitado", description: "Seu saque foi enviado para análise." });
+    await loadUserData(user.id);
+  }
+
   const statusIcon = (s: string) => {
     if (s === "approved" || s === "completed") return <CheckCircle className="h-3.5 w-3.5 text-primary" />;
     if (s === "rejected" || s === "failed") return <XCircle className="h-3.5 w-3.5 text-destructive" />;
