@@ -37,7 +37,6 @@ export function GameGrid({ searchQuery }: { searchQuery: string }) {
       if (category === "hot" && !g.is_hot) return false;
       if (category === "new" && !g.is_new) return false;
       if (category !== "all" && category !== "hot" && category !== "new" && g.category !== category) return false;
-      if (provider !== "all" && g.provider !== provider) return false;
       if (searchQuery && !g.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
