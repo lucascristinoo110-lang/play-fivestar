@@ -9,6 +9,7 @@ import { AgeVerificationModal } from "@/components/casino/AgeVerificationModal";
 import { AuthOverlayModal, type AuthMode } from "@/components/casino/AuthOverlayModal";
 import { SportsHighlights } from "@/components/casino/SportsHighlights";
 import { CasinoFooter } from "@/components/casino/CasinoFooter";
+import { BottomNavBar } from "@/components/casino/BottomNavBar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearchParams } from "react-router-dom";
@@ -60,7 +61,7 @@ const Index = () => {
           onOpenAuth={setAuthMode}
         />
 
-        <main className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto">
+        <main className={`flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto ${isMobile ? "pb-24" : ""}`}>
           <HeroBanner />
           <SportsHighlights />
           <RecentWinsCarousel />
@@ -68,6 +69,8 @@ const Index = () => {
           <CasinoFooter />
         </main>
       </div>
+
+      {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} />}
 
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
     </div>
