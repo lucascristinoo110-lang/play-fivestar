@@ -148,6 +148,7 @@ export type Database = {
           bspay_client_id: string | null
           bspay_client_secret: string | null
           created_at: string | null
+          deposit_banner_url: string | null
           favicon_url: string | null
           id: string
           igamewin_api_key: string | null
@@ -176,6 +177,7 @@ export type Database = {
           bspay_client_id?: string | null
           bspay_client_secret?: string | null
           created_at?: string | null
+          deposit_banner_url?: string | null
           favicon_url?: string | null
           id?: string
           igamewin_api_key?: string | null
@@ -204,6 +206,7 @@ export type Database = {
           bspay_client_id?: string | null
           bspay_client_secret?: string | null
           created_at?: string | null
+          deposit_banner_url?: string | null
           favicon_url?: string | null
           id?: string
           igamewin_api_key?: string | null
