@@ -30,25 +30,27 @@ function applyThemeFromSettings(data: PublicSiteSettings | null) {
   if (data.background_color) root.style.setProperty("--background", data.background_color);
 }
 
-async function loadPublicSettings() {
+async function loadPublicSettings(): Promise<PublicSiteSettings | null> {
   if (cachedSettings) return cachedSettings;
   if (inflightRequest) return inflightRequest;
 
-  inflightRequest = supabase
-    .from("site_settings")
-    .select("id,site_name,logo_url,favicon_url,primary_color,secondary_color,accent_color,background_color,min_deposit,max_deposit,min_withdraw,max_withdraw,maintenance_mode,deposit_banner_url")
-    .limit(1)
-    .single()
-    .then(({ data }) => {
+  inflightRequest = (async () => {
+    try {
+      const { data } = await supabase
+        .from("site_settings")
+        .select("id,site_name,logo_url,favicon_url,primary_color,secondary_color,accent_color,background_color,min_deposit,max_deposit,min_withdraw,max_withdraw,maintenance_mode,deposit_banner_url")
+        .limit(1)
+        .single();
+
       cachedSettings = (data as PublicSiteSettings | null) ?? null;
       applyThemeFromSettings(cachedSettings);
-      inflightRequest = null;
       return cachedSettings;
-    })
-    .catch(() => {
-      inflightRequest = null;
+    } catch {
       return null;
-    });
+    } finally {
+      inflightRequest = null;
+    }
+  })();
 
   return inflightRequest;
 }
