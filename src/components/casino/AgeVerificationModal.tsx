@@ -39,7 +39,7 @@ export function AgeVerificationModal() {
         <div
           className="flex items-center justify-center py-8 px-6"
           style={{
-            background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))",
+            background: "linear-gradient(135deg, hsl(222 47% 8%), hsl(142 50% 15%), hsl(222 47% 6%))",
           }}
         >
           {settings?.logo_url ? (
