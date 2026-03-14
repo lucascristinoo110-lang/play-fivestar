@@ -34,11 +34,23 @@ export default function Profile() {
   const [depositOpen, setDepositOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState<"rg" | "cnh">("rg");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawPixKey, setWithdrawPixKey] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  async function loadUserData(userId: string) {
+    const [{ data: tx }, { data: docs }] = await Promise.all([
+      supabase.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
+      supabase.from("kyc_documents").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+    ]);
+
+    setTransactions((tx as Transaction[]) || []);
+    setKycDocs((docs as KycDoc[]) || []);
+  }
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("transactions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(50).then(({ data }) => setTransactions((data as Transaction[]) || []));
-    supabase.from("kyc_documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => setKycDocs((data as KycDoc[]) || []));
+    loadUserData(user.id);
   }, [user]);
 
   if (authLoading) return null;
@@ -46,7 +58,11 @@ export default function Profile() {
 
   const totalDeposits = transactions.filter(t => t.type === "deposit" && t.status === "completed").reduce((s, t) => s + Number(t.amount), 0);
   const totalWithdrawals = transactions.filter(t => t.type === "withdraw" && t.status === "completed").reduce((s, t) => s + Number(t.amount), 0);
-  const balance = profile?.balance ?? 0;
+  const pendingWithdrawals = transactions
+    .filter(t => t.type === "withdraw" && t.status === "pending")
+    .reduce((s, t) => s + Number(t.amount), 0);
+  const balance = Number(profile?.balance ?? 0);
+  const availableToWithdraw = Math.max(0, balance - pendingWithdrawals);
 
   async function handleUploadDoc(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -71,8 +87,47 @@ export default function Profile() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Documento enviado!", description: "Aguarde a análise da equipe." });
-      supabase.from("kyc_documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => setKycDocs((data as KycDoc[]) || []));
+      await loadUserData(user.id);
     }
+  }
+
+  async function handleWithdrawRequest() {
+    if (!user) return;
+
+    const amount = Number(withdrawAmount);
+
+    if (!amount || amount <= 0) {
+      toast({ title: "Valor inválido", description: "Informe um valor válido para saque.", variant: "destructive" });
+      return;
+    }
+
+    if (amount > availableToWithdraw) {
+      toast({ title: "Saldo insuficiente", description: "Você não possui saldo disponível para este saque.", variant: "destructive" });
+      return;
+    }
+
+    setWithdrawing(true);
+
+    const { error } = await supabase.from("transactions").insert({
+      user_id: user.id,
+      type: "withdraw",
+      amount,
+      payment_method: "pix",
+      status: "pending",
+      metadata: withdrawPixKey ? { pix_key: withdrawPixKey } : {},
+    });
+
+    setWithdrawing(false);
+
+    if (error) {
+      toast({ title: "Erro ao solicitar saque", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setWithdrawAmount("");
+    setWithdrawPixKey("");
+    toast({ title: "Saque solicitado", description: "Seu saque foi enviado para análise." });
+    await loadUserData(user.id);
   }
 
   const statusIcon = (s: string) => {
@@ -172,13 +227,42 @@ export default function Profile() {
                   </div>
                 </div>
               </div>
-              <div className="flex gap-3">
-                <Button onClick={() => setDepositOpen(true)} className="bg-primary text-primary-foreground font-semibold flex-1">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button onClick={() => setDepositOpen(true)} className="bg-primary text-primary-foreground font-semibold w-full">
                   <ArrowDownToLine className="h-4 w-4 mr-2" /> Depositar
                 </Button>
-                <Button variant="outline" className="flex-1 border-border/40" onClick={() => setTab("kyc")}>
+                <Button variant="outline" className="border-border/40 w-full" onClick={() => setTab("kyc")}>
                   <Shield className="h-4 w-4 mr-2" /> Verificar Identidade
                 </Button>
+              </div>
+
+              <div className="rounded-xl bg-card border border-border/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-foreground">Solicitar saque via PIX</h4>
+                  <span className="text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={withdrawAmount}
+                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    placeholder="Valor do saque"
+                    className="bg-secondary border-border/40"
+                  />
+                  <Input
+                    value={withdrawPixKey}
+                    onChange={(e) => setWithdrawPixKey(e.target.value)}
+                    placeholder="Chave PIX (opcional)"
+                    className="bg-secondary border-border/40"
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-muted-foreground">Saques entram como pendentes até aprovação no admin.</p>
+                  <Button onClick={handleWithdrawRequest} disabled={withdrawing || !withdrawAmount} className="bg-primary text-primary-foreground font-semibold">
+                    <ArrowUpFromLine className="h-4 w-4 mr-2" /> {withdrawing ? "Enviando..." : "Solicitar saque"}
+                  </Button>
+                </div>
               </div>
             </div>
           )}

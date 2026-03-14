@@ -101,11 +101,11 @@ export default function AdminGamesPage() {
         body: { action: "list_games" },
       });
 
-      if (error || !data?.data) {
+      if (error || !data?.games) {
         throw new Error(data?.error || "Erro ao buscar jogos da Playfiver");
       }
 
-      const apiGames = data.data as any[];
+      const apiGames = data.games as any[];
       let imported = 0;
 
       for (const g of apiGames) {
@@ -150,9 +150,9 @@ export default function AdminGamesPage() {
             <Gamepad2 className="h-4 w-4 text-primary" />
             Provedor: Playfiver
           </h2>
-          <p className="text-xs text-muted-foreground">Configure Client ID, Secret e Webhook URL da Playfiver para que os jogos funcionem.</p>
-          {field("Client ID / API Key", "playfiver_api_key", "Seu client_id")}
-          {field("URL da API / Webhook", "playfiver_api_url", "https://api.playfiver.com")}
+          <p className="text-xs text-muted-foreground">Configure no formato <strong>agentToken:secretKey</strong> para habilitar lançamento real dos jogos.</p>
+          {field("Credencial (agentToken:secretKey)", "playfiver_api_key", "token_do_agente:secret_key")}
+          {field("URL da API (opcional)", "playfiver_api_url", "https://api.playfivers.com")}
         </div>
 
         <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow space-y-4">

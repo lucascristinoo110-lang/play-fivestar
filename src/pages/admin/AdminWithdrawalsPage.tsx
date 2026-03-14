@@ -15,9 +15,48 @@ export default function AdminWithdrawalsPage() {
   }
 
   async function updateStatus(id: string, status: string) {
-    await supabase.from("transactions").update({ status }).eq("id", id);
-    toast({ title: `Saque ${status === "completed" ? "aprovado" : "rejeitado"}` });
-    fetch();
+    try {
+      const { data: tx, error: txError } = await supabase
+        .from("transactions")
+        .select("id, user_id, amount, status")
+        .eq("id", id)
+        .single();
+
+      if (txError || !tx) throw txError || new Error("Transação não encontrada");
+
+      if (status === "completed" && tx.status !== "completed") {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("user_id", tx.user_id)
+          .single();
+
+        if (profileError) throw profileError;
+
+        const currentBalance = Number(profile?.balance) || 0;
+        const amount = Number(tx.amount) || 0;
+
+        if (currentBalance < amount) {
+          toast({ title: "Saldo insuficiente", description: "Usuário não possui saldo para concluir este saque.", variant: "destructive" });
+          return;
+        }
+
+        const { error: balanceError } = await supabase
+          .from("profiles")
+          .update({ balance: currentBalance - amount })
+          .eq("user_id", tx.user_id);
+
+        if (balanceError) throw balanceError;
+      }
+
+      const { error } = await supabase.from("transactions").update({ status }).eq("id", id);
+      if (error) throw error;
+
+      toast({ title: `Saque ${status === "completed" ? "aprovado" : "rejeitado"}` });
+      fetch();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
   }
 
   return (
