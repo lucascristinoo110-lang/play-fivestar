@@ -78,8 +78,9 @@ function getFilterTitle(filter: FilterType) {
   }
 }
 
-export function GameGrid({ searchQuery, forcedFilter }: { searchQuery: string; forcedFilter?: FilterType }) {
+export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery: string; forcedFilter?: FilterType; onSearch?: (q: string) => void }) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [mode, setMode] = useState<QueryMode>("featured");
   const [loading, setLoading] = useState(true);
