@@ -7,11 +7,12 @@ type GameData = {
   provider: string;
   category: string;
   image_url: string | null;
+  game_code: string | null;
   is_hot: boolean;
   is_new: boolean;
 };
 
-export function GameCard({ game, index }: { game: GameData; index: number }) {
+export function GameCard({ game, index, onPlay }: { game: GameData; index: number; onPlay?: (game: GameData) => void }) {
   const gradients = [
     "from-purple-600 to-blue-600",
     "from-red-600 to-orange-500",
@@ -25,8 +26,9 @@ export function GameCard({ game, index }: { game: GameData; index: number }) {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25, delay: index * 0.03 }}
+      transition={{ duration: 0.25, delay: Math.min(index * 0.03, 0.3) }}
       className="group relative rounded-xl overflow-hidden card-shadow game-card-hover cursor-pointer"
+      onClick={() => onPlay?.(game)}
     >
       <div className="aspect-[3/4] overflow-hidden">
         {game.image_url ? (
