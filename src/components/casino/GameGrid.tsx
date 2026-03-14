@@ -40,7 +40,7 @@ export function GameGrid({ searchQuery }: { searchQuery: string }) {
       if (searchQuery && !g.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [category, provider, searchQuery, games]);
+  }, [category, searchQuery, games]);
 
   return (
     <div className="space-y-4">
