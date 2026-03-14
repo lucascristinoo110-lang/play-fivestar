@@ -10,6 +10,8 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
+import Football from "./pages/Football";
+import AffiliateDashboard from "./pages/AffiliateDashboard";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
@@ -20,6 +22,8 @@ import AdminGamesPage from "./pages/admin/AdminGamesPage";
 import AdminAppearancePage from "./pages/admin/AdminAppearancePage";
 import AdminBspayPage from "./pages/admin/AdminBspayPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+import AdminBannersPage from "./pages/admin/AdminBannersPage";
+import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +42,8 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<Index />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/football" element={<Football />} />
+            <Route path="/affiliate" element={<AffiliateDashboard />} />
             <Route path="/rei" element={<AdminLayout />}>
               <Route index element={<AdminDashboardPage />} />
               <Route path="users" element={<AdminUsersPage />} />
@@ -45,6 +51,8 @@ const App = () => (
               <Route path="withdrawals" element={<AdminWithdrawalsPage />} />
               <Route path="kyc" element={<AdminKycPage />} />
               <Route path="games" element={<AdminGamesPage />} />
+              <Route path="banners" element={<AdminBannersPage />} />
+              <Route path="affiliates" element={<AdminAffiliatesPage />} />
               <Route path="appearance" element={<AdminAppearancePage />} />
               <Route path="bspay" element={<AdminBspayPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
