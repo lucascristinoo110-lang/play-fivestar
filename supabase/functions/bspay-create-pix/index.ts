@@ -258,7 +258,7 @@ serve(async (req) => {
       .eq("id", transaction_id);
 
     return new Response(JSON.stringify({
-      pix_code: pixData.pixCopiaECola || pixData.pix_copy_paste || pixData.qrCode || pixData.qr_code || pixData.pix_code,
+      pix_code: pixData.pixCopiaECola || pixData.pix_copy_paste || pixData.qrCode || pixData.qrcode || pixData.qr_code || pixData.pix_code,
       qr_code_image: pixData.qrCodeImage || pixData.qr_code_image || pixData.qr_code_base64 || null,
       transaction_id: pixData.transactionId || pixData.transaction_id || pixData.id || transaction_id,
     }), {
