@@ -23,6 +23,7 @@ export default function AdminGamesPage() {
   const [settings, setSettings] = useState<any>(null);
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editGame, setEditGame] = useState<Partial<GameRow> | null>(null);
 
