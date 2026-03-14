@@ -10,7 +10,7 @@ type BottomNavBarProps = {
 const navItems = [
   { icon: Tv, label: "Ao Vivo", path: "/?category=live" },
   { icon: Trophy, label: "Esportes", path: "/football" },
-  { icon: null, label: "Depositar", path: "" }, // center placeholder
+  { icon: null, label: "", path: "" }, // center placeholder
   { icon: Gamepad2, label: "Cassino", path: "/" },
   { icon: Ticket, label: "Bilhetes", path: "/profile" },
 ];
