@@ -87,7 +87,7 @@ export default function Profile() {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Documento enviado!", description: "Aguarde a análise da equipe." });
-      supabase.from("kyc_documents").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => setKycDocs((data as KycDoc[]) || []));
+      await loadUserData(user.id);
     }
   }
 
