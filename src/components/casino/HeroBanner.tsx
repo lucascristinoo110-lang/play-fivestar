@@ -48,12 +48,12 @@ export function HeroBanner() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative w-full aspect-[8/3]"
+        className="relative w-full aspect-[5/2]"
       >
         <img
           src={b.image_url}
           alt={b.title}
-          className="w-full h-full object-contain bg-background"
+          className="w-full h-full object-cover"
           loading="eager"
           decoding="async"
         />
