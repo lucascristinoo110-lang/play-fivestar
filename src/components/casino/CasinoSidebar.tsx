@@ -77,7 +77,7 @@ export function CasinoSidebar({ onClose }: { onClose?: () => void }) {
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 w-auto object-contain" />
             ) : (
-              <span className="text-lg sm:text-xl font-bold text-gradient-green tracking-tight">{settings?.site_name || "NEXUS"}</span>
+              <span className="text-lg sm:text-xl font-bold text-gradient-green tracking-tight">{settings?.site_name || ""}</span>
             )}
           </Link>
         )}
