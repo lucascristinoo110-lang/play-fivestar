@@ -35,7 +35,7 @@ export default function Login() {
           {settings?.logo_url ? (
             <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-10 mx-auto object-contain" />
           ) : (
-            <h1 className="text-3xl font-bold text-gradient-green tracking-tight">NEXUS</h1>
+            <h1 className="text-3xl font-bold text-gradient-green tracking-tight">{settings?.site_name || ""}</h1>
           )}
           <p className="text-muted-foreground text-sm mt-2">Entre na sua conta</p>
         </div>
