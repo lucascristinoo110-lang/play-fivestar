@@ -70,7 +70,7 @@ const Index = () => {
         </main>
       </div>
 
-      {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} />}
+      {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} onOpenAuth={setAuthMode} />}
 
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
     </div>
