@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { GameCard } from "./GameCard";
 import { GameLauncher } from "./GameLauncher";
 import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 type Game = {
   id: string;
