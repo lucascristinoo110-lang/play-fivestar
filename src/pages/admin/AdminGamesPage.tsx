@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2 } from "lucide-react";
 
@@ -19,6 +20,19 @@ type GameRow = {
   sort_order: number;
 };
 
+function splitPlayfiverCredential(value?: string | null) {
+  const raw = value?.trim() ?? "";
+  const separatorIndex = raw.indexOf(":");
+
+  if (!raw) return { token: "", secret: "" };
+  if (separatorIndex === -1) return { token: raw, secret: "" };
+
+  return {
+    token: raw.slice(0, separatorIndex).trim(),
+    secret: raw.slice(separatorIndex + 1).trim(),
+  };
+}
+
 export default function AdminGamesPage() {
   const [settings, setSettings] = useState<any>(null);
   const [games, setGames] = useState<GameRow[]>([]);
@@ -26,6 +40,8 @@ export default function AdminGamesPage() {
   const [importing, setImporting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editGame, setEditGame] = useState<Partial<GameRow> | null>(null);
+  const [playfiverToken, setPlayfiverToken] = useState("");
+  const [playfiverSecret, setPlayfiverSecret] = useState("");
 
   useEffect(() => {
     loadData();
@@ -36,39 +52,76 @@ export default function AdminGamesPage() {
       supabase.from("site_settings").select("*").limit(1).single(),
       supabase.from("games").select("*").order("sort_order"),
     ]);
+
     setSettings(s);
     setGames((g as GameRow[]) || []);
+
+    const parsed = splitPlayfiverCredential(s?.playfiver_api_key);
+    setPlayfiverToken(parsed.token);
+    setPlayfiverSecret(parsed.secret);
   }
+
+  const hasPlayfiverCredential = useMemo(
+    () => Boolean(playfiverToken.trim() && playfiverSecret.trim()),
+    [playfiverToken, playfiverSecret],
+  );
 
   async function saveProviders() {
     if (!settings) return;
+
+    if ((playfiverToken.trim() && !playfiverSecret.trim()) || (!playfiverToken.trim() && playfiverSecret.trim())) {
+      toast({
+        title: "Credencial incompleta",
+        description: "Preencha Agent Token e Secret Key para salvar a Playfiver.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const playfiverCredential = hasPlayfiverCredential
+      ? `${playfiverToken.trim()}:${playfiverSecret.trim()}`
+      : null;
+
     setLoading(true);
-    const { error } = await supabase.from("site_settings").update({
-      playfiver_api_key: settings.playfiver_api_key,
-      playfiver_api_url: settings.playfiver_api_url,
-      igamewin_api_key: settings.igamewin_api_key,
-      igamewin_api_url: settings.igamewin_api_url,
-    }).eq("id", settings.id);
+    const { error } = await supabase
+      .from("site_settings")
+      .update({
+        playfiver_api_key: playfiverCredential,
+        playfiver_api_url: settings.playfiver_api_url,
+        igamewin_api_key: settings.igamewin_api_key,
+        igamewin_api_url: settings.igamewin_api_url,
+      })
+      .eq("id", settings.id);
     setLoading(false);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else toast({ title: "Provedores salvos!" });
+
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Provedores salvos!" });
+    loadData();
   }
 
   async function saveGame() {
     if (!editGame?.name) return;
     setLoading(true);
+
     if (editGame.id) {
-      await supabase.from("games").update({
-        name: editGame.name,
-        provider: editGame.provider || "playfiver",
-        category: editGame.category || "slots",
-        image_url: editGame.image_url,
-        game_code: editGame.game_code,
-        is_hot: editGame.is_hot || false,
-        is_new: editGame.is_new || false,
-        is_active: editGame.is_active ?? true,
-        sort_order: editGame.sort_order || 0,
-      }).eq("id", editGame.id);
+      await supabase
+        .from("games")
+        .update({
+          name: editGame.name,
+          provider: editGame.provider || "playfiver",
+          category: editGame.category || "slots",
+          image_url: editGame.image_url,
+          game_code: editGame.game_code,
+          is_hot: editGame.is_hot || false,
+          is_new: editGame.is_new || false,
+          is_active: editGame.is_active ?? true,
+          sort_order: editGame.sort_order || 0,
+        })
+        .eq("id", editGame.id);
     } else {
       await supabase.from("games").insert({
         name: editGame.name,
@@ -81,6 +134,7 @@ export default function AdminGamesPage() {
         sort_order: editGame.sort_order || 0,
       });
     }
+
     setLoading(false);
     setEditGame(null);
     setShowForm(false);
@@ -95,36 +149,29 @@ export default function AdminGamesPage() {
   }
 
   async function importFromPlayfiver() {
+    if (!hasPlayfiverCredential) {
+      toast({
+        title: "Credenciais ausentes",
+        description: "Preencha Agent Token e Secret Key da Playfiver antes de importar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setImporting(true);
     try {
       const { data, error } = await supabase.functions.invoke("playfiver-api", {
-        body: { action: "list_games" },
+        body: { action: "sync_games" },
       });
 
-      if (error || !data?.games) {
-        throw new Error(data?.error || "Erro ao buscar jogos da Playfiver");
+      if (error || !data?.status) {
+        throw new Error(data?.error || "Erro ao importar jogos da Playfiver");
       }
 
-      const apiGames = data.games as any[];
-      let imported = 0;
-
-      for (const g of apiGames) {
-        const existing = games.find(eg => eg.game_code === g.game_code && eg.provider === (g.provider?.name || "playfiver"));
-        if (!existing) {
-          await supabase.from("games").insert({
-            name: g.name,
-            provider: g.provider?.name || "playfiver",
-            category: "slots",
-            image_url: g.image_url || null,
-            game_code: g.game_code,
-            is_new: true,
-            sort_order: imported,
-          });
-          imported++;
-        }
-      }
-
-      toast({ title: `${imported} jogos importados da Playfiver!`, description: `${apiGames.length} jogos encontrados, ${imported} novos.` });
+      toast({
+        title: "Importação concluída",
+        description: `${data.imported} novos e ${data.updated} atualizados (${data.total_received} recebidos).`,
+      });
       loadData();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -137,7 +184,12 @@ export default function AdminGamesPage() {
   const field = (label: string, key: string, placeholder: string) => (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input value={settings[key] ?? ""} onChange={e => setSettings({ ...settings, [key]: e.target.value })} placeholder={placeholder} className="bg-secondary border-border/40 h-9 text-sm font-mono" />
+      <Input
+        value={settings[key] ?? ""}
+        onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
+        placeholder={placeholder}
+        className="bg-secondary border-border/40 h-9 text-sm font-mono"
+      />
     </div>
   );
 
@@ -150,8 +202,38 @@ export default function AdminGamesPage() {
             <Gamepad2 className="h-4 w-4 text-primary" />
             Provedor: Playfiver
           </h2>
-          <p className="text-xs text-muted-foreground">Configure no formato <strong>agentToken:secretKey</strong> para habilitar lançamento real dos jogos.</p>
-          {field("Credencial (agentToken:secretKey)", "playfiver_api_key", "token_do_agente:secret_key")}
+          <p className="text-xs text-muted-foreground">
+            Configure token e secret em abas separadas para habilitar lançamento real e importação automática de jogos.
+          </p>
+
+          <Tabs defaultValue="token" className="space-y-3">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="token">Agent Token</TabsTrigger>
+              <TabsTrigger value="secret">Secret Key</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="token" className="space-y-1">
+              <Label className="text-xs">Agent Token</Label>
+              <Input
+                value={playfiverToken}
+                onChange={(e) => setPlayfiverToken(e.target.value)}
+                placeholder="Cole o agentToken"
+                className="bg-secondary border-border/40 h-9 text-sm font-mono"
+              />
+            </TabsContent>
+
+            <TabsContent value="secret" className="space-y-1">
+              <Label className="text-xs">Secret Key</Label>
+              <Input
+                type="password"
+                value={playfiverSecret}
+                onChange={(e) => setPlayfiverSecret(e.target.value)}
+                placeholder="Cole a secretKey"
+                className="bg-secondary border-border/40 h-9 text-sm font-mono"
+              />
+            </TabsContent>
+          </Tabs>
+
           {field("URL da API (opcional)", "playfiver_api_url", "https://api.playfivers.com")}
         </div>
 
@@ -179,7 +261,13 @@ export default function AdminGamesPage() {
               {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
               Importar da Playfiver
             </Button>
-            <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }}>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditGame({ provider: "playfiver", category: "slots", is_active: true });
+                setShowForm(true);
+              }}
+            >
               <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
             </Button>
           </div>
@@ -190,23 +278,25 @@ export default function AdminGamesPage() {
           <div className="rounded-lg bg-secondary/50 border border-border/40 p-4 space-y-3">
             <div className="flex justify-between items-center">
               <h3 className="text-xs font-semibold">{editGame.id ? "Editar Jogo" : "Novo Jogo"}</h3>
-              <button onClick={() => { setShowForm(false); setEditGame(null); }}><X className="h-4 w-4 text-muted-foreground" /></button>
+              <button onClick={() => { setShowForm(false); setEditGame(null); }}>
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <Label className="text-xs">Nome</Label>
-                <Input value={editGame.name || ""} onChange={e => setEditGame({ ...editGame, name: e.target.value })} className="h-8 text-xs bg-secondary" />
+                <Input value={editGame.name || ""} onChange={(e) => setEditGame({ ...editGame, name: e.target.value })} className="h-8 text-xs bg-secondary" />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Provedor</Label>
-                <select value={editGame.provider || "playfiver"} onChange={e => setEditGame({ ...editGame, provider: e.target.value })} className="h-8 w-full rounded-md border border-border/40 bg-secondary text-xs px-2">
+                <select value={editGame.provider || "playfiver"} onChange={(e) => setEditGame({ ...editGame, provider: e.target.value })} className="h-8 w-full rounded-md border border-border/40 bg-secondary text-xs px-2">
                   <option value="playfiver">Playfiver</option>
                   <option value="igamewin">iGameWin</option>
                 </select>
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Categoria</Label>
-                <select value={editGame.category || "slots"} onChange={e => setEditGame({ ...editGame, category: e.target.value })} className="h-8 w-full rounded-md border border-border/40 bg-secondary text-xs px-2">
+                <select value={editGame.category || "slots"} onChange={(e) => setEditGame({ ...editGame, category: e.target.value })} className="h-8 w-full rounded-md border border-border/40 bg-secondary text-xs px-2">
                   <option value="slots">Slots</option>
                   <option value="crash">Crash</option>
                   <option value="live">Ao Vivo</option>
@@ -215,25 +305,25 @@ export default function AdminGamesPage() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Código do Jogo</Label>
-                <Input value={editGame.game_code || ""} onChange={e => setEditGame({ ...editGame, game_code: e.target.value })} className="h-8 text-xs bg-secondary" placeholder="ex: fortune-tiger" />
+                <Input value={editGame.game_code || ""} onChange={(e) => setEditGame({ ...editGame, game_code: e.target.value })} className="h-8 text-xs bg-secondary" placeholder="ex: 126" />
               </div>
               <div className="col-span-2 space-y-1">
                 <Label className="text-xs">URL da Imagem</Label>
-                <Input value={editGame.image_url || ""} onChange={e => setEditGame({ ...editGame, image_url: e.target.value })} className="h-8 text-xs bg-secondary" placeholder="https://..." />
+                <Input value={editGame.image_url || ""} onChange={(e) => setEditGame({ ...editGame, image_url: e.target.value })} className="h-8 text-xs bg-secondary" placeholder="https://..." />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs">Ordem</Label>
-                <Input type="number" value={editGame.sort_order ?? 0} onChange={e => setEditGame({ ...editGame, sort_order: parseInt(e.target.value) || 0 })} className="h-8 text-xs bg-secondary" />
+                <Input type="number" value={editGame.sort_order ?? 0} onChange={(e) => setEditGame({ ...editGame, sort_order: parseInt(e.target.value) || 0 })} className="h-8 text-xs bg-secondary" />
               </div>
               <div className="flex items-center gap-4 pt-4">
                 <label className="flex items-center gap-1.5 text-xs">
-                  <input type="checkbox" checked={editGame.is_hot || false} onChange={e => setEditGame({ ...editGame, is_hot: e.target.checked })} /> Hot
+                  <input type="checkbox" checked={editGame.is_hot || false} onChange={(e) => setEditGame({ ...editGame, is_hot: e.target.checked })} /> Hot
                 </label>
                 <label className="flex items-center gap-1.5 text-xs">
-                  <input type="checkbox" checked={editGame.is_new || false} onChange={e => setEditGame({ ...editGame, is_new: e.target.checked })} /> Novo
+                  <input type="checkbox" checked={editGame.is_new || false} onChange={(e) => setEditGame({ ...editGame, is_new: e.target.checked })} /> Novo
                 </label>
                 <label className="flex items-center gap-1.5 text-xs">
-                  <input type="checkbox" checked={editGame.is_active ?? true} onChange={e => setEditGame({ ...editGame, is_active: e.target.checked })} /> Ativo
+                  <input type="checkbox" checked={editGame.is_active ?? true} onChange={(e) => setEditGame({ ...editGame, is_active: e.target.checked })} /> Ativo
                 </label>
               </div>
             </div>
@@ -256,10 +346,10 @@ export default function AdminGamesPage() {
               </tr>
             </thead>
             <tbody>
-              {games.map(g => (
+              {games.map((g) => (
                 <tr key={g.id} className="border-b border-border/20 hover:bg-surface-hover transition-colors">
                   <td className="p-2 text-foreground font-medium">{g.name}</td>
-                  <td className="p-2 text-muted-foreground capitalize">{g.provider}</td>
+                  <td className="p-2 text-muted-foreground uppercase">{g.provider}</td>
                   <td className="p-2 text-muted-foreground capitalize">{g.category}</td>
                   <td className="p-2">
                     <span className={`text-[10px] font-semibold ${g.is_active ? "text-primary" : "text-destructive"}`}>
