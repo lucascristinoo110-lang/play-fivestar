@@ -45,7 +45,14 @@ serve(async (req) => {
       }
 
       const data = await response.json();
-      return new Response(JSON.stringify(data), {
+      const games = Array.isArray(data?.data) ? data.data : [];
+
+      return new Response(JSON.stringify({
+        status: true,
+        games,
+        total: games.length,
+        raw: data,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
