@@ -116,19 +116,6 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
         </div>
       </div>
 
-      {/* Mobile search bar below */}
-      {isMobile && (
-        <div className="px-3 pb-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar jogos..."
-              className="pl-10 bg-secondary border-border/40 text-sm h-9 focus-visible:ring-primary/30"
-              onChange={(e) => onSearch(e.target.value)}
-            />
-          </div>
-        </div>
-      )}
     </header>
   );
 }

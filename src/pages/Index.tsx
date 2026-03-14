@@ -65,12 +65,12 @@ const Index = () => {
           <HeroBanner />
           <SportsHighlights />
           <RecentWinsCarousel />
-          <GameGrid searchQuery={searchQuery} forcedFilter={forcedFilter} />
+          <GameGrid searchQuery={searchQuery} forcedFilter={forcedFilter} onSearch={setSearchQuery} />
           <CasinoFooter />
         </main>
       </div>
 
-      {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} />}
+      {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} onOpenAuth={setAuthMode} />}
 
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
     </div>

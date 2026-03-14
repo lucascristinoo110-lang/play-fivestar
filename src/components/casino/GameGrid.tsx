@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { GameCard } from "./GameCard";
 import { GameLauncher } from "./GameLauncher";
 import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 type Game = {
   id: string;
@@ -75,8 +78,9 @@ function getFilterTitle(filter: FilterType) {
   }
 }
 
-export function GameGrid({ searchQuery, forcedFilter }: { searchQuery: string; forcedFilter?: FilterType }) {
+export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery: string; forcedFilter?: FilterType; onSearch?: (q: string) => void }) {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const [mode, setMode] = useState<QueryMode>("featured");
   const [loading, setLoading] = useState(true);
@@ -217,6 +221,18 @@ export function GameGrid({ searchQuery, forcedFilter }: { searchQuery: string; f
   return (
     <>
       <div className="space-y-5">
+        {/* Mobile search inline */}
+        {isMobile && onSearch && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar jogos..."
+              className="pl-10 bg-secondary border-border/40 text-sm h-9 focus-visible:ring-primary/30"
+              onChange={(e) => onSearch(e.target.value)}
+            />
+          </div>
+        )}
+
         {!trimmedSearch && (
           <p className="text-xs text-muted-foreground">
             Exibindo apenas sessões principais para performance no mobile. Pesquise com 2+ letras para acessar o catálogo completo.

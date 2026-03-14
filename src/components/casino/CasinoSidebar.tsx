@@ -18,7 +18,7 @@ const playerLinks = [
   { icon: Tv, label: "Ao Vivo", path: "/?category=live" },
   { icon: Dice5, label: "Mesa", path: "/?category=table" },
   { icon: Rocket, label: "Crash", path: "/?category=crash" },
-  { icon: Trophy, label: "Futebol", path: "/#futebol" },
+  { icon: Trophy, label: "Futebol", path: "/football" },
 ];
 
 const financeLinks = [

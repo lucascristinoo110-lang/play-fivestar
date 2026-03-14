@@ -158,18 +158,21 @@ export function AuthOverlayModal({ open, mode, onClose, onModeChange }: AuthOver
   return (
     <div className="fixed inset-0 z-[85] bg-background/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-4">
       <div className="w-full max-w-md rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b border-border/40">
-          <div className="flex items-center gap-3 min-w-0">
-            {settings?.logo_url ? (
-              <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-8 sm:h-9 w-auto object-contain" />
-            ) : (
-              <span className="text-sm font-bold text-gradient-green">{settings?.site_name || "Cassino"}</span>
-            )}
-            <p className="text-xs text-muted-foreground hidden sm:block">Acesse sem sair do lobby</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground">
+        {/* Gradient header with logo */}
+        <div
+          className="flex items-center justify-center py-6 sm:py-8 px-6 relative"
+          style={{
+            background: "linear-gradient(135deg, hsl(222 47% 8%), hsl(142 50% 15%), hsl(222 47% 6%))",
+          }}
+        >
+          <button onClick={onClose} className="absolute top-3 right-3 p-1.5 rounded-md hover:bg-white/10 text-white/60">
             <X className="h-4 w-4" />
           </button>
+          {settings?.logo_url ? (
+            <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-12 sm:h-16 w-auto object-contain drop-shadow-lg" />
+          ) : (
+            <span className="text-2xl font-bold text-white tracking-tight">{settings?.site_name || "Cassino"}</span>
+          )}
         </div>
 
         <Tabs value={mode} onValueChange={(value) => onModeChange(value as AuthMode)} className="p-4 sm:p-5">

@@ -1,21 +1,23 @@
-import { Tv, Trophy, Gamepad2, Ticket, Wallet } from "lucide-react";
+import { Tv, Trophy, Gamepad2, Ticket, Wallet, LogIn } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import type { AuthMode } from "./AuthOverlayModal";
 
 type BottomNavBarProps = {
   onDeposit: () => void;
+  onOpenAuth?: (mode: AuthMode) => void;
 };
 
 const navItems = [
   { icon: Tv, label: "Ao Vivo", path: "/?category=live" },
   { icon: Trophy, label: "Esportes", path: "/football" },
-  { icon: null, label: "Depositar", path: "" }, // center placeholder
+  { icon: null, label: "", path: "" }, // center placeholder
   { icon: Gamepad2, label: "Cassino", path: "/" },
   { icon: Ticket, label: "Bilhetes", path: "/profile" },
 ];
 
-export function BottomNavBar({ onDeposit }: BottomNavBarProps) {
+export function BottomNavBar({ onDeposit, onOpenAuth }: BottomNavBarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -27,20 +29,37 @@ export function BottomNavBar({ onDeposit }: BottomNavBarProps) {
       <div className="flex items-end justify-around px-1 h-16">
         {navItems.map((item, idx) => {
           if (idx === 2) {
-            // Center deposit button
+            // Center button: Deposit if logged in, Login if guest
+            if (user) {
+              return (
+                <button
+                  key="deposit"
+                  onClick={onDeposit}
+                  className="relative -mt-5 flex flex-col items-center"
+                >
+                  <div className="relative">
+                    <span className="absolute inset-0 rounded-full animate-pulse bg-primary/40 scale-125" />
+                    <div className="relative w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
+                      <Wallet className="h-6 w-6 text-primary-foreground" />
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-semibold text-primary mt-1">Depositar</span>
+                </button>
+              );
+            }
             return (
               <button
-                key="deposit"
-                onClick={onDeposit}
+                key="login"
+                onClick={() => onOpenAuth?.("login")}
                 className="relative -mt-5 flex flex-col items-center"
               >
                 <div className="relative">
                   <span className="absolute inset-0 rounded-full animate-pulse bg-primary/40 scale-125" />
                   <div className="relative w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-                    <Wallet className="h-6 w-6 text-primary-foreground" />
+                    <LogIn className="h-6 w-6 text-primary-foreground" />
                   </div>
                 </div>
-                <span className="text-[10px] font-semibold text-primary mt-1">Depositar</span>
+                <span className="text-[10px] font-semibold text-primary mt-1">Entrar</span>
               </button>
             );
           }
