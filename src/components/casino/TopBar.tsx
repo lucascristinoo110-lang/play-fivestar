@@ -20,8 +20,15 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
   const isMobile = useIsMobile();
   const { settings } = useSiteSettings();
 
+  const showPromo = settings?.promo_message_active && settings?.promo_message;
+
   return (
     <header className="sticky top-0 z-30 border-b border-border/40 bg-background/95 backdrop-blur-xl">
+      {showPromo && (
+        <div className="bg-primary text-primary-foreground text-center text-[11px] sm:text-xs font-medium py-1.5 px-3 truncate">
+          {settings.promo_message}
+        </div>
+      )}
       {/* Main top bar */}
       <div className="h-14 sm:h-16 flex items-center justify-between px-3 sm:px-6 gap-2">
         {isMobile && (

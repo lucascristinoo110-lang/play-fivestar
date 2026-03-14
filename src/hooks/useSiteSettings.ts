@@ -16,6 +16,8 @@ type PublicSiteSettings = {
   max_withdraw: number | null;
   maintenance_mode: boolean | null;
   deposit_banner_url: string | null;
+  promo_message: string | null;
+  promo_message_active: boolean | null;
 };
 
 let cachedSettings: PublicSiteSettings | null = null;
@@ -38,7 +40,7 @@ async function loadPublicSettings(): Promise<PublicSiteSettings | null> {
     try {
       const { data } = await supabase
         .from("site_settings")
-        .select("id,site_name,logo_url,favicon_url,primary_color,secondary_color,accent_color,background_color,min_deposit,max_deposit,min_withdraw,max_withdraw,maintenance_mode,deposit_banner_url")
+        .select("id,site_name,logo_url,favicon_url,primary_color,secondary_color,accent_color,background_color,min_deposit,max_deposit,min_withdraw,max_withdraw,maintenance_mode,deposit_banner_url,promo_message,promo_message_active")
         .limit(1)
         .single();
 

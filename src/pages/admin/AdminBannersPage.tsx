@@ -7,6 +7,61 @@ import { toast } from "@/hooks/use-toast";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Upload, Trash2, Plus, GripVertical, Megaphone, Save } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+function SortableBannerItem({ banner, light, onToggle, onDelete }: {
+  banner: any;
+  light: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: banner.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn("flex items-center gap-4 p-4", light ? "hover:bg-gray-50" : "hover:bg-surface-hover")}
+    >
+      <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
+        <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+      </button>
+      <img src={banner.image_url} alt={banner.title} className="h-14 w-24 object-cover rounded-lg shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className={cn("text-sm font-medium truncate", light ? "text-gray-900" : "text-foreground")}>{banner.title}</p>
+        <p className={cn("text-[10px] truncate", light ? "text-gray-400" : "text-muted-foreground")}>{banner.link_url || "Sem link"}</p>
+      </div>
+      <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2" onClick={onToggle}>
+        {banner.is_active ? "Desativar" : "Ativar"}
+      </Button>
+      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={onDelete}>
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
 
 export default function AdminBannersPage() {
   const { light } = useOutletContext<{ light: boolean }>();
@@ -16,10 +71,14 @@ export default function AdminBannersPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Promo message
   const [promoMsg, setPromoMsg] = useState("");
   const [promoActive, setPromoActive] = useState(false);
   const [settingsId, setSettingsId] = useState("");
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   useEffect(() => {
     loadBanners();
@@ -79,6 +138,24 @@ export default function AdminBannersPage() {
   async function toggleBanner(banner: any) {
     await supabase.from("promo_banners").update({ is_active: !banner.is_active }).eq("id", banner.id);
     loadBanners();
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = banners.findIndex((b) => b.id === active.id);
+    const newIndex = banners.findIndex((b) => b.id === over.id);
+    const reordered = arrayMove(banners, oldIndex, newIndex);
+    setBanners(reordered);
+
+    // Persist new order
+    await Promise.all(
+      reordered.map((b, i) =>
+        supabase.from("promo_banners").update({ sort_order: i }).eq("id", b.id)
+      )
+    );
+    toast({ title: "Ordem atualizada!" });
   }
 
   async function savePromo() {
@@ -141,32 +218,29 @@ export default function AdminBannersPage() {
         </Button>
       </div>
 
-      {/* Banner List */}
+      {/* Banner List with Drag & Drop */}
       <div className={cn("rounded-xl border overflow-hidden", light ? "bg-white border-gray-200 shadow-sm" : "bg-card border-border/40 card-shadow")}>
         <div className={cn("p-4 border-b", light ? "border-gray-200" : "border-border/40")}>
-          <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Banners Ativos ({banners.length})</h2>
+          <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Banners ({banners.length}) — Arraste para reordenar</h2>
         </div>
         {banners.length === 0 ? (
           <p className={cn("p-6 text-center text-sm", light ? "text-gray-400" : "text-muted-foreground")}>Nenhum banner cadastrado.</p>
         ) : (
-          <div className="divide-y divide-border/20">
-            {banners.map(b => (
-              <div key={b.id} className={cn("flex items-center gap-4 p-4", light ? "hover:bg-gray-50" : "hover:bg-surface-hover")}>
-                <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                <img src={b.image_url} alt={b.title} className="h-14 w-24 object-cover rounded-lg shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className={cn("text-sm font-medium truncate", light ? "text-gray-900" : "text-foreground")}>{b.title}</p>
-                  <p className={cn("text-[10px] truncate", light ? "text-gray-400" : "text-muted-foreground")}>{b.link_url || "Sem link"}</p>
-                </div>
-                <Button size="sm" variant="ghost" className="h-7 text-[10px] px-2" onClick={() => toggleBanner(b)}>
-                  {b.is_active ? "Desativar" : "Ativar"}
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => deleteBanner(b.id)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={banners.map(b => b.id)} strategy={verticalListSortingStrategy}>
+              <div className="divide-y divide-border/20">
+                {banners.map(b => (
+                  <SortableBannerItem
+                    key={b.id}
+                    banner={b}
+                    light={light}
+                    onToggle={() => toggleBanner(b)}
+                    onDelete={() => deleteBanner(b.id)}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>
