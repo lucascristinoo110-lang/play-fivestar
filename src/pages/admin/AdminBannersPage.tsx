@@ -118,6 +118,10 @@ export default function AdminBannersPage() {
       {/* Add Banner */}
       <div className={sectionClass}>
         <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Adicionar Banner Rotativo</h2>
+        <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-[11px]", light ? "bg-blue-50 text-blue-700" : "bg-primary/10 text-primary")}>
+          <span>📐</span>
+          <span><strong>Tamanho ideal:</strong> 1280 × 512 px (proporção 2.5:1) — Use imagens nessa dimensão para melhor exibição no carrossel.</span>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="space-y-1">
             <Label className="text-xs">Título</Label>
