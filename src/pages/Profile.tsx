@@ -34,6 +34,9 @@ export default function Profile() {
   const [depositOpen, setDepositOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState<"rg" | "cnh">("rg");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawPixKey, setWithdrawPixKey] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     if (!user) return;
