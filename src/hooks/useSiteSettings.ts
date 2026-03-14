@@ -16,6 +16,8 @@ type PublicSiteSettings = {
   max_withdraw: number | null;
   maintenance_mode: boolean | null;
   deposit_banner_url: string | null;
+  promo_message: string | null;
+  promo_message_active: boolean | null;
 };
 
 let cachedSettings: PublicSiteSettings | null = null;
