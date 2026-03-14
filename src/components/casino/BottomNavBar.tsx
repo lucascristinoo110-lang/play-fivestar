@@ -14,7 +14,7 @@ const navItems = [
   { icon: Trophy, label: "Esportes", path: "/football" },
   { icon: null, label: "", path: "" }, // center placeholder
   { icon: Gamepad2, label: "Cassino", path: "/" },
-  { icon: Ticket, label: "Bilhetes", path: "/profile" },
+  { icon: Ticket, label: "Bilhetes", path: "/tickets" },
 ];
 
 export function BottomNavBar({ onDeposit, onOpenAuth }: BottomNavBarProps) {
