@@ -1,7 +1,7 @@
 import { 
   Home, Gamepad2, Flame, Star, Tv, Dice5, Rocket, 
   Wallet, ArrowDownToLine, ArrowUpFromLine, ChevronLeft, ChevronRight,
-  LogIn, LogOut, Shield
+  LogIn, LogOut, Shield, User
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
@@ -20,9 +20,10 @@ const playerLinks = [
 ];
 
 const financeLinks = [
-  { icon: Wallet, label: "Carteira", path: "/wallet" },
-  { icon: ArrowDownToLine, label: "Depositar", path: "/deposit" },
-  { icon: ArrowUpFromLine, label: "Sacar", path: "/withdraw" },
+  { icon: User, label: "Meu Perfil", path: "/profile" },
+  { icon: Wallet, label: "Carteira", path: "/profile" },
+  { icon: ArrowDownToLine, label: "Depositar", path: "/profile?action=deposit" },
+  { icon: ArrowUpFromLine, label: "Sacar", path: "/profile?tab=kyc" },
 ];
 
 export function CasinoSidebar() {
@@ -86,12 +87,12 @@ export function CasinoSidebar() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
         <SectionLabel>Jogos</SectionLabel>
-        {playerLinks.map(link => <SidebarLink key={link.path} {...link} />)}
+        {playerLinks.map(link => <SidebarLink key={link.path + link.label} {...link} />)}
         
         {user && (
           <>
             <SectionLabel>Financeiro</SectionLabel>
-            {financeLinks.map(link => <SidebarLink key={link.path} {...link} />)}
+            {financeLinks.map(link => <SidebarLink key={link.path + link.label} {...link} />)}
           </>
         )}
 

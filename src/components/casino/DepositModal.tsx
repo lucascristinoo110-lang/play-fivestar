@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,13 +14,13 @@ type Step = "amount" | "qrcode" | "success";
 
 export function DepositModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user } = useAuth();
+  const { settings } = useSiteSettings();
   const [step, setStep] = useState<Step>("amount");
   const [amount, setAmount] = useState<number | "">("");
   const [customAmount, setCustomAmount] = useState("");
   const [transactionId, setTransactionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [pixCode, setPixCode] = useState("");
-  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -50,7 +51,6 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       })
       .subscribe();
 
-    // Also poll every 5s as fallback
     const interval = setInterval(async () => {
       const { data } = await supabase.from("transactions").select("status").eq("id", transactionId).single();
       if (data?.status === "completed") {
@@ -71,7 +71,6 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
 
     setLoading(true);
     try {
-      // Create transaction record
       const { data: tx, error } = await supabase.from("transactions").insert({
         user_id: user.id,
         type: "deposit",
@@ -84,13 +83,11 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
 
       setTransactionId(tx.id);
 
-      // Call BSPAY edge function to generate PIX
       const { data: pixData, error: pixError } = await supabase.functions.invoke("bspay-create-pix", {
         body: { transaction_id: tx.id, amount: Number(finalAmount) },
       });
 
       if (pixError || !pixData?.pix_code) {
-        // Fallback: generate a mock PIX code for demo
         setPixCode(`00020126580014br.gov.bcb.pix0136demo-${tx.id}520400005303986540${Number(finalAmount).toFixed(2)}5802BR`);
       } else {
         setPixCode(pixData.pix_code);
@@ -110,6 +107,8 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
 
   if (!open) return null;
 
+  const bannerUrl = (settings as any)?.deposit_banner_url;
+
   return (
     <AnimatePresence>
       <motion.div
@@ -126,6 +125,13 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
           onClick={e => e.stopPropagation()}
           className="w-full max-w-md rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden"
         >
+          {/* Banner */}
+          {bannerUrl && (
+            <div className="w-full">
+              <img src={bannerUrl} alt="Promoção" className="w-full h-28 object-cover" />
+            </div>
+          )}
+
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/40">
             <h3 className="text-sm font-semibold text-foreground">Depositar via PIX</h3>
@@ -192,11 +198,8 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
               <div className="space-y-4 text-center">
                 <p className="text-xs text-muted-foreground">Escaneie o QR Code ou copie o código abaixo:</p>
 
-                {/* QR Code placeholder */}
                 <div className="mx-auto w-48 h-48 rounded-xl bg-white flex items-center justify-center p-3">
-                  <div className="w-full h-full bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20fill%3D%22%23fff%22%2F%3E%3Cg%20fill%3D%22%23000%22%3E%3Crect%20x%3D%221%22%20y%3D%221%22%20width%3D%229%22%20height%3D%229%22%2F%3E%3Crect%20x%3D%2222%22%20y%3D%221%22%20width%3D%229%22%20height%3D%229%22%2F%3E%3Crect%20x%3D%221%22%20y%3D%2222%22%20width%3D%229%22%20height%3D%229%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%224%22%20width%3D%223%22%20height%3D%223%22%2F%3E%3Crect%20x%3D%2216%22%20y%3D%221%22%20width%3D%222%22%20height%3D%225%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%2212%22%20width%3D%228%22%20height%3D%228%22%2F%3E%3Crect%20x%3D%2222%22%20y%3D%2214%22%20width%3D%225%22%20height%3D%224%22%2F%3E%3Crect%20x%3D%2224%22%20y%3D%2222%22%20width%3D%226%22%20height%3D%226%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E')] bg-contain bg-center bg-no-repeat flex items-center justify-center">
-                    <QrCode className="h-16 w-16 text-muted" />
-                  </div>
+                  <QrCode className="h-20 w-20 text-muted" />
                 </div>
 
                 <p className="text-lg font-bold text-foreground font-mono">
