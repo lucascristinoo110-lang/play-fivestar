@@ -101,11 +101,11 @@ export default function AdminGamesPage() {
         body: { action: "list_games" },
       });
 
-      if (error || !data?.data) {
+      if (error || !data?.games) {
         throw new Error(data?.error || "Erro ao buscar jogos da Playfiver");
       }
 
-      const apiGames = data.data as any[];
+      const apiGames = data.games as any[];
       let imported = 0;
 
       for (const g of apiGames) {
