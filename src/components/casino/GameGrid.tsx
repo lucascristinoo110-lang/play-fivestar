@@ -17,7 +17,6 @@ type Game = {
 
 export function GameGrid({ searchQuery }: { searchQuery: string }) {
   const [category, setCategory] = useState<CategoryFilter>("all");
-  const [provider, setProvider] = useState<ProviderFilter>("all");
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
