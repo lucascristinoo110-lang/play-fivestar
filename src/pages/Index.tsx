@@ -4,6 +4,7 @@ import { TopBar } from "@/components/casino/TopBar";
 import { HeroBanner } from "@/components/casino/HeroBanner";
 import { GameGrid } from "@/components/casino/GameGrid";
 import { RecentWinsCarousel } from "@/components/casino/RecentWinsCarousel";
+import { LiveCasinoSection } from "@/components/casino/LiveCasinoSection";
 import { DepositModal } from "@/components/casino/DepositModal";
 
 const Index = () => {
@@ -19,6 +20,7 @@ const Index = () => {
           <HeroBanner />
           <RecentWinsCarousel />
           <GameGrid searchQuery={searchQuery} />
+          <LiveCasinoSection />
         </main>
       </div>
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />

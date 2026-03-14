@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GameCard } from "./GameCard";
 import { CategoryTabs, type CategoryFilter } from "./CategoryTabs";
-import { ProviderTabs, type ProviderFilter } from "./ProviderTabs";
 
 type Game = {
   id: string;
@@ -18,7 +17,6 @@ type Game = {
 
 export function GameGrid({ searchQuery }: { searchQuery: string }) {
   const [category, setCategory] = useState<CategoryFilter>("all");
-  const [provider, setProvider] = useState<ProviderFilter>("all");
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,17 +37,15 @@ export function GameGrid({ searchQuery }: { searchQuery: string }) {
       if (category === "hot" && !g.is_hot) return false;
       if (category === "new" && !g.is_new) return false;
       if (category !== "all" && category !== "hot" && category !== "new" && g.category !== category) return false;
-      if (provider !== "all" && g.provider !== provider) return false;
       if (searchQuery && !g.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [category, provider, searchQuery, games]);
+  }, [category, searchQuery, games]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <CategoryTabs active={category} onChange={setCategory} />
-        <ProviderTabs active={provider} onChange={setProvider} />
       </div>
 
       {loading ? (

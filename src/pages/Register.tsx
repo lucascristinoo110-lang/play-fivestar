@@ -4,8 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Fingerprint, User, Mail, Phone, Lock, CheckSquare } from "lucide-react";
+import { Eye, EyeOff, Fingerprint, User, Mail, Phone, Lock } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+
+function validateCpf(cpf: string) {
+  const nums = cpf.replace(/\D/g, "");
+  if (nums.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(nums)) return false;
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(nums[i]) * (10 - i);
+  let rest = (sum * 10) % 11;
+  if (rest === 10) rest = 0;
+  if (rest !== parseInt(nums[9])) return false;
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(nums[i]) * (11 - i);
+  rest = (sum * 10) % 11;
+  if (rest === 10) rest = 0;
+  return rest === parseInt(nums[10]);
+}
+
+function validatePhone(phone: string) {
+  const nums = phone.replace(/\D/g, "");
+  return nums.length === 10 || nums.length === 11;
+}
 
 export default function Register() {
   const [cpf, setCpf] = useState("");
@@ -17,6 +38,8 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [cpfError, setCpfError] = useState("");
   const navigate = useNavigate();
   const { settings } = useSiteSettings();
 
@@ -35,10 +58,44 @@ export default function Register() {
     return `(${nums.slice(0, 2)}) ${nums.slice(2, 7)}-${nums.slice(7)}`;
   }
 
+  function handlePhoneChange(value: string) {
+    const formatted = formatPhone(value);
+    setPhone(formatted);
+    const nums = value.replace(/\D/g, "");
+    if (nums.length > 0 && nums.length < 10) {
+      setPhoneError("Número inválido. Use (XX) XXXXX-XXXX");
+    } else if (nums.length > 11) {
+      setPhoneError("Número com dígitos a mais");
+    } else {
+      setPhoneError("");
+    }
+  }
+
+  function handleCpfChange(value: string) {
+    const formatted = formatCpf(value);
+    setCpf(formatted);
+    const nums = value.replace(/\D/g, "");
+    if (nums.length === 11 && !validateCpf(nums)) {
+      setCpfError("CPF inválido");
+    } else if (nums.length > 0 && nums.length < 11) {
+      setCpfError("");
+    } else {
+      setCpfError("");
+    }
+  }
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     if (!acceptTerms) {
       toast({ title: "Aceite os termos", description: "Você precisa aceitar os termos para continuar.", variant: "destructive" });
+      return;
+    }
+    if (!validateCpf(cpf.replace(/\D/g, ""))) {
+      toast({ title: "CPF inválido", description: "Verifique o CPF digitado.", variant: "destructive" });
+      return;
+    }
+    if (!validatePhone(phone)) {
+      toast({ title: "Telefone inválido", description: "Use o formato (XX) XXXXX-XXXX.", variant: "destructive" });
       return;
     }
     if (password !== confirmPassword) {
@@ -81,15 +138,18 @@ export default function Register() {
 
         <form onSubmit={handleRegister} className="space-y-3 rounded-xl bg-card border border-border/40 p-6 card-shadow">
           {/* CPF */}
-          <div className="relative">
-            <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-            <Input
-              value={cpf}
-              onChange={e => setCpf(formatCpf(e.target.value))}
-              placeholder="CPF"
-              required
-              className="pl-10 bg-secondary border-border/40 h-12"
-            />
+          <div>
+            <div className="relative">
+              <Fingerprint className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <Input
+                value={cpf}
+                onChange={e => handleCpfChange(e.target.value)}
+                placeholder="CPF"
+                required
+                className="pl-10 bg-secondary border-border/40 h-12"
+              />
+            </div>
+            {cpfError && <p className="text-[11px] text-destructive mt-1 pl-1">{cpfError}</p>}
           </div>
 
           {/* Nome */}
@@ -118,15 +178,18 @@ export default function Register() {
           </div>
 
           {/* Phone */}
-          <div className="relative">
-            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-            <Input
-              value={phone}
-              onChange={e => setPhone(formatPhone(e.target.value))}
-              placeholder="Número de telefone"
-              required
-              className="pl-10 bg-secondary border-border/40 h-12"
-            />
+          <div>
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+              <Input
+                value={phone}
+                onChange={e => handlePhoneChange(e.target.value)}
+                placeholder="(XX) XXXXX-XXXX"
+                required
+                className={`pl-10 bg-secondary border-border/40 h-12 ${phoneError ? "border-destructive" : ""}`}
+              />
+            </div>
+            {phoneError && <p className="text-[11px] text-destructive mt-1 pl-1">{phoneError}</p>}
           </div>
 
           {/* Password */}
@@ -171,7 +234,7 @@ export default function Register() {
             </span>
           </label>
 
-          <Button type="submit" disabled={loading || !acceptTerms} className="w-full bg-primary text-primary-foreground font-semibold h-12 text-sm">
+          <Button type="submit" disabled={loading || !acceptTerms || !!phoneError || !!cpfError} className="w-full bg-primary text-primary-foreground font-semibold h-12 text-sm">
             {loading ? "Cadastrando..." : "Cadastrar agora"}
           </Button>
 
