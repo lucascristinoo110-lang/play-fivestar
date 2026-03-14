@@ -12,6 +12,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Profile from "./pages/Profile";
 import Football from "./pages/Football";
 import AffiliateDashboard from "./pages/AffiliateDashboard";
+import TicketsPage from "./pages/Tickets";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/football" element={<Football />} />
+            <Route path="/tickets" element={<TicketsPage />} />
             <Route path="/affiliate" element={<AffiliateDashboard />} />
             <Route path="/privacidade" element={<PrivacyPolicy />} />
             <Route path="/termos" element={<TermsConditions />} />
