@@ -14,6 +14,89 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_referrals: {
+        Row: {
+          affiliate_id: string
+          commission_earned: number | null
+          created_at: string | null
+          id: string
+          referred_user_id: string
+        }
+        Insert: {
+          affiliate_id: string
+          commission_earned?: number | null
+          created_at?: string | null
+          id?: string
+          referred_user_id: string
+        }
+        Update: {
+          affiliate_id?: string
+          commission_earned?: number | null
+          created_at?: string | null
+          id?: string
+          referred_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_referrals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliates: {
+        Row: {
+          affiliate_code: string
+          balance: number | null
+          commission_cpa: number | null
+          commission_revshare: number | null
+          commission_type: string
+          created_at: string | null
+          id: string
+          status: string | null
+          total_clicks: number | null
+          total_deposits: number | null
+          total_earnings: number | null
+          total_signups: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          affiliate_code: string
+          balance?: number | null
+          commission_cpa?: number | null
+          commission_revshare?: number | null
+          commission_type?: string
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          total_clicks?: number | null
+          total_deposits?: number | null
+          total_earnings?: number | null
+          total_signups?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          affiliate_code?: string
+          balance?: number | null
+          commission_cpa?: number | null
+          commission_revshare?: number | null
+          commission_type?: string
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          total_clicks?: number | null
+          total_deposits?: number | null
+          total_earnings?: number | null
+          total_signups?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           category: string
@@ -140,6 +223,36 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_banners: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          link_url: string | null
+          sort_order: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          link_url?: string | null
+          sort_order?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          link_url?: string | null
+          sort_order?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           accent_color: string | null
@@ -162,6 +275,8 @@ export type Database = {
           playfiver_api_key: string | null
           playfiver_api_url: string | null
           primary_color: string | null
+          promo_message: string | null
+          promo_message_active: boolean | null
           require_kyc_for_withdraw: boolean | null
           rollover_multiplier: number | null
           secondary_color: string | null
@@ -191,6 +306,8 @@ export type Database = {
           playfiver_api_key?: string | null
           playfiver_api_url?: string | null
           primary_color?: string | null
+          promo_message?: string | null
+          promo_message_active?: boolean | null
           require_kyc_for_withdraw?: boolean | null
           rollover_multiplier?: number | null
           secondary_color?: string | null
@@ -220,6 +337,8 @@ export type Database = {
           playfiver_api_key?: string | null
           playfiver_api_url?: string | null
           primary_color?: string | null
+          promo_message?: string | null
+          promo_message_active?: boolean | null
           require_kyc_for_withdraw?: boolean | null
           rollover_multiplier?: number | null
           secondary_color?: string | null

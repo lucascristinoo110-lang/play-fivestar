@@ -2,7 +2,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import {
   BarChart3, Users, Settings, Shield, ArrowDownToLine,
-  ArrowUpFromLine, FileCheck, Palette, Gamepad2, LogOut, Home, Sun, Moon
+  ArrowUpFromLine, FileCheck, Palette, Gamepad2, LogOut, Home, Sun, Moon,
+  Image, UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -14,6 +15,8 @@ const links = [
   { icon: ArrowUpFromLine, label: "Saques", path: "/rei/withdrawals" },
   { icon: FileCheck, label: "KYC / Documentos", path: "/rei/kyc" },
   { icon: Gamepad2, label: "Jogos / Provedores", path: "/rei/games" },
+  { icon: Image, label: "Banners / Promoções", path: "/rei/banners" },
+  { icon: UserCheck, label: "Afiliados", path: "/rei/affiliates" },
   { icon: Palette, label: "Aparência", path: "/rei/appearance" },
   { icon: Shield, label: "Gateway BSPAY", path: "/rei/bspay" },
   { icon: Settings, label: "Configurações", path: "/rei/settings" },
