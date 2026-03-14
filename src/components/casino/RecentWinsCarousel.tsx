@@ -13,18 +13,17 @@ const recentWins = [
   { player: "T***o", game: "Dog House", amount: 1120.00, img: "🐕" },
 ];
 
-// Duplicate for seamless loop
 const items = [...recentWins, ...recentWins];
 
 export function RecentWinsCarousel() {
   return (
-    <div className="relative overflow-hidden rounded-xl bg-card border border-border/40 card-shadow py-3">
-      <div className="flex items-center gap-2 px-4 mb-2">
-        <span className="text-xs font-semibold text-primary uppercase tracking-wider">🏆 Últimos Ganhos</span>
+    <div className="relative overflow-hidden rounded-xl bg-card border border-border/40 card-shadow py-2 sm:py-3">
+      <div className="flex items-center gap-2 px-3 sm:px-4 mb-1.5 sm:mb-2">
+        <span className="text-[10px] sm:text-xs font-semibold text-primary uppercase tracking-wider">🏆 Últimos Ganhos</span>
       </div>
       <div className="overflow-hidden">
         <motion.div
-          className="flex gap-3 px-4"
+          className="flex gap-2 sm:gap-3 px-3 sm:px-4"
           animate={{ x: [0, -50 * recentWins.length * 4] }}
           transition={{
             x: { repeat: Infinity, repeatType: "loop", duration: 30, ease: "linear" },
@@ -33,13 +32,13 @@ export function RecentWinsCarousel() {
           {items.map((win, i) => (
             <div
               key={i}
-              className="flex-shrink-0 flex items-center gap-2 bg-secondary/60 rounded-lg px-3 py-2 border border-border/20"
+              className="flex-shrink-0 flex items-center gap-1.5 sm:gap-2 bg-secondary/60 rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 border border-border/20"
             >
-              <span className="text-lg">{win.img}</span>
+              <span className="text-base sm:text-lg">{win.img}</span>
               <div className="whitespace-nowrap">
-                <p className="text-[10px] text-muted-foreground">{win.player} ganhou</p>
-                <p className="text-xs font-bold text-primary font-mono">R$ {win.amount.toFixed(2)}</p>
-                <p className="text-[9px] text-muted-foreground">{win.game}</p>
+                <p className="text-[8px] sm:text-[10px] text-muted-foreground">{win.player} ganhou</p>
+                <p className="text-[10px] sm:text-xs font-bold text-primary font-mono">R$ {win.amount.toFixed(2)}</p>
+                <p className="text-[8px] sm:text-[9px] text-muted-foreground">{win.game}</p>
               </div>
             </div>
           ))}

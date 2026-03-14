@@ -115,24 +115,22 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-end sm:items-center justify-center"
         onClick={onClose}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
+          initial={{ y: 100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 100, opacity: 0 }}
           onClick={e => e.stopPropagation()}
-          className="w-full max-w-md rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden"
+          className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden max-h-[90vh] overflow-y-auto"
         >
-          {/* Banner */}
           {bannerUrl && (
             <div className="w-full">
-              <img src={bannerUrl} alt="Promoção" className="w-full h-28 object-cover" />
+              <img src={bannerUrl} alt="Promoção" className="w-full h-24 sm:h-28 object-cover" />
             </div>
           )}
 
-          {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-border/40">
             <h3 className="text-sm font-semibold text-foreground">Depositar via PIX</h3>
             <button onClick={onClose} className="p-1 rounded-md hover:bg-secondary text-muted-foreground">
@@ -140,7 +138,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
             </button>
           </div>
 
-          <div className="p-5">
+          <div className="p-4 sm:p-5">
             {step === "amount" && (
               <div className="space-y-4">
                 <p className="text-xs text-muted-foreground">Escolha o valor do depósito:</p>
@@ -173,7 +171,6 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   />
                 </div>
 
-                {/* Pulsing deposit button */}
                 <button
                   onClick={handleGenerateQR}
                   disabled={loading || (!amount && !customAmount)}
@@ -198,8 +195,8 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
               <div className="space-y-4 text-center">
                 <p className="text-xs text-muted-foreground">Escaneie o QR Code ou copie o código abaixo:</p>
 
-                <div className="mx-auto w-48 h-48 rounded-xl bg-white flex items-center justify-center p-3">
-                  <QrCode className="h-20 w-20 text-muted" />
+                <div className="mx-auto w-40 h-40 sm:w-48 sm:h-48 rounded-xl bg-white flex items-center justify-center p-3">
+                  <QrCode className="h-16 w-16 sm:h-20 sm:w-20 text-muted" />
                 </div>
 
                 <p className="text-lg font-bold text-foreground font-mono">
