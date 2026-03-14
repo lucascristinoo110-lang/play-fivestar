@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Save, Gamepad2, Plus, Trash2, Edit2, X } from "lucide-react";
+import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2 } from "lucide-react";
 
 type GameRow = {
   id: string;
