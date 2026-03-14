@@ -60,6 +60,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) {
+      if (profileChannelRef.current) {
+        supabase.removeChannel(profileChannelRef.current);
+        profileChannelRef.current = null;
+      }
+      return;
+    }
+
+    if (profileChannelRef.current) {
+      supabase.removeChannel(profileChannelRef.current);
+      profileChannelRef.current = null;
+    }
+
+    const channel = supabase
+      .channel(`profile-${user.id}`)
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "profiles",
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        setProfile((prev: any) => ({ ...(prev || {}), ...(payload.new as any) }));
+      })
+      .subscribe();
+
+    profileChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (profileChannelRef.current === channel) {
+        profileChannelRef.current = null;
+      }
+    };
+  }, [user?.id]);
+
   async function fetchProfile(userId: string) {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
     setProfile(data);
