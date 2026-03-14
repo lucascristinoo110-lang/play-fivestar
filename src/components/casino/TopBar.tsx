@@ -36,7 +36,7 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
             {settings?.logo_url ? (
               <img src={settings.logo_url} alt={settings?.site_name || "Logo"} className="h-8 w-auto object-contain" />
             ) : (
-              <span className="text-lg font-bold text-gradient-green tracking-tight">{settings?.site_name || "NEXUS"}</span>
+              <span className="text-lg font-bold text-gradient-green tracking-tight">{settings?.site_name || ""}</span>
             )}
           </Link>
         )}

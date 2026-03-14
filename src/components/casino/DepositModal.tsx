@@ -5,10 +5,10 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, QrCode, Copy, CheckCircle, Loader2 } from "lucide-react";
+import { X, QrCode, Copy, CheckCircle, Loader2, Zap, Shield, Clock, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const presets = [50, 100, 200];
+const presets = [30, 50, 100, 200, 500];
 
 type Step = "amount" | "qrcode" | "success";
 
@@ -45,12 +45,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       .channel(`deposit-${transactionId}`)
       .on(
         "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "transactions",
-          filter: `id=eq.${transactionId}`,
-        },
+        { event: "UPDATE", schema: "public", table: "transactions", filter: `id=eq.${transactionId}` },
         (payload) => {
           if (payload.new.status === "completed") {
             setStep("success");
@@ -82,18 +77,11 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
     try {
       const { data: tx, error } = await supabase
         .from("transactions")
-        .insert({
-          user_id: user.id,
-          type: "deposit",
-          amount: Number(finalAmount),
-          payment_method: "pix",
-          status: "pending",
-        })
+        .insert({ user_id: user.id, type: "deposit", amount: Number(finalAmount), payment_method: "pix", status: "pending" })
         .select()
         .single();
 
       if (error || !tx) throw error || new Error("Não foi possível criar a transação.");
-
       setTransactionId(tx.id);
 
       const { data: pixData, error: pixError } = await supabase.functions.invoke("bspay-create-pix", {
@@ -145,33 +133,61 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
             </div>
           )}
 
-          <div className="flex items-center justify-between p-4 border-b border-border/40">
-            <h3 className="text-sm font-semibold text-foreground">Depositar via PIX</h3>
-            <button onClick={onClose} className="p-1 rounded-md hover:bg-secondary text-muted-foreground">
-              <X className="h-4 w-4" />
-            </button>
+          {/* Header with gradient accent */}
+          <div className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent" />
+            <div className="relative flex items-center justify-between p-4 border-b border-border/40">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Depositar via PIX</h3>
+                  <p className="text-[10px] text-primary font-medium">Crédito instantâneo • 24h</p>
+                </div>
+              </div>
+              <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           <div className="p-4 sm:p-5">
             {step === "amount" && (
               <div className="space-y-4">
-                <p className="text-xs text-muted-foreground">Escolha o valor do depósito:</p>
-
+                {/* Trust badges */}
                 <div className="grid grid-cols-3 gap-2">
-                  {presets.map((v) => (
-                    <button
-                      key={v}
-                      onClick={() => {
-                        setAmount(v);
-                        setCustomAmount("");
-                      }}
-                      className={`py-3 rounded-xl text-sm font-bold transition-all border ${
-                        amount === v ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40 hover:border-primary/50"
-                      }`}
-                    >
-                      R$ {v}
-                    </button>
-                  ))}
+                  <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-secondary/50 border border-border/20">
+                    <Clock className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground font-medium text-center leading-tight">Crédito em segundos</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-secondary/50 border border-border/20">
+                    <Shield className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground font-medium text-center leading-tight">100% seguro</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-secondary/50 border border-border/20">
+                    <TrendingUp className="h-3.5 w-3.5 text-primary" />
+                    <span className="text-[9px] text-muted-foreground font-medium text-center leading-tight">Bônus ativo</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-foreground mb-2">Escolha o valor:</p>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {presets.map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => { setAmount(v); setCustomAmount(""); }}
+                        className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                          amount === v
+                            ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
+                            : "bg-secondary text-foreground border-border/40 hover:border-primary/50 hover:bg-secondary/80"
+                        }`}
+                      >
+                        R${v}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="relative">
@@ -179,33 +195,37 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   <Input
                     type="number"
                     value={customAmount}
-                    onChange={(e) => {
-                      setCustomAmount(e.target.value);
-                      setAmount("");
-                    }}
+                    onChange={(e) => { setCustomAmount(e.target.value); setAmount(""); }}
                     placeholder="Outro valor"
                     className="pl-10 bg-secondary border-border/40 h-12 text-sm"
                     min={1}
                   />
                 </div>
 
+                {/* Urgency message */}
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 text-center">
+                  <p className="text-[11px] text-primary font-semibold">🔥 Jogadores online agora estão ganhando — deposite e comece a jogar!</p>
+                </div>
+
                 <button
                   onClick={handleGenerateQR}
                   disabled={loading || (!amount && !customAmount)}
-                  className="relative w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110"
+                  className="relative w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110 shadow-lg shadow-primary/30"
                 >
                   {loading ? (
                     <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                   ) : (
                     <>
-                      <span className="absolute inset-0 rounded-xl animate-ping bg-primary/30" />
+                      <span className="absolute inset-0 rounded-xl animate-ping bg-primary/20" />
                       <span className="relative flex items-center justify-center gap-2">
                         <QrCode className="h-5 w-5" />
-                        Gerar QR Code PIX
+                        Depositar Agora
                       </span>
                     </>
                   )}
                 </button>
+
+                <p className="text-[10px] text-muted-foreground text-center">Depósito mínimo R$ {settings?.min_deposit ?? 10} • Confirmação automática</p>
               </div>
             )}
 
@@ -243,9 +263,9 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   <CheckCircle className="h-8 w-8 text-primary" />
                 </div>
                 <h3 className="text-lg font-bold text-foreground">Depósito Confirmado!</h3>
-                <p className="text-sm text-muted-foreground">Seu saldo foi atualizado. Boas apostas!</p>
+                <p className="text-sm text-muted-foreground">Seu saldo foi atualizado. Boa sorte! 🍀</p>
                 <Button onClick={onClose} className="bg-primary text-primary-foreground font-semibold">
-                  Fechar
+                  Jogar Agora
                 </Button>
               </div>
             )}
