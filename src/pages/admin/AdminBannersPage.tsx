@@ -85,7 +85,7 @@ export default function AdminBannersPage() {
   useEffect(() => {
     loadBanners();
     loadSettings();
-  }, []);
+  }, [activePlacement]);
 
   async function loadBanners() {
     const { data } = await supabase.from("promo_banners").select("*").eq("placement", activePlacement).order("sort_order");
