@@ -193,7 +193,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
     setLaunching(true);
     try {
-      const { data, error } = await supabase.functions.invoke("playfiver-api", {
+      const response = await supabase.functions.invoke("playfiver-api", {
         body: {
           action: "launch_game",
           user_id: user.id,
@@ -202,8 +202,19 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         },
       });
 
-      if (error || !data?.launch_url) {
-        throw new Error(data?.error || "Erro ao abrir o jogo");
+      const data = response.data;
+      const fnError = response.error;
+
+      if (fnError) {
+        // Edge function non-2xx responses: try to parse error from body
+        const errBody = typeof fnError === "object" && fnError !== null
+          ? (fnError as any)?.context?.body || (fnError as any)?.message
+          : String(fnError);
+        throw new Error(typeof errBody === "string" ? errBody : "Erro ao abrir o jogo");
+      }
+
+      if (!data?.launch_url) {
+        throw new Error(data?.error || data?.provider_message || "Erro ao abrir o jogo");
       }
 
       setLaunchName(data.name || game.name);
