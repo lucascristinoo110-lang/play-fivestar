@@ -38,6 +38,14 @@ export function HeroBanner() {
     return () => clearInterval(interval);
   }, [next, banners.length]);
 
+  if (!loaded) {
+    return (
+      <div className="relative rounded-xl overflow-hidden card-shadow">
+        <div className="w-full aspect-[5/2] bg-card shimmer" />
+      </div>
+    );
+  }
+
   if (banners.length === 0) return null;
 
   const b = banners[current];
