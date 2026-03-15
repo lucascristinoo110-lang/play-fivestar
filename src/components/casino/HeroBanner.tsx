@@ -15,6 +15,7 @@ type PromoBanner = {
 export function HeroBanner() {
   const [banners, setBanners] = useState<PromoBanner[]>([]);
   const [current, setCurrent] = useState(0);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     supabase
@@ -25,9 +26,9 @@ export function HeroBanner() {
       .order("sort_order")
       .then(({ data }) => {
         if (data && data.length > 0) setBanners(data);
+        setLoaded(true);
       });
   }, []);
-
   const next = useCallback(() => setCurrent(i => (i + 1) % (banners.length || 1)), [banners.length]);
   const prev = useCallback(() => setCurrent(i => (i - 1 + (banners.length || 1)) % (banners.length || 1)), [banners.length]);
 

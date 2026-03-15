@@ -206,11 +206,25 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       const fnError = response.error;
 
       if (fnError) {
-        // Edge function non-2xx responses: try to parse error from body
-        const errBody = typeof fnError === "object" && fnError !== null
-          ? (fnError as any)?.context?.body || (fnError as any)?.message
-          : String(fnError);
-        throw new Error(typeof errBody === "string" ? errBody : "Erro ao abrir o jogo");
+        // Try to extract JSON error from the FunctionsHttpError context
+        let errorMessage = "Erro ao abrir o jogo";
+        try {
+          const ctx = (fnError as any)?.context;
+          if (ctx && typeof ctx.json === "function") {
+            const body = await ctx.json();
+            errorMessage = body?.error || body?.provider_message || errorMessage;
+          } else if (typeof (fnError as any)?.message === "string") {
+            // Try to parse JSON from the message
+            const msgMatch = (fnError as any).message;
+            try {
+              const parsed = JSON.parse(msgMatch);
+              errorMessage = parsed?.error || parsed?.provider_message || errorMessage;
+            } catch {
+              errorMessage = msgMatch || errorMessage;
+            }
+          }
+        } catch { /* fallback */ }
+        throw new Error(errorMessage);
       }
 
       if (!data?.launch_url) {
