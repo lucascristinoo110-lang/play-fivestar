@@ -88,7 +88,7 @@ export default function AdminBannersPage() {
   }, []);
 
   async function loadBanners() {
-    const { data } = await supabase.from("promo_banners").select("*").order("sort_order");
+    const { data } = await supabase.from("promo_banners").select("*").eq("placement", activePlacement).order("sort_order");
     setBanners(data || []);
   }
 
