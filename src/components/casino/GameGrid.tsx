@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { GameCard } from "./GameCard";
-import { GameLauncher } from "./GameLauncher";
+import { GamePage } from "./GamePage";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -89,6 +89,8 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
   const [launchUrl, setLaunchUrl] = useState<string | null>(null);
   const [launchName, setLaunchName] = useState("");
+  const [launchProvider, setLaunchProvider] = useState("");
+  const [launchImage, setLaunchImage] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
   const trimmedSearch = useMemo(() => searchQuery.trim(), [searchQuery]);
@@ -100,11 +102,12 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       setMode("featured");
       setLoading(true);
 
+      const imageFilter = (q: any) => q.not("image_url", "is", null).neq("image_url", "");
       const [hot, slots, live, crash] = await Promise.all([
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true).order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots").order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "live").order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash").order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true)).order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots")).order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "live")).order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash")).order("sort_order").limit(12),
       ]);
 
       if (cancelled) return;
@@ -124,7 +127,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       setMode("filter");
       setLoading(true);
 
-      let query = supabase.from("games").select(GAME_FIELDS).eq("is_active", true);
+      let query = supabase.from("games").select(GAME_FIELDS).eq("is_active", true).not("image_url", "is", null).neq("image_url", "");
       if (filter === "hot") query = query.eq("is_hot", true);
       else if (filter === "new") query = query.eq("is_new", true);
       else if (filter) query = query.eq("category", filter);
@@ -144,6 +147,8 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         .from("games")
         .select(GAME_FIELDS)
         .eq("is_active", true)
+        .not("image_url", "is", null)
+        .neq("image_url", "")
         .ilike("name", `%${queryText}%`)
         .order("is_hot", { ascending: false })
         .order("sort_order")
@@ -188,7 +193,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
     setLaunching(true);
     try {
-      const { data, error } = await supabase.functions.invoke("playfiver-api", {
+      const response = await supabase.functions.invoke("playfiver-api", {
         body: {
           action: "launch_game",
           user_id: user.id,
@@ -197,11 +202,24 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         },
       });
 
-      if (error || !data?.launch_url) {
-        throw new Error(data?.error || "Erro ao abrir o jogo");
+      const data = response.data;
+      const fnError = response.error;
+
+      if (fnError) {
+        // Edge function non-2xx responses: try to parse error from body
+        const errBody = typeof fnError === "object" && fnError !== null
+          ? (fnError as any)?.context?.body || (fnError as any)?.message
+          : String(fnError);
+        throw new Error(typeof errBody === "string" ? errBody : "Erro ao abrir o jogo");
+      }
+
+      if (!data?.launch_url) {
+        throw new Error(data?.error || data?.provider_message || "Erro ao abrir o jogo");
       }
 
       setLaunchName(data.name || game.name);
+      setLaunchProvider(game.provider);
+      setLaunchImage(game.image_url);
       setLaunchUrl(data.launch_url);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -275,7 +293,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         )}
       </div>
 
-      {launchUrl && <GameLauncher url={launchUrl} gameName={launchName} onClose={() => setLaunchUrl(null)} />}
+      {launchUrl && <GamePage url={launchUrl} gameName={launchName} provider={launchProvider} imageUrl={launchImage} onClose={() => setLaunchUrl(null)} />}
 
       {launching && (
         <div className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-center justify-center">
