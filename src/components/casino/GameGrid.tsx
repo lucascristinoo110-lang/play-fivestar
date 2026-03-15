@@ -147,6 +147,8 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         .from("games")
         .select(GAME_FIELDS)
         .eq("is_active", true)
+        .not("image_url", "is", null)
+        .neq("image_url", "")
         .ilike("name", `%${queryText}%`)
         .order("is_hot", { ascending: false })
         .order("sort_order")
