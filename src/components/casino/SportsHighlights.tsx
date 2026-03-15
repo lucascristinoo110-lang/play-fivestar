@@ -50,10 +50,11 @@ export function SportsHighlights() {
     let cancelled = false;
     async function load() {
       try {
-        const res = await Promise.allSettled([
-          fetch("https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4351"),
-          fetch("https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4480"),
-        ]);
+        // Fetch from multiple Brazilian leagues + Libertadores
+        const leagueIds = ["4351", "4404", "4405", "4480"]; // Série A, Série B, Copa do Brasil, Libertadores
+        const res = await Promise.allSettled(
+          leagueIds.map(id => fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${id}`))
+        );
         const events = (await Promise.all(res.map(async r => {
           if (r.status !== "fulfilled" || !r.value.ok) return [];
           const d = await r.value.json().catch(() => null);
