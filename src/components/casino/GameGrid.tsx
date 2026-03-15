@@ -89,6 +89,8 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
   const [launchUrl, setLaunchUrl] = useState<string | null>(null);
   const [launchName, setLaunchName] = useState("");
+  const [launchProvider, setLaunchProvider] = useState("");
+  const [launchImage, setLaunchImage] = useState<string | null>(null);
   const [launching, setLaunching] = useState(false);
 
   const trimmedSearch = useMemo(() => searchQuery.trim(), [searchQuery]);
