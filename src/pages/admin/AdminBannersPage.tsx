@@ -195,6 +195,27 @@ export default function AdminBannersPage() {
         </div>
       </div>
 
+      {/* Placement Tabs */}
+      <div className="flex gap-2">
+        {[
+          { key: "home", label: "🏠 Home (Cassino)" },
+          { key: "sports", label: "⚽ Esportes (Carrossel)" },
+          { key: "sports_side", label: "📐 Esportes (Lateral)" },
+        ].map(p => (
+          <button
+            key={p.key}
+            onClick={() => setActivePlacement(p.key)}
+            className={cn("px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+              activePlacement === p.key
+                ? light ? "bg-blue-600 text-white" : "bg-primary text-primary-foreground"
+                : light ? "bg-gray-100 text-gray-500" : "bg-secondary text-muted-foreground"
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* Add Banner */}
       <div className={sectionClass}>
         <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Adicionar Banner Rotativo</h2>
