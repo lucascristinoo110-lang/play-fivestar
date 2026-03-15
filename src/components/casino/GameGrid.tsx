@@ -282,7 +282,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         )}
       </div>
 
-      {launchUrl && <GameLauncher url={launchUrl} gameName={launchName} onClose={() => setLaunchUrl(null)} />}
+      {launchUrl && <GamePage url={launchUrl} gameName={launchName} provider={launchProvider} imageUrl={launchImage} onClose={() => setLaunchUrl(null)} />}
 
       {launching && (
         <div className="fixed inset-0 z-[80] bg-background/80 backdrop-blur-sm flex items-center justify-center">
