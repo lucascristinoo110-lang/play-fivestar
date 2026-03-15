@@ -207,6 +207,8 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       }
 
       setLaunchName(data.name || game.name);
+      setLaunchProvider(game.provider);
+      setLaunchImage(game.image_url);
       setLaunchUrl(data.launch_url);
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
