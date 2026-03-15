@@ -127,7 +127,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       setMode("filter");
       setLoading(true);
 
-      let query = supabase.from("games").select(GAME_FIELDS).eq("is_active", true);
+      let query = supabase.from("games").select(GAME_FIELDS).eq("is_active", true).not("image_url", "is", null).neq("image_url", "");
       if (filter === "hot") query = query.eq("is_hot", true);
       else if (filter === "new") query = query.eq("is_new", true);
       else if (filter) query = query.eq("category", filter);
