@@ -38,10 +38,14 @@ const LEAGUES: League[] = [
   { id: "brasileirao-b", name: "Brasileirão Série B", country: "🇧🇷", apiId: "4404" },
   { id: "copa-brasil", name: "Copa do Brasil", country: "🇧🇷", apiId: "4405" },
   { id: "libertadores", name: "Copa Libertadores", country: "🌎", apiId: "4480" },
+  { id: "sulamericana", name: "Copa Sul-Americana", country: "🌎", apiId: "4481" },
   { id: "premier", name: "Premier League", country: "🏴", apiId: "4328" },
   { id: "laliga", name: "La Liga", country: "🇪🇸", apiId: "4335" },
   { id: "seriea", name: "Serie A (Itália)", country: "🇮🇹", apiId: "4332" },
+  { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", apiId: "4331" },
+  { id: "ligue1", name: "Ligue 1", country: "🇫🇷", apiId: "4334" },
   { id: "champions", name: "Champions League", country: "🇪🇺", apiId: "4480" },
+  { id: "europa", name: "Europa League", country: "🇪🇺", apiId: "4481" },
 ];
 
 function deterministicOdds(home: string, away: string) {
@@ -125,23 +129,30 @@ export default function Football() {
         ...(Array.isArray(pastData?.events) ? pastData.events : []),
       ];
 
-      const mapped: Match[] = allEvents
-        .filter((e: any) => e?.strHomeTeam && e?.strAwayTeam)
-        .map((e: any) => ({
-          id: String(e.idEvent),
-          league: e.strLeague || league.name,
-          home: e.strHomeTeam,
-          away: e.strAwayTeam,
-          homeBadge: e.strHomeTeamBadge || "",
-          awayBadge: e.strAwayTeamBadge || "",
-          kickoff: e.strTimestamp || e.dateEvent,
-          homeScore: e.intHomeScore != null ? Number(e.intHomeScore) : undefined,
-          awayScore: e.intAwayScore != null ? Number(e.intAwayScore) : undefined,
-          status: e.intHomeScore != null ? "finished" : "upcoming",
-          venue: e.strVenue || "",
-          city: e.strCity || "",
-          odds: deterministicOdds(e.strHomeTeam, e.strAwayTeam),
-        }));
+      // Deduplicate by event ID
+      const seen = new Set<string>();
+      const unique = allEvents.filter((e: any) => {
+        const id = String(e?.idEvent || "");
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return e?.strHomeTeam && e?.strAwayTeam;
+      });
+
+      const mapped: Match[] = unique.map((e: any) => ({
+        id: String(e.idEvent),
+        league: e.strLeague || league.name,
+        home: e.strHomeTeam,
+        away: e.strAwayTeam,
+        homeBadge: e.strHomeTeamBadge || "",
+        awayBadge: e.strAwayTeamBadge || "",
+        kickoff: e.strTimestamp || e.dateEvent,
+        homeScore: e.intHomeScore != null ? Number(e.intHomeScore) : undefined,
+        awayScore: e.intAwayScore != null ? Number(e.intAwayScore) : undefined,
+        status: e.intHomeScore != null ? "finished" : "upcoming",
+        venue: e.strVenue || "",
+        city: e.strCity || "",
+        odds: deterministicOdds(e.strHomeTeam, e.strAwayTeam),
+      }));
 
       // Sort: upcoming first by date asc, then finished by date desc
       mapped.sort((a, b) => {
@@ -157,6 +168,12 @@ export default function Football() {
     }
     setLoading(false);
   }
+
+  // Auto-refresh matches every 60 seconds
+  useEffect(() => {
+    const iv = setInterval(() => loadMatches(activeLeague), 60000);
+    return () => clearInterval(iv);
+  }, [activeLeague]);
 
   const upcomingMatches = matches.filter(m => m.status === "upcoming");
   const finishedMatches = matches.filter(m => m.status === "finished");
