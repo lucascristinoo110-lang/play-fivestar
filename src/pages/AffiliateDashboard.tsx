@@ -1,12 +1,72 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Navigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Users, DollarSign, TrendingUp, Copy, ArrowDownToLine, BarChart3, Home, LogOut } from "lucide-react";
+import { Users, DollarSign, TrendingUp, Copy, ArrowDownToLine, BarChart3, Home, LogOut, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+
+function AffiliateLogin({ onLogin }: { onLogin: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      onLogin();
+    } catch (err: any) {
+      toast({ title: "Erro no login", description: err.message || "Credenciais inválidas.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold text-foreground">Painel do Afiliado</h1>
+          <p className="text-sm text-muted-foreground">Faça login com sua conta de jogador</p>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl bg-card border border-border/40 p-6 card-shadow">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">E-mail</label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="seu@email.com" className="pl-10" required />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted-foreground">Senha</label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input value={password} onChange={e => setPassword(e.target.value)} type={showPass ? "text" : "password"} placeholder="••••••••" className="pl-10 pr-10" required />
+              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
+          </Button>
+        </form>
+        <p className="text-center text-xs text-muted-foreground">
+          Use o mesmo login da sua conta de jogador.{" "}
+          <Link to="/" className="text-primary underline">Voltar ao cassino</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function AffiliateDashboard() {
   const { user, loading, signOut } = useAuth();
@@ -14,6 +74,7 @@ export default function AffiliateDashboard() {
   const [referrals, setReferrals] = useState<any[]>([]);
   const [notAffiliate, setNotAffiliate] = useState(false);
   const [chartData, setChartData] = useState<any[]>([]);
+  const [forceReload, setForceReload] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -26,7 +87,7 @@ export default function AffiliateDashboard() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, forceReload]);
 
   async function loadData() {
     if (!user) return;
@@ -40,7 +101,6 @@ export default function AffiliateDashboard() {
 
     const { data: refs } = await supabase.from("affiliate_referrals").select("*").eq("affiliate_id", aff.id).order("created_at", { ascending: false });
     if (refs) {
-      // Get profile names
       const userIds = refs.map(r => r.referred_user_id);
       if (userIds.length > 0) {
         const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, email, created_at").in("user_id", userIds);
@@ -51,7 +111,6 @@ export default function AffiliateDashboard() {
       }
     }
 
-    // Chart: last 7 days signups
     const days: any[] = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -77,7 +136,7 @@ export default function AffiliateDashboard() {
   }
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Carregando...</div>;
-  if (!user) return <Navigate to="/" replace />;
+  if (!user) return <AffiliateLogin onLogin={() => setForceReload(p => p + 1)} />;
   if (notAffiliate) return (
     <div className="min-h-screen bg-background flex items-center justify-center text-center p-4">
       <div className="space-y-4">
