@@ -13,6 +13,7 @@ const links = [
   { icon: Users, label: "Usuários", path: "/rei/users" },
   { icon: ArrowDownToLine, label: "Depósitos", path: "/rei/deposits" },
   { icon: ArrowUpFromLine, label: "Saques", path: "/rei/withdrawals" },
+  { icon: Ticket, label: "Bilhetes", path: "/rei/bets" },
   { icon: FileCheck, label: "KYC / Documentos", path: "/rei/kyc" },
   { icon: Gamepad2, label: "Jogos / Provedores", path: "/rei/games" },
   { icon: Image, label: "Banners", path: "/rei/banners" },

@@ -23,6 +23,7 @@ const playerLinks = [
 
 const financeLinks = [
   { icon: User, label: "Meu Perfil", path: "/profile" },
+  { icon: Ticket, label: "Meus Bilhetes", path: "/tickets" },
   { icon: Wallet, label: "Carteira", path: "/profile" },
   { icon: ArrowDownToLine, label: "Depositar", path: "/profile?action=deposit" },
   { icon: ArrowUpFromLine, label: "Sacar", path: "/profile?tab=kyc" },

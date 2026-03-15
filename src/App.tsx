@@ -65,6 +65,7 @@ const App = () => (
               <Route path="kyc" element={<AdminKycPage />} />
               <Route path="games" element={<AdminGamesPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
+              <Route path="bets" element={<AdminBetsPage />} />
               <Route path="affiliates" element={<AdminAffiliatesPage />} />
               <Route path="appearance" element={<AdminAppearancePage />} />
               <Route path="bspay" element={<AdminBspayPage />} />
