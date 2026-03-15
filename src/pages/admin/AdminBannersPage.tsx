@@ -218,7 +218,7 @@ export default function AdminBannersPage() {
 
       {/* Add Banner */}
       <div className={sectionClass}>
-        <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Adicionar Banner Rotativo</h2>
+        <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Adicionar Banner — {activePlacement === "home" ? "Home" : activePlacement === "sports" ? "Esportes Carrossel" : "Esportes Lateral"}</h2>
         <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-[11px]", light ? "bg-blue-50 text-blue-700" : "bg-primary/10 text-primary")}>
           <span>📐</span>
           <span><strong>Tamanho ideal:</strong> 1280 × 400 px (proporção 16:5) — Use imagens nessa dimensão para melhor exibição no carrossel.</span>
