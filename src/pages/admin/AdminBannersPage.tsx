@@ -70,6 +70,8 @@ export default function AdminBannersPage() {
   const [linkUrl, setLinkUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [placement, setPlacement] = useState("home");
+  const [activePlacement, setActivePlacement] = useState("home");
 
   const [promoMsg, setPromoMsg] = useState("");
   const [promoActive, setPromoActive] = useState(false);
