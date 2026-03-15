@@ -121,6 +121,7 @@ export default function AdminBannersPage() {
       image_url: publicUrl,
       link_url: linkUrl || null,
       sort_order: banners.length,
+      placement,
     });
 
     toast({ title: "Banner adicionado!" });
