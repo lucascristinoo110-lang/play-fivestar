@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Upload, Trash2, Plus, GripVertical, Megaphone, Save } from "lucide-react";
+import { Upload, Trash2, Plus, GripVertical, Megaphone, Save, Image } from "lucide-react";
 import {
   DndContext,
   closestCenter,
