@@ -102,11 +102,12 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       setMode("featured");
       setLoading(true);
 
+      const imageFilter = (q: any) => q.not("image_url", "is", null).neq("image_url", "");
       const [hot, slots, live, crash] = await Promise.all([
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true).order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots").order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "live").order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash").order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true)).order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots")).order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "live")).order("sort_order").limit(12),
+        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash")).order("sort_order").limit(12),
       ]);
 
       if (cancelled) return;
