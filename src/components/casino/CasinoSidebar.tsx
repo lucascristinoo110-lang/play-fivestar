@@ -1,7 +1,7 @@
 import {
   Home, Gamepad2, Flame, Star, Tv, Dice5, Rocket,
   Wallet, ArrowDownToLine, ArrowUpFromLine, ChevronLeft, ChevronRight,
-  LogIn, LogOut, User, X, Trophy
+  LogIn, LogOut, User, X, Trophy, Ticket
 } from "lucide-react";
 import { useState } from "react";
 import { useLocation, Link } from "react-router-dom";
@@ -23,6 +23,7 @@ const playerLinks = [
 
 const financeLinks = [
   { icon: User, label: "Meu Perfil", path: "/profile" },
+  { icon: Ticket, label: "Meus Bilhetes", path: "/tickets" },
   { icon: Wallet, label: "Carteira", path: "/profile" },
   { icon: ArrowDownToLine, label: "Depositar", path: "/profile?action=deposit" },
   { icon: ArrowUpFromLine, label: "Sacar", path: "/profile?tab=kyc" },

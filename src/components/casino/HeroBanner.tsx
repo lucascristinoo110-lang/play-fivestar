@@ -21,6 +21,7 @@ export function HeroBanner() {
       .from("promo_banners")
       .select("*")
       .eq("is_active", true)
+      .eq("placement", "home")
       .order("sort_order")
       .then(({ data }) => {
         if (data && data.length > 0) setBanners(data);

@@ -24,6 +24,7 @@ import AdminAppearancePage from "./pages/admin/AdminAppearancePage";
 import AdminBspayPage from "./pages/admin/AdminBspayPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminBannersPage from "./pages/admin/AdminBannersPage";
+import AdminBetsPage from "./pages/admin/AdminBetsPage";
 import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsConditions from "./pages/legal/TermsConditions";
@@ -64,6 +65,7 @@ const App = () => (
               <Route path="kyc" element={<AdminKycPage />} />
               <Route path="games" element={<AdminGamesPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
+              <Route path="bets" element={<AdminBetsPage />} />
               <Route path="affiliates" element={<AdminAffiliatesPage />} />
               <Route path="appearance" element={<AdminAppearancePage />} />
               <Route path="bspay" element={<AdminBspayPage />} />

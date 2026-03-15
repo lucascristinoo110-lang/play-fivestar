@@ -3,7 +3,7 @@ import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import {
   BarChart3, Users, Settings, Shield, ArrowDownToLine,
   ArrowUpFromLine, FileCheck, Palette, Gamepad2, LogOut, Home, Sun, Moon,
-  Image, UserCheck, ChevronRight
+  Image, UserCheck, ChevronRight, Ticket
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -13,6 +13,7 @@ const links = [
   { icon: Users, label: "Usuários", path: "/rei/users" },
   { icon: ArrowDownToLine, label: "Depósitos", path: "/rei/deposits" },
   { icon: ArrowUpFromLine, label: "Saques", path: "/rei/withdrawals" },
+  { icon: Ticket, label: "Bilhetes", path: "/rei/bets" },
   { icon: FileCheck, label: "KYC / Documentos", path: "/rei/kyc" },
   { icon: Gamepad2, label: "Jogos / Provedores", path: "/rei/games" },
   { icon: Image, label: "Banners", path: "/rei/banners" },

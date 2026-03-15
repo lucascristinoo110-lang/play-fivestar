@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Upload, Trash2, Plus, GripVertical, Megaphone, Save } from "lucide-react";
+import { Upload, Trash2, Plus, GripVertical, Megaphone, Save, Image } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -70,6 +70,8 @@ export default function AdminBannersPage() {
   const [linkUrl, setLinkUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [placement, setPlacement] = useState("home");
+  const [activePlacement, setActivePlacement] = useState("home");
 
   const [promoMsg, setPromoMsg] = useState("");
   const [promoActive, setPromoActive] = useState(false);
@@ -83,10 +85,10 @@ export default function AdminBannersPage() {
   useEffect(() => {
     loadBanners();
     loadSettings();
-  }, []);
+  }, [activePlacement]);
 
   async function loadBanners() {
-    const { data } = await supabase.from("promo_banners").select("*").order("sort_order");
+    const { data } = await supabase.from("promo_banners").select("*").eq("placement", activePlacement).order("sort_order");
     setBanners(data || []);
   }
 
@@ -119,6 +121,7 @@ export default function AdminBannersPage() {
       image_url: publicUrl,
       link_url: linkUrl || null,
       sort_order: banners.length,
+      placement: activePlacement,
     });
 
     toast({ title: "Banner adicionado!" });
@@ -192,9 +195,30 @@ export default function AdminBannersPage() {
         </div>
       </div>
 
+      {/* Placement Tabs */}
+      <div className="flex gap-2">
+        {[
+          { key: "home", label: "🏠 Home (Cassino)" },
+          { key: "sports", label: "⚽ Esportes (Carrossel)" },
+          { key: "sports_side", label: "📐 Esportes (Lateral)" },
+        ].map(p => (
+          <button
+            key={p.key}
+            onClick={() => setActivePlacement(p.key)}
+            className={cn("px-4 py-2 rounded-lg text-xs font-semibold transition-all",
+              activePlacement === p.key
+                ? light ? "bg-blue-600 text-white" : "bg-primary text-primary-foreground"
+                : light ? "bg-gray-100 text-gray-500" : "bg-secondary text-muted-foreground"
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* Add Banner */}
       <div className={sectionClass}>
-        <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Adicionar Banner Rotativo</h2>
+        <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>Adicionar Banner — {activePlacement === "home" ? "Home" : activePlacement === "sports" ? "Esportes Carrossel" : "Esportes Lateral"}</h2>
         <div className={cn("flex items-center gap-2 px-3 py-2 rounded-lg text-[11px]", light ? "bg-blue-50 text-blue-700" : "bg-primary/10 text-primary")}>
           <span>📐</span>
           <span><strong>Tamanho ideal:</strong> 1280 × 400 px (proporção 16:5) — Use imagens nessa dimensão para melhor exibição no carrossel.</span>
