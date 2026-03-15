@@ -27,6 +27,9 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
   const [pixCode, setPixCode] = useState("");
   const [qrImage, setQrImage] = useState<string | null>(null);
 
+  const minDeposit = settings?.min_deposit ?? 10;
+  const maxDeposit = settings?.max_deposit ?? 50000;
+
   useEffect(() => {
     if (!open) {
       setStep("amount");
@@ -69,15 +72,28 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
     };
   }, [transactionId, step]);
 
+  function getFinalAmount(): number {
+    return Number(amount) || parseFloat(customAmount) || 0;
+  }
+
   async function handleGenerateQR() {
-    const finalAmount = amount || parseFloat(customAmount);
+    const finalAmount = getFinalAmount();
     if (!finalAmount || finalAmount <= 0 || !user) return;
+
+    if (finalAmount < minDeposit) {
+      toast({ title: "Valor mínimo", description: `O depósito mínimo é R$ ${minDeposit.toFixed(2)}.`, variant: "destructive" });
+      return;
+    }
+    if (finalAmount > maxDeposit) {
+      toast({ title: "Valor máximo", description: `O depósito máximo é R$ ${maxDeposit.toFixed(2)}.`, variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
     try {
       const { data: tx, error } = await supabase
         .from("transactions")
-        .insert({ user_id: user.id, type: "deposit", amount: Number(finalAmount), payment_method: "pix", status: "pending" })
+        .insert({ user_id: user.id, type: "deposit", amount: finalAmount, payment_method: "pix", status: "pending" })
         .select()
         .single();
 
@@ -85,7 +101,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       setTransactionId(tx.id);
 
       const { data: pixData, error: pixError } = await supabase.functions.invoke("bspay-create-pix", {
-        body: { transaction_id: tx.id, amount: Number(finalAmount) },
+        body: { transaction_id: tx.id, amount: finalAmount },
       });
 
       if (pixError || !pixData?.pix_code) {
@@ -110,6 +126,10 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null;
 
   const bannerUrl = settings?.deposit_banner_url;
+  const finalAmount = getFinalAmount();
+  const isBelowMin = finalAmount > 0 && finalAmount < minDeposit;
+  const isAboveMax = finalAmount > maxDeposit;
+  const canGenerate = finalAmount >= minDeposit && finalAmount <= maxDeposit;
 
   return (
     <AnimatePresence>
@@ -133,7 +153,6 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
             </div>
           )}
 
-          {/* Header with gradient accent */}
           <div className="relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary/5 to-transparent" />
             <div className="relative flex items-center justify-between p-4 border-b border-border/40">
@@ -155,7 +174,6 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
           <div className="p-4 sm:p-5">
             {step === "amount" && (
               <div className="space-y-4">
-                {/* Trust badges */}
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col items-center gap-1 p-2 rounded-lg bg-secondary/50 border border-border/20">
                     <Clock className="h-3.5 w-3.5 text-primary" />
@@ -198,18 +216,29 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                     onChange={(e) => { setCustomAmount(e.target.value); setAmount(""); }}
                     placeholder="Outro valor"
                     className="pl-10 bg-secondary border-border/40 h-12 text-sm"
-                    min={1}
+                    min={minDeposit}
+                    max={maxDeposit}
                   />
                 </div>
 
-                {/* Urgency message */}
+                {isBelowMin && (
+                  <p className="text-[11px] text-destructive font-semibold text-center">
+                    ⚠️ O valor mínimo para depósito é R$ {minDeposit.toFixed(2)}
+                  </p>
+                )}
+                {isAboveMax && (
+                  <p className="text-[11px] text-destructive font-semibold text-center">
+                    ⚠️ O valor máximo para depósito é R$ {maxDeposit.toFixed(2)}
+                  </p>
+                )}
+
                 <div className="bg-primary/10 border border-primary/20 rounded-lg p-2.5 text-center">
                   <p className="text-[11px] text-primary font-semibold">🔥 Jogadores online agora estão ganhando — deposite e comece a jogar!</p>
                 </div>
 
                 <button
                   onClick={handleGenerateQR}
-                  disabled={loading || (!amount && !customAmount)}
+                  disabled={loading || !canGenerate}
                   className="relative w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110 shadow-lg shadow-primary/30"
                 >
                   {loading ? (
@@ -225,7 +254,9 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   )}
                 </button>
 
-                <p className="text-[10px] text-muted-foreground text-center">Depósito mínimo R$ {settings?.min_deposit ?? 10} • Confirmação automática</p>
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Depósito mínimo R$ {minDeposit.toFixed(2)} • Máximo R$ {maxDeposit.toFixed(2)} • Confirmação automática
+                </p>
               </div>
             )}
 
@@ -241,7 +272,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   )}
                 </div>
 
-                <p className="text-lg font-bold text-foreground font-mono">R$ {(amount || parseFloat(customAmount) || 0).toFixed(2)}</p>
+                <p className="text-lg font-bold text-foreground font-mono">R$ {finalAmount.toFixed(2)}</p>
 
                 <div className="flex items-start gap-2 bg-secondary rounded-lg p-2">
                   <code className="flex-1 text-[10px] text-muted-foreground break-all text-left max-h-16 overflow-y-auto">{pixCode}</code>

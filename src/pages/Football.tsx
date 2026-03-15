@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Trophy, CalendarClock, X, Ticket, CheckCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, Trophy, CalendarClock, X, Ticket, CheckCircle, Loader2, MapPin, Stadium } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { SportsHeroBanner } from "@/components/casino/SportsHeroBanner";
 
 type League = {
   id: string;
@@ -26,11 +28,15 @@ type Match = {
   homeScore?: number;
   awayScore?: number;
   status: string;
+  venue?: string;
+  city?: string;
   odds: { home: number; draw: number; away: number };
 };
 
 const LEAGUES: League[] = [
   { id: "brasileirao", name: "Brasileirão Série A", country: "🇧🇷", apiId: "4351" },
+  { id: "brasileirao-b", name: "Brasileirão Série B", country: "🇧🇷", apiId: "4404" },
+  { id: "copa-brasil", name: "Copa do Brasil", country: "🇧🇷", apiId: "4405" },
   { id: "libertadores", name: "Copa Libertadores", country: "🌎", apiId: "4480" },
   { id: "premier", name: "Premier League", country: "🏴", apiId: "4328" },
   { id: "laliga", name: "La Liga", country: "🇪🇸", apiId: "4335" },
@@ -67,9 +73,11 @@ export default function Football() {
   const { settings } = useSiteSettings();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [activeLeague, setActiveLeague] = useState("brasileirao");
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewTab, setViewTab] = useState<"proximos" | "encerrados">("proximos");
 
   // Betslip
   const [selection, setSelection] = useState<BetSelection | null>(null);
@@ -77,9 +85,26 @@ export default function Football() {
   const [placing, setPlacing] = useState(false);
   const [betSuccess, setBetSuccess] = useState<{ ticket: string; potentialWin: number } | null>(null);
 
+  // Sports side banners (desktop)
+  const [sideBanners, setSideBanners] = useState<any[]>([]);
+
   useEffect(() => {
     loadMatches(activeLeague);
   }, [activeLeague]);
+
+  useEffect(() => {
+    loadSideBanners();
+  }, []);
+
+  async function loadSideBanners() {
+    const { data } = await supabase
+      .from("promo_banners")
+      .select("*")
+      .eq("is_active", true)
+      .eq("placement", "sports_side")
+      .order("sort_order");
+    setSideBanners(data || []);
+  }
 
   async function loadMatches(leagueId: string) {
     setLoading(true);
@@ -87,24 +112,24 @@ export default function Football() {
     if (!league) return;
 
     try {
-      const [nextRes, liveRes] = await Promise.allSettled([
+      const [nextRes, pastRes] = await Promise.allSettled([
         fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${league.apiId}`),
         fetch(`https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${league.apiId}`),
       ]);
 
       const nextData = nextRes.status === "fulfilled" && nextRes.value.ok ? await nextRes.value.json() : null;
-      const pastData = liveRes.status === "fulfilled" && liveRes.value.ok ? await liveRes.value.json() : null;
+      const pastData = pastRes.status === "fulfilled" && pastRes.value.ok ? await pastRes.value.json() : null;
 
       const allEvents = [
         ...(Array.isArray(nextData?.events) ? nextData.events : []),
-        ...(Array.isArray(pastData?.events) ? pastData.events.slice(0, 10) : []),
+        ...(Array.isArray(pastData?.events) ? pastData.events : []),
       ];
 
       const mapped: Match[] = allEvents
         .filter((e: any) => e?.strHomeTeam && e?.strAwayTeam)
         .map((e: any) => ({
           id: String(e.idEvent),
-          league: league.name,
+          league: e.strLeague || league.name,
           home: e.strHomeTeam,
           away: e.strAwayTeam,
           homeBadge: e.strHomeTeamBadge || "",
@@ -113,9 +138,18 @@ export default function Football() {
           homeScore: e.intHomeScore != null ? Number(e.intHomeScore) : undefined,
           awayScore: e.intAwayScore != null ? Number(e.intAwayScore) : undefined,
           status: e.intHomeScore != null ? "finished" : "upcoming",
+          venue: e.strVenue || "",
+          city: e.strCity || "",
           odds: deterministicOdds(e.strHomeTeam, e.strAwayTeam),
-        }))
-        .slice(0, 30);
+        }));
+
+      // Sort: upcoming first by date asc, then finished by date desc
+      mapped.sort((a, b) => {
+        if (a.status === "upcoming" && b.status === "finished") return -1;
+        if (a.status === "finished" && b.status === "upcoming") return 1;
+        if (a.status === "upcoming") return new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime();
+        return new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime();
+      });
 
       setMatches(mapped);
     } catch {
@@ -123,6 +157,10 @@ export default function Football() {
     }
     setLoading(false);
   }
+
+  const upcomingMatches = matches.filter(m => m.status === "upcoming");
+  const finishedMatches = matches.filter(m => m.status === "finished");
+  const displayedMatches = viewTab === "proximos" ? upcomingMatches : finishedMatches;
 
   function selectOdd(match: Match, type: "home" | "draw" | "away") {
     if (!user) {
@@ -149,20 +187,17 @@ export default function Football() {
 
     setPlacing(true);
     try {
-      // Deduct balance
       const { error: balErr } = await supabase
         .from("profiles")
         .update({ balance: balance - amt })
         .eq("user_id", user.id);
-
       if (balErr) throw balErr;
 
-      // Create bet
       const { data: bet, error: betErr } = await supabase
         .from("bets")
         .insert({
           user_id: user.id,
-          ticket_number: "temp", // trigger will overwrite
+          ticket_number: "temp",
           match_id: selection.match.id,
           match_data: {
             home: selection.match.home,
@@ -171,6 +206,8 @@ export default function Football() {
             awayBadge: selection.match.awayBadge,
             league: selection.match.league,
             kickoff: selection.match.kickoff,
+            venue: selection.match.venue,
+            city: selection.match.city,
             odds: selection.match.odds,
           },
           bet_type: selection.type,
@@ -201,7 +238,11 @@ export default function Football() {
         <Link to="/" className="p-2 rounded-lg hover:bg-secondary text-muted-foreground">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        {settings?.logo_url && <img src={settings.logo_url} alt="" className="h-7 w-auto object-contain" />}
+        {settings?.logo_url && (
+          <Link to="/">
+            <img src={settings.logo_url} alt="" className="h-7 w-auto object-contain" />
+          </Link>
+        )}
         <h1 className="text-sm font-bold flex items-center gap-2 flex-1">
           <Trophy className="h-4 w-4 text-primary" /> Futebol
         </h1>
@@ -212,93 +253,146 @@ export default function Football() {
         )}
       </header>
 
-      <div className="p-3 sm:p-6 space-y-4 max-w-5xl mx-auto">
-        {/* League Tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {LEAGUES.map(l => (
-            <button
-              key={l.id}
-              onClick={() => setActiveLeague(l.id)}
-              className={`shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
-                activeLeague === l.id
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground hover:bg-surface-hover"
-              }`}
-            >
-              {l.country} {l.name}
-            </button>
-          ))}
-        </div>
+      <div className="flex max-w-7xl mx-auto">
+        {/* Main content */}
+        <div className="flex-1 p-3 sm:p-6 space-y-4">
+          {/* Sports carousel banner */}
+          <SportsHeroBanner />
 
-        {/* Matches */}
-        {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-28 rounded-xl shimmer" />
+          {/* League Tabs */}
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {LEAGUES.map(l => (
+              <button
+                key={l.id}
+                onClick={() => setActiveLeague(l.id)}
+                className={`shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  activeLeague === l.id
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-muted-foreground hover:bg-surface-hover"
+                }`}
+              >
+                {l.country} {l.name}
+              </button>
             ))}
           </div>
-        ) : matches.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground text-sm">Nenhum jogo encontrado para esta liga.</div>
-        ) : (
-          <div className="space-y-3">
-            {matches.map(m => (
-              <div key={m.id} className="rounded-xl border border-border/40 bg-card card-shadow p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{m.league}</span>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${
-                      m.status === "finished" ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
-                    }`}>
-                      {m.status === "finished" ? "Encerrado" : "Próximo"}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                      <CalendarClock className="h-3 w-3" />
-                      {new Date(m.kickoff).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </div>
-                </div>
 
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <TeamBadge src={m.homeBadge} name={m.home} />
-                    <div>
-                      <p className="text-sm font-bold text-foreground truncate">{m.home}</p>
-                      {m.homeScore != null && <span className="text-lg font-black text-primary">{m.homeScore}</span>}
+          {/* Próximos / Encerrados tabs */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setViewTab("proximos")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                viewTab === "proximos"
+                  ? "bg-primary/15 text-primary border border-primary/30"
+                  : "bg-secondary text-muted-foreground border border-border/30"
+              }`}
+            >
+              ⚽ Próximos ({upcomingMatches.length})
+            </button>
+            <button
+              onClick={() => setViewTab("encerrados")}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+                viewTab === "encerrados"
+                  ? "bg-muted text-foreground border border-border/50"
+                  : "bg-secondary text-muted-foreground border border-border/30"
+              }`}
+            >
+              🏁 Encerrados ({finishedMatches.length})
+            </button>
+          </div>
+
+          {/* Matches */}
+          {loading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="h-28 rounded-xl shimmer" />
+              ))}
+            </div>
+          ) : displayedMatches.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground text-sm">
+              {viewTab === "proximos"
+                ? "Nenhum jogo próximo encontrado para esta liga."
+                : "Nenhum jogo encerrado encontrado para esta liga."}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {displayedMatches.map(m => (
+                <div key={m.id} className="rounded-xl border border-border/40 bg-card card-shadow p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{m.league}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${
+                        m.status === "finished" ? "bg-muted text-muted-foreground" : "bg-primary/15 text-primary"
+                      }`}>
+                        {m.status === "finished" ? "Encerrado" : "Próximo"}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <CalendarClock className="h-3 w-3" />
+                        {new Date(m.kickoff).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </span>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-muted-foreground px-2">VS</span>
-                  <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
-                    <div>
-                      <p className="text-sm font-bold text-foreground truncate">{m.away}</p>
-                      {m.awayScore != null && <span className="text-lg font-black text-primary">{m.awayScore}</span>}
-                    </div>
-                    <TeamBadge src={m.awayBadge} name={m.away} />
-                  </div>
-                </div>
 
-                {m.status === "upcoming" && (
-                  <div className="grid grid-cols-3 gap-2 mt-3">
-                    {(["home", "draw", "away"] as const).map(type => {
-                      const val = type === "home" ? m.odds.home : type === "draw" ? m.odds.draw : m.odds.away;
-                      const isSelected = selection?.match.id === m.id && selection?.type === type;
-                      return (
-                        <button
-                          key={type}
-                          onClick={() => selectOdd(m, type)}
-                          className={`rounded-lg border p-2 text-center transition-all ${
-                            isSelected
-                              ? "bg-primary/20 border-primary text-primary shadow-sm shadow-primary/20"
-                              : "bg-secondary border-border/30 hover:bg-primary/10 hover:border-primary/30"
-                          }`}
-                        >
-                          <p className="text-[9px] text-muted-foreground">{betTypeLabel(type)}</p>
-                          <p className="text-sm font-bold text-primary">{val.toFixed(2)}</p>
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <TeamBadge src={m.homeBadge} name={m.home} />
+                      <div>
+                        <p className="text-sm font-bold text-foreground truncate">{m.home}</p>
+                        {m.homeScore != null && <span className="text-lg font-black text-primary">{m.homeScore}</span>}
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-muted-foreground px-2">VS</span>
+                    <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
+                      <div>
+                        <p className="text-sm font-bold text-foreground truncate">{m.away}</p>
+                        {m.awayScore != null && <span className="text-lg font-black text-primary">{m.awayScore}</span>}
+                      </div>
+                      <TeamBadge src={m.awayBadge} name={m.away} />
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Venue info */}
+                  {m.venue && (
+                    <div className="flex items-center gap-1.5 mt-2 text-[10px] text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <span>{m.venue}{m.city ? ` • ${m.city}` : ""}</span>
+                    </div>
+                  )}
+
+                  {m.status === "upcoming" && (
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {(["home", "draw", "away"] as const).map(type => {
+                        const val = type === "home" ? m.odds.home : type === "draw" ? m.odds.draw : m.odds.away;
+                        const isSelected = selection?.match.id === m.id && selection?.type === type;
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => selectOdd(m, type)}
+                            className={`rounded-lg border p-2 text-center transition-all ${
+                              isSelected
+                                ? "bg-primary/20 border-primary text-primary shadow-sm shadow-primary/20"
+                                : "bg-secondary border-border/30 hover:bg-primary/10 hover:border-primary/30"
+                            }`}
+                          >
+                            <p className="text-[9px] text-muted-foreground">{betTypeLabel(type)}</p>
+                            <p className="text-sm font-bold text-primary">{val.toFixed(2)}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Desktop side banners */}
+        {!isMobile && sideBanners.length > 0 && (
+          <div className="w-64 shrink-0 p-4 space-y-4 hidden lg:block">
+            {sideBanners.slice(0, 2).map(b => (
+              <a key={b.id} href={b.link_url || "#"} className="block rounded-xl overflow-hidden border border-border/40">
+                <img src={b.image_url} alt={b.title} className="w-full h-auto object-cover" />
+              </a>
             ))}
           </div>
         )}
@@ -319,6 +413,11 @@ export default function Football() {
           <div className="bg-secondary/50 rounded-lg p-3 space-y-1">
             <p className="text-[10px] text-muted-foreground uppercase">{selection.match.league}</p>
             <p className="text-xs font-semibold text-foreground">{selection.match.home} vs {selection.match.away}</p>
+            {selection.match.venue && (
+              <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <MapPin className="h-3 w-3" /> {selection.match.venue}
+              </p>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
                 {betTypeLabel(selection.type)} @ {selection.odds.toFixed(2)}
@@ -345,7 +444,6 @@ export default function Football() {
             </div>
           </div>
 
-          {/* Quick amounts */}
           <div className="flex gap-1.5">
             {[10, 25, 50, 100].map(v => (
               <button
