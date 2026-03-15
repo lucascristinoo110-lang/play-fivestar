@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, Trophy, CalendarClock, X, Ticket, CheckCircle, Loader2, MapPin, Stadium } from "lucide-react";
+import { ArrowLeft, Trophy, CalendarClock, X, Ticket, CheckCircle, Loader2, MapPin } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
