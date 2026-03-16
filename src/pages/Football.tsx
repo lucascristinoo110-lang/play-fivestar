@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SportsHeroBanner } from "@/components/casino/SportsHeroBanner";
 import { BottomNavBar } from "@/components/casino/BottomNavBar";
+import { getTeamBadge } from "@/lib/team-badges";
 
 type League = {
   id: string;
