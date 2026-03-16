@@ -132,10 +132,59 @@ function balanceResponse(balance: number, userCode: string) {
 }
 
 /**
- * Playfiver Wallet Callback
- * Public endpoint (no JWT) — called directly by Playfiver servers.
- * Uses atomic DB functions to prevent race conditions.
+ * Track affiliate revshare:
+ * - When user LOSES (bet, no win): affiliate earns revshare % of loss
+ * - When user WINS: affiliate balance decreases by revshare % of net win (can go negative)
  */
+async function trackAffiliateRevShare(supabase: any, userId: string, netAmount: number) {
+  try {
+    // netAmount: negative = user lost, positive = user won
+    // Find if user was referred by an affiliate
+    const { data: referral } = await supabase
+      .from("affiliate_referrals")
+      .select("affiliate_id")
+      .eq("referred_user_id", userId)
+      .maybeSingle();
+
+    if (!referral) return;
+
+    const { data: affiliate } = await supabase
+      .from("affiliates")
+      .select("id, commission_type, commission_revshare, balance, total_earnings")
+      .eq("id", referral.affiliate_id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (!affiliate) return;
+
+    // Only process if affiliate has revshare component
+    if (affiliate.commission_type !== "revshare" && affiliate.commission_type !== "hybrid") return;
+
+    const revPercent = Number(affiliate.commission_revshare || 0) / 100;
+    if (revPercent <= 0) return;
+
+    // netAmount negative = house won (user lost) → affiliate earns
+    // netAmount positive = user won → affiliate loses (negative revshare)
+    const commission = -netAmount * revPercent; // e.g. user lost R$10 → netAmount=-10 → commission=+3 (30%)
+
+    const newBalance = Number(affiliate.balance || 0) + commission;
+    const newEarnings = Number(affiliate.total_earnings || 0) + commission;
+
+    await supabase
+      .from("affiliates")
+      .update({
+        balance: newBalance,
+        total_earnings: newEarnings,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", affiliate.id);
+
+    console.log(`AFFILIATE REV: affiliate=${affiliate.id} user=${userId} net=${netAmount} commission=${commission.toFixed(2)} newBalance=${newBalance.toFixed(2)}`);
+  } catch (err) {
+    console.error("Affiliate tracking error:", err);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -182,11 +231,7 @@ serve(async (req) => {
       }
     }
 
-    // ── BET (debit) — prioritize amounts over type string ──
-    // Playfiver sends type "WinBet" for ALL transactions; actual intent is in bet/win values
-    // txn_type "debit_credit" means: debit bet, credit win in one callback
-
-    // ── REFUND / CANCEL (check first) ──
+    // ── REFUND / CANCEL ──
     if (type === "REFUND" || type === "CANCEL" || type === "ROLLBACK") {
       const refundAmt = betAmt || winAmt || parseAmount(body.amount);
       const { data, error } = await supabase.rpc("adjust_balance", {
@@ -197,13 +242,16 @@ serve(async (req) => {
 
       const newBalance = Number(data);
       await recordTx(supabase, userCode, "game_refund", refundAmt, transactionId, { type, original_transaction: body.original_transaction_id, round_id: transactionId, raw_payload: body });
+      
+      // Reverse affiliate tracking for refund
+      await trackAffiliateRevShare(supabase, userCode, refundAmt);
+      
       console.log(`REFUND: ${userCode} +${refundAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── BET+WIN combined (debit_credit) — e.g. bet=0.4, win=1.2 ──
+    // ── BET+WIN combined ──
     if (betAmt > 0 && winAmt > 0) {
-      // Net credit = win - bet
       const net = winAmt - betAmt;
       const { data, error } = await supabase.rpc("adjust_balance", {
         p_user_id: userCode,
@@ -213,6 +261,10 @@ serve(async (req) => {
 
       const newBalance = Number(data);
       await recordTx(supabase, userCode, "game_win", net, transactionId, { type, game_code: gameCode, round_id: transactionId, bet: betAmt, win: winAmt, raw_payload: body });
+      
+      // Track affiliate: net positive = user won, net negative = user lost
+      await trackAffiliateRevShare(supabase, userCode, net);
+      
       console.log(`BET+WIN: ${userCode} bet=${betAmt} win=${winAmt} net=${net}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
@@ -237,6 +289,10 @@ serve(async (req) => {
 
       const newBalance = Number(data);
       await recordTx(supabase, userCode, "game_bet", -betAmt, transactionId, { type, game_code: gameCode, round_id: transactionId, raw_payload: body });
+      
+      // User lost → netAmount is negative (house profit)
+      await trackAffiliateRevShare(supabase, userCode, -betAmt);
+      
       console.log(`BET: ${userCode} -${betAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
@@ -251,13 +307,17 @@ serve(async (req) => {
 
       const newBalance = Number(data);
       await recordTx(supabase, userCode, "game_win", winAmt, transactionId, { type, game_code: gameCode, round_id: transactionId, raw_payload: body });
+      
+      // User won → positive net, affiliate loses revshare
+      await trackAffiliateRevShare(supabase, userCode, winAmt);
+      
       console.log(`WIN: ${userCode} +${winAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
 
     // ── BALANCE-only or unknown ──
     const balance = await getBalance(supabase, userCode);
-    console.log(`GENERIC: ${userCode} net=${netAmount}, balance=${balance}`);
+    console.log(`GENERIC: ${userCode} balance=${balance}`);
     return json(balanceResponse(balance ?? 0, userCode));
   } catch (error: any) {
     console.error("Playfiver callback error:", error);
