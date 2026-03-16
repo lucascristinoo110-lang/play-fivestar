@@ -46,7 +46,7 @@ export default function AdminLayout() {
   const sidebarContent = (
     <>
       {/* Brand */}
-      <div className={cn("h-16 flex items-center justify-between px-5 border-b shrink-0", light ? "border-slate-200/60" : "border-white/[0.06]")}>
+      <div className={cn("h-16 flex items-center justify-between px-5 border-b shrink-0", light ? "border-slate-200/60" : "border-slate-700/40")}>
         <div className="flex items-center gap-2.5">
           <div className={cn(
             "w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shadow-lg",
