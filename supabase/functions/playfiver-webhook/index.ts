@@ -207,8 +207,8 @@ serve(async (req) => {
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── WIN (credit) ──
-    if (type === "WIN" || type === "WINBET" || (type === "TRANSACTION" && winAmt > 0)) {
+    // ── WIN (credit) — only when there's actual winnings ──
+    if (winAmt > 0) {
       const { data, error } = await supabase.rpc("adjust_balance", {
         p_user_id: userCode,
         p_amount: winAmt,
