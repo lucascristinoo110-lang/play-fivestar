@@ -27,7 +27,7 @@ const statusConfig: Record<string, { label: string; icon: any; color: string; bg
   cancelled: { label: "Cancelado", icon: XCircle, color: "text-gray-400", bg: "bg-gray-400/10" },
 };
 
-const betTypeLabel = (t: string) => t === "home" ? "Casa" : t === "draw" ? "Empate" : "Fora";
+const betTypeLabel = (t: string) => getBetTypeLabel(t);
 
 export default function AdminBetsPage() {
   const { light } = useOutletContext<{ light: boolean }>();
