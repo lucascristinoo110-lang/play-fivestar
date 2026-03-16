@@ -157,7 +157,6 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
                 Enviar WhatsApp
               </Button>
             )}
-            </div>
           </SheetDescription>
         </SheetHeader>
 
