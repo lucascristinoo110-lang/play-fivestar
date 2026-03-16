@@ -44,8 +44,8 @@ const LEAGUES: League[] = [
   { id: "seriea", name: "Serie A (Itália)", country: "🇮🇹", apiId: "4332" },
   { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", apiId: "4331" },
   { id: "ligue1", name: "Ligue 1", country: "🇫🇷", apiId: "4334" },
-  { id: "champions", name: "Champions League", country: "🇪🇺", apiId: "4480" },
-  { id: "europa", name: "Europa League", country: "🇪🇺", apiId: "4481" },
+  { id: "champions", name: "Champions League", country: "🇪🇺", apiId: "4364" },
+  { id: "europa", name: "Europa League", country: "🇪🇺", apiId: "4365" },
 ];
 
 function deterministicOdds(home: string, away: string) {
@@ -249,7 +249,7 @@ export default function Football() {
   const betTypeLabel = (t: string) => t === "home" ? "Casa" : t === "draw" ? "Empate" : "Fora";
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <Link to="/" className="p-2 rounded-lg hover:bg-secondary text-muted-foreground">
@@ -277,12 +277,12 @@ export default function Football() {
           <SportsHeroBanner />
 
           {/* League Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3">
             {LEAGUES.map(l => (
               <button
                 key={l.id}
                 onClick={() => setActiveLeague(l.id)}
-                className={`shrink-0 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${
+                className={`shrink-0 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
                   activeLeague === l.id
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary text-muted-foreground hover:bg-surface-hover"

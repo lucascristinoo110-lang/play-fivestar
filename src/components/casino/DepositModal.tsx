@@ -145,7 +145,8 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden max-h-[90vh] overflow-y-auto"
+          className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl bg-card border border-border/40 elevated-shadow overflow-hidden max-h-[90vh] overflow-y-auto overscroll-contain touch-pan-y"
+          style={{ touchAction: "pan-y" }}
         >
           {bannerUrl && (
             <div className="w-full">
