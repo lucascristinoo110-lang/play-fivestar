@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SportsHeroBanner } from "@/components/casino/SportsHeroBanner";
 import { BottomNavBar } from "@/components/casino/BottomNavBar";
+import { getTeamBadge } from "@/lib/team-badges";
 
 type League = {
   id: string;
@@ -109,8 +110,8 @@ function getBrazilianFallbackMatches(league: League): Match[] {
     leagueId: league.apiId,
     home,
     away,
-    homeBadge: "",
-    awayBadge: "",
+    homeBadge: getTeamBadge(home),
+    awayBadge: getTeamBadge(away),
     kickoff: new Date(now + (i + 1) * 86400000 + i * 7200000).toISOString(),
     status: "upcoming",
     venue: "",
@@ -172,8 +173,8 @@ export default function Football() {
         leagueId: String(e.idLeague),
         home: e.strHomeTeam,
         away: e.strAwayTeam,
-        homeBadge: e.strHomeTeamBadge || "",
-        awayBadge: e.strAwayTeamBadge || "",
+        homeBadge: e.strHomeTeamBadge || getTeamBadge(e.strHomeTeam),
+        awayBadge: e.strAwayTeamBadge || getTeamBadge(e.strAwayTeam),
         kickoff: e.strTimestamp || e.dateEvent,
         homeScore: e.intHomeScore != null ? Number(e.intHomeScore) : undefined,
         awayScore: e.intAwayScore != null ? Number(e.intAwayScore) : undefined,

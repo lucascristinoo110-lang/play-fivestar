@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronRight, Trophy } from "lucide-react";
+import { getTeamBadge } from "@/lib/team-badges";
 
 type SportsMatch = {
   id: string;
@@ -52,8 +53,8 @@ function getBrazilianFallbackMatches(): SportsMatch[] {
     league,
     home,
     away,
-    homeBadge: "",
-    awayBadge: "",
+    homeBadge: getTeamBadge(home),
+    awayBadge: getTeamBadge(away),
     kickoff: new Date(baseTime + dayOffset * 86400000 + 72000000).toISOString(), // 20:00
     odds: deterministicOdds(home, away),
   }));
@@ -103,8 +104,8 @@ export function SportsHighlights() {
             league: e._leagueName || String(e.strLeague || "Futebol"),
             home: e.strHomeTeam,
             away: e.strAwayTeam,
-            homeBadge: e.strHomeTeamBadge || "",
-            awayBadge: e.strAwayTeamBadge || "",
+            homeBadge: e.strHomeTeamBadge || getTeamBadge(e.strHomeTeam),
+            awayBadge: e.strAwayTeamBadge || getTeamBadge(e.strAwayTeam),
             kickoff: e.strTimestamp || e.dateEvent,
             odds: deterministicOdds(e.strHomeTeam, e.strAwayTeam),
           }))
