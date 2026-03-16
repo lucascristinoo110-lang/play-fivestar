@@ -98,7 +98,7 @@ export default function AdminLayout() {
       </nav>
 
       {/* Footer */}
-      <div className={cn("px-3 py-4 border-t space-y-1 shrink-0", light ? "border-slate-200/60" : "border-white/[0.06]")}>
+      <div className={cn("px-3 py-4 border-t space-y-1 shrink-0", light ? "border-slate-200/60" : "border-slate-700/40")}>
         <Link to="/" className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium border border-transparent", light ? "text-slate-500 hover:bg-slate-50 hover:text-slate-800" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200")}>
           <Home className="h-[18px] w-[18px] opacity-50" />
           <span>Voltar ao site</span>
