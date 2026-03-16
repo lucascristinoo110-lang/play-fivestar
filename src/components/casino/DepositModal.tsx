@@ -262,24 +262,29 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
             )}
 
             {step === "qrcode" && (
-              <div className="space-y-4 text-center">
+              <div className="space-y-3 text-center">
                 <p className="text-xs text-muted-foreground">Escaneie o QR Code ou copie o código abaixo:</p>
 
-                <div className="mx-auto w-44 h-44 sm:w-52 sm:h-52 rounded-xl bg-white flex items-center justify-center p-3">
+                <div className="mx-auto w-40 h-40 sm:w-52 sm:h-52 rounded-xl bg-white flex items-center justify-center p-2">
                   {qrImage ? (
                     <img src={qrImage} alt="QR Code PIX" className="w-full h-full object-contain" loading="eager" decoding="async" />
                   ) : (
-                    <QrCode className="h-16 w-16 sm:h-20 sm:w-20 text-muted" />
+                    <QrCode className="h-14 w-14 sm:h-20 sm:w-20 text-muted" />
                   )}
                 </div>
 
-                <p className="text-lg font-bold text-foreground font-mono">R$ {finalAmount.toFixed(2)}</p>
+                <p className="text-base font-bold text-foreground font-mono">R$ {finalAmount.toFixed(2)}</p>
 
-                <div className="flex items-start gap-2 bg-secondary rounded-lg p-2">
-                  <code className="flex-1 text-[10px] text-muted-foreground break-all text-left max-h-16 overflow-y-auto">{pixCode}</code>
-                  <button onClick={copyCode} className="p-2 rounded-md hover:bg-surface-hover text-primary shrink-0">
-                    <Copy className="h-4 w-4" />
-                  </button>
+                <button
+                  onClick={copyCode}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-lg shadow-primary/30 active:scale-95 transition-transform"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copiar Código PIX
+                </button>
+
+                <div className="bg-secondary rounded-lg p-2.5 max-h-20 overflow-y-auto">
+                  <code className="text-[10px] text-muted-foreground break-all block text-left select-all">{pixCode}</code>
                 </div>
 
                 <div className="flex items-center justify-center gap-2 text-xs text-accent">

@@ -16,8 +16,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const payload = await req.json();
-    console.log("BSPAY webhook received:", JSON.stringify(payload));
+    const rawPayload = await req.json();
+    console.log("BSPAY webhook received:", JSON.stringify(rawPayload));
+
+    // BSPAY sends data nested inside requestBody
+    const payload = rawPayload.requestBody || rawPayload;
 
     const externalId =
       payload.external_id ||
@@ -35,6 +38,8 @@ serve(async (req) => {
       payload.event;
 
     const status = String(rawStatus || "").toLowerCase();
+
+    console.log("Parsed - externalId:", externalId, "status:", status);
 
     if (!externalId) {
       return new Response(JSON.stringify({ error: "Missing external_id" }), {
@@ -71,28 +76,21 @@ serve(async (req) => {
       // Update transaction status
       await supabase
         .from("transactions")
-        .update({ status: "completed", metadata: payload })
+        .update({ status: "completed", metadata: rawPayload })
         .eq("id", transaction.id);
 
-      // Add balance to user profile
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("balance")
-        .eq("user_id", transaction.user_id)
-        .single();
+      // Use atomic adjust_balance RPC
+      const depositAmount = Number(payload.amount || transaction.amount) || Number(transaction.amount);
+      const newBalance = await supabase.rpc("adjust_balance", {
+        p_user_id: transaction.user_id,
+        p_amount: depositAmount,
+      });
 
-      const newBalance = (Number(profile?.balance) || 0) + Number(transaction.amount);
-
-      await supabase
-        .from("profiles")
-        .update({ balance: newBalance })
-        .eq("user_id", transaction.user_id);
-
-      console.log(`Deposit confirmed: user ${transaction.user_id}, amount ${transaction.amount}, new balance ${newBalance}`);
+      console.log(`Deposit confirmed: user ${transaction.user_id}, amount ${depositAmount}, result:`, newBalance);
     } else if (["failed", "expired", "cancelled", "canceled", "rejected"].includes(status)) {
       await supabase
         .from("transactions")
-        .update({ status: "failed", metadata: payload })
+        .update({ status: "failed", metadata: rawPayload })
         .eq("id", transaction.id);
     }
 
