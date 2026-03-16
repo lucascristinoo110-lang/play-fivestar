@@ -86,7 +86,7 @@ export default function AdminLayout() {
                     : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                   : light
                     ? "text-slate-500 hover:text-slate-800 hover:bg-slate-50/80 border border-transparent"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent"
+                    : "text-slate-300 hover:text-white hover:bg-slate-700/40 border border-transparent"
               )}
             >
               <Icon className={cn("h-[18px] w-[18px] shrink-0 transition-all", active ? "" : "opacity-50 group-hover:opacity-80")} />
