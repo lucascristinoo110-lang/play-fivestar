@@ -1,0 +1,1 @@
+UPDATE games SET is_hot = true WHERE game_code = 'PP_vs10bbbonanza' AND provider = 'OFICIAL - PRAGMATIC SLOTS' AND is_active = true;
