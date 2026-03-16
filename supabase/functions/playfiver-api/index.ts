@@ -6,7 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PLAYFIVER_API = "https://api.playfivers.com";
+const PLAYFIVER_API = "http://72.62.162.29";
+const CASINO_KEY_HEADER = { "X-Casino-Key": "meuSegredoCasino2026" };
 const SUPPORTED_ACTIONS = ["list_games", "list_providers", "launch_game", "sync_games"] as const;
 
 type PlayfiverSettings = {
