@@ -249,7 +249,7 @@ export default function Football() {
   const betTypeLabel = (t: string) => t === "home" ? "Casa" : t === "draw" ? "Empate" : "Fora";
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
+    <div className="min-h-screen bg-background text-foreground pb-20 overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-30 h-14 flex items-center gap-3 px-4 border-b border-border/40 bg-background/80 backdrop-blur-xl">
         <Link to="/" className="p-2 rounded-lg hover:bg-secondary text-muted-foreground">
