@@ -35,7 +35,7 @@ const Index = () => {
   }, [searchParams]);
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className="flex min-h-screen w-full bg-background overflow-x-hidden">
       {!user && <AgeVerificationModal />}
 
       {!user && authMode && (
