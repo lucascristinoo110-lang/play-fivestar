@@ -47,8 +47,18 @@ export default function AdminUsersPage() {
   const filtered = users.filter(u =>
     (u.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
-    (u.cpf || "").includes(search)
+    (u.cpf || "").includes(search) ||
+    (u.phone || "").includes(search)
   );
+
+  function openWhatsApp(phone: string, name: string) {
+    // Clean phone: remove non-digits
+    let clean = phone.replace(/\D/g, "");
+    // Add Brazil country code if not present
+    if (clean.length <= 11 && !clean.startsWith("55")) clean = "55" + clean;
+    const msg = encodeURIComponent(`Olá ${name || ""}! Tudo bem?`);
+    window.open(`https://wa.me/${clean}?text=${msg}`, "_blank");
+  }
 
   return (
     <div className="space-y-4">
