@@ -120,20 +120,20 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         "EVOLIVE_NoCommBac0000001",  // No Commission Baccarat
       ];
 
-      // Latest PG Soft releases
+      // PG Soft — Fortune series & top titles
       const PG_LATEST_CODES = [
-        "2012025",   // Skylight Wonders
-        "1971587",   // Majestic Empire
-        "1964781",   // Pharaoh Royals
-        "1940257",   // Alibabas Cave of Fortune
-        "1935269",   // Diner Frenzy Spins
-        "1929177",   // Kraken Gold Rush
-        "1903012",   // Grimms Bounty Hansel Gretel
-        "1897678",   // Dragons Treasure Quest
-        "1881268",   // Knockout Riches
-        "1865521",   // Dead Mans Riches
-        "1834850",   // Jack the Giant Hunter
-        "1760238",   // Yakuza Honor
+        "1879752",   // Fortune Snake
+        "1695365",   // Fortune Dragon
+        "1543462",   // Fortune Rabbit
+        "1451122",   // Dragon Hatch 2
+        "1402846",   // Midas Fortune
+        "1799745",   // Mr Treasures Fortune
+        "87",        // Treasures of Aztec
+        "42",        // Ganesha Gold
+        "75",        // Ganesha Fortune
+        "89",        // Lucky Neko
+        "130",       // Lucky Piggy
+        "48",        // Double Fortune
       ];
 
       const [hot, curatedLive, pgLatest, slots, crash] = await Promise.all([
@@ -159,7 +159,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       const sections: GameSection[] = [
         { id: "hot", title: "Mais Jogados Agora", subtitle: "Jogos com maior tração no cassino", games: normalizeGames(hot.data) },
         { id: "curated-live", title: "🔴 Cassino ao Vivo", subtitle: "As mesas mais quentes com dealers reais", games: curatedLiveGames },
-        { id: "pg-latest", title: "🐉 Lançamentos PG Soft", subtitle: "Os jogos mais recentes da PG Soft", games: pgLatestGames },
+        { id: "pg-latest", title: "🐉 Destaques PG Soft", subtitle: "Fortune Snake, Dragon Hatch e os mais jogados da PG", games: pgLatestGames },
         { id: "slots", title: "Slots Campeões", subtitle: "Títulos que mais convertem em sessão", games: normalizeGames(slots.data) },
         { id: "crash", title: "Crash e Multiplicadores", subtitle: "Sessão para gatilho de ação rápida", games: normalizeGames(crash.data) },
       ].filter((section) => section.games.length > 0);
