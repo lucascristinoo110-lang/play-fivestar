@@ -459,6 +459,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      adjust_balance: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: number
+      }
+      debit_balance: {
+        Args: { p_amount: number; p_user_id: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
