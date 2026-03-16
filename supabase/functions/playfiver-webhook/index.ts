@@ -182,8 +182,9 @@ serve(async (req) => {
       }
     }
 
-    // ── BET (debit) ──
-    if (type === "BET" || type === "LOSEBET" || (type === "TRANSACTION" && betAmt > 0 && winAmt === 0)) {
+    // ── BET (debit) — prioritize amounts over type string ──
+    // Playfiver sends type "WinBet" for ALL transactions; actual intent is in bet/win values
+    if (betAmt > 0 && winAmt === 0) {
       const { data, error } = await supabase.rpc("debit_balance", {
         p_user_id: userCode,
         p_amount: betAmt,
