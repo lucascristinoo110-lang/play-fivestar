@@ -120,6 +120,7 @@ export default function Register() {
     if (error) {
       toast({ title: "Erro no cadastro", description: error.message, variant: "destructive" });
     } else {
+      trackEvent("CompleteRegistration");
       toast({ title: "Cadastro realizado!", description: "Sua conta foi criada com sucesso." });
       navigate("/");
     }

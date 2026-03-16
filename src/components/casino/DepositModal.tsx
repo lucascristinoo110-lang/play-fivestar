@@ -64,6 +64,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       const { data } = await supabase.from("transactions").select("status").eq("id", transactionId).single();
       if (data?.status === "completed") {
         setStep("success");
+        trackEvent("Purchase", { value: Number(amount), currency: "BRL" });
         toast({ title: "Depósito confirmado!" });
       }
     }, 5000);
