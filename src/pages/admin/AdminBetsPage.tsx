@@ -4,6 +4,7 @@ import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Ticket, Clock, CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getBetTypeLabel } from "@/lib/sports-odds";
 
 type Bet = {
   id: string;
@@ -26,7 +27,7 @@ const statusConfig: Record<string, { label: string; icon: any; color: string; bg
   cancelled: { label: "Cancelado", icon: XCircle, color: "text-gray-400", bg: "bg-gray-400/10" },
 };
 
-const betTypeLabel = (t: string) => t === "home" ? "Casa" : t === "draw" ? "Empate" : "Fora";
+const betTypeLabel = (t: string) => getBetTypeLabel(t);
 
 export default function AdminBetsPage() {
   const { light } = useOutletContext<{ light: boolean }>();

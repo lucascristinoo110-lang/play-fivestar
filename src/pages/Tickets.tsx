@@ -4,6 +4,7 @@ import { ArrowLeft, Ticket, Clock, CheckCircle, XCircle, Loader2 } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { getBetTypeLabel, getMarketLabel } from "@/lib/sports-odds";
 
 type Bet = {
   id: string;
@@ -25,8 +26,6 @@ const statusConfig: Record<string, { label: string; icon: any; color: string; bg
   lost: { label: "Perdeu", icon: XCircle, color: "text-destructive", bg: "bg-destructive/10" },
   cancelled: { label: "Cancelado", icon: XCircle, color: "text-muted-foreground", bg: "bg-muted" },
 };
-
-const betTypeLabel = (t: string) => t === "home" ? "Casa" : t === "draw" ? "Empate" : "Fora";
 
 export default function TicketsPage() {
   const { user } = useAuth();
@@ -170,13 +169,29 @@ export default function TicketsPage() {
 
                   {/* Match info */}
                   <div className="bg-secondary/30 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase">{md?.league}</p>
-                    <p className="text-xs font-semibold text-foreground mt-0.5">{md?.home} vs {md?.away}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
-                        {betTypeLabel(bet.bet_type)} @ {Number(bet.odds).toFixed(2)}
-                      </span>
-                    </div>
+                    {bet.bet_type === "accumulator" && md?.selections ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] text-primary font-semibold uppercase">Aposta Acumulada • {md.selections.length} seleções</p>
+                        {md.selections.map((sel: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-foreground">{sel.home} vs {sel.away}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
+                              {sel.label || getBetTypeLabel(sel.betType)} @ {Number(sel.odds).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-muted-foreground uppercase">{md?.league}</p>
+                        <p className="text-xs font-semibold text-foreground mt-0.5">{md?.home} vs {md?.away}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
+                            {md?.label || getBetTypeLabel(bet.bet_type)} @ {Number(bet.odds).toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Amounts */}

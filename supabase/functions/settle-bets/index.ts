@@ -15,7 +15,6 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Get all pending bets
     const { data: pendingBets, error: fetchErr } = await supabase
       .from("bets")
       .select("*")
@@ -28,60 +27,89 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Group bets by match_id
-    const matchIds = [...new Set(pendingBets.map(b => b.match_id))];
+    // Collect all unique match IDs (skip "accumulator" placeholder)
+    const allMatchIds = new Set<string>();
+    for (const bet of pendingBets) {
+      if (bet.match_id === "accumulator") {
+        const md = bet.match_data as any;
+        if (md?.selections) {
+          for (const sel of md.selections) {
+            if (sel.matchId) allMatchIds.add(sel.matchId);
+          }
+        }
+      } else {
+        allMatchIds.add(bet.match_id);
+      }
+    }
+
+    // Fetch results for all matches
+    const matchResults = new Map<string, { homeScore: number; awayScore: number }>();
+    for (const matchId of allMatchIds) {
+      try {
+        const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookupevent.php?id=${matchId}`);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const event = data?.events?.[0];
+        if (!event || event.intHomeScore == null || event.intAwayScore == null) continue;
+        matchResults.set(matchId, {
+          homeScore: Number(event.intHomeScore),
+          awayScore: Number(event.intAwayScore),
+        });
+      } catch { /* skip */ }
+    }
+
     let settledCount = 0;
 
-    for (const matchId of matchIds) {
-      // Check match result from TheSportsDB
-      const res = await fetch(`https://www.thesportsdb.com/api/v1/json/3/lookupevent.php?id=${matchId}`);
-      if (!res.ok) continue;
+    for (const bet of pendingBets) {
+      let won: boolean | null = null; // null = can't settle yet
 
-      const data = await res.json();
-      const event = data?.events?.[0];
-      if (!event || event.intHomeScore == null || event.intAwayScore == null) continue;
+      if (bet.bet_type === "accumulator") {
+        // Accumulator: all selections must be settled, all must win
+        const md = bet.match_data as any;
+        if (!md?.selections || !Array.isArray(md.selections)) continue;
 
-      const homeScore = Number(event.intHomeScore);
-      const awayScore = Number(event.intAwayScore);
+        let allResolved = true;
+        let allWon = true;
 
-      // Determine result
-      let result: "home" | "draw" | "away";
-      if (homeScore > awayScore) result = "home";
-      else if (homeScore < awayScore) result = "away";
-      else result = "draw";
-
-      // Settle each bet for this match
-      const matchBets = pendingBets.filter(b => b.match_id === matchId);
-
-      for (const bet of matchBets) {
-        const won = bet.bet_type === result;
-        const newStatus = won ? "won" : "lost";
-
-        // Update bet status
-        await supabase
-          .from("bets")
-          .update({ status: newStatus, settled_at: new Date().toISOString() })
-          .eq("id", bet.id);
-
-        // If won, credit the user's balance
-        if (won) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("balance")
-            .eq("user_id", bet.user_id)
-            .single();
-
-          if (profile) {
-            const newBalance = Number(profile.balance || 0) + Number(bet.potential_win);
-            await supabase
-              .from("profiles")
-              .update({ balance: newBalance })
-              .eq("user_id", bet.user_id);
+        for (const sel of md.selections) {
+          const result = matchResults.get(sel.matchId);
+          if (!result) { allResolved = false; break; }
+          if (!checkBetResult(sel.betType, result.homeScore, result.awayScore)) {
+            allWon = false;
           }
         }
 
-        settledCount++;
+        if (!allResolved) continue; // Wait until all matches have results
+        won = allWon;
+      } else {
+        // Single bet
+        const result = matchResults.get(bet.match_id);
+        if (!result) continue;
+        won = checkBetResult(bet.bet_type, result.homeScore, result.awayScore);
       }
+
+      if (won === null) continue;
+
+      const newStatus = won ? "won" : "lost";
+      await supabase.from("bets")
+        .update({ status: newStatus, settled_at: new Date().toISOString() })
+        .eq("id", bet.id);
+
+      if (won) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("balance")
+          .eq("user_id", bet.user_id)
+          .single();
+        if (profile) {
+          const newBalance = Number(profile.balance || 0) + Number(bet.potential_win);
+          await supabase.from("profiles")
+            .update({ balance: newBalance })
+            .eq("user_id", bet.user_id);
+        }
+      }
+
+      settledCount++;
     }
 
     return new Response(
@@ -95,3 +123,39 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+function checkBetResult(betType: string, homeScore: number, awayScore: number): boolean {
+  const totalGoals = homeScore + awayScore;
+
+  switch (betType) {
+    // 1x2
+    case "home": return homeScore > awayScore;
+    case "draw": return homeScore === awayScore;
+    case "away": return homeScore < awayScore;
+
+    // Double chance
+    case "home_draw": return homeScore >= awayScore;
+    case "home_away": return homeScore !== awayScore;
+    case "draw_away": return homeScore <= awayScore;
+
+    // Over/Under
+    case "over_1_5": return totalGoals > 1.5;
+    case "under_1_5": return totalGoals < 1.5;
+    case "over_2_5": return totalGoals > 2.5;
+    case "under_2_5": return totalGoals < 2.5;
+    case "over_3_5": return totalGoals > 3.5;
+    case "under_3_5": return totalGoals < 3.5;
+
+    // Both teams to score
+    case "both_yes": return homeScore > 0 && awayScore > 0;
+    case "both_no": return homeScore === 0 || awayScore === 0;
+
+    // Exact score (e.g. "score_2_1")
+    default:
+      if (betType.startsWith("score_")) {
+        const parts = betType.replace("score_", "").split("_");
+        return Number(parts[0]) === homeScore && Number(parts[1]) === awayScore;
+      }
+      return false;
+  }
+}
