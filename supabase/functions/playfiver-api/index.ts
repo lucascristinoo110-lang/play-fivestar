@@ -133,6 +133,7 @@ async function launchGameWithRetry({
         game_original: false,
         user_balance: userBalance,
         lang: "pt",
+        callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/playfiver-webhook`,
       }),
     });
 
