@@ -153,7 +153,7 @@ export default function AdminLayout() {
             </div>
           </div>
         </header>
-        <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto", light ? "bg-slate-50" : "bg-[#080c14]")}>
+        <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto", light ? "bg-slate-50" : "bg-[#111827]")}>
           <Outlet context={{ light }} />
         </main>
       </div>
