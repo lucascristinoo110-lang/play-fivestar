@@ -142,7 +142,7 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className={cn(
           "sticky top-0 z-30 h-14 flex items-center justify-between px-4 lg:px-8 border-b backdrop-blur-xl",
-          light ? "bg-white/70 border-slate-200/60" : "bg-[#080c14]/70 border-white/[0.06]"
+          light ? "bg-white/70 border-slate-200/60" : "bg-[#111827]/80 border-slate-700/40"
         )}>
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className={cn("p-2 rounded-lg lg:hidden", light ? "hover:bg-slate-100 text-slate-500" : "hover:bg-white/[0.06] text-slate-400")}>
