@@ -117,7 +117,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         "EVOLIVE_mrfykemt5slanyi5",  // Infinite Blackjack
         "EVOLIVE_SuperSicBo000001",  // Super Sic Bo
         "EVOLIVE_gwbaccarat000001",  // Golden Wealth Baccarat
-        "EVOLIVE_CrazyBalls000001",  // Crazy Balls
+        
       ];
 
       const [hot, curatedLive, slots, crash] = await Promise.all([
