@@ -186,7 +186,7 @@ serve(async (req) => {
 
     if (action === "list_providers") {
       const response = await fetch(`${apiUrl}/api/v2/providers`, {
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json", ...CASINO_KEY_HEADER },
       });
 
       const rawText = await response.text();
