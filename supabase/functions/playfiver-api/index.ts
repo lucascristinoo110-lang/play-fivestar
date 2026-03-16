@@ -120,7 +120,7 @@ async function launchGameWithRetry({
 }) {
   let lastResult: { parsed: any; providerMessage: string; ipDenied: boolean } | null = null;
 
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
     const response = await fetch(`${PLAYFIVER_API}/api/v2/game_launch`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Accept": "application/json", ...getCasinoKeyHeader() },
@@ -149,7 +149,7 @@ async function launchGameWithRetry({
 
     console.warn(`Game launch failed on attempt ${attempt} for ${provider}/${gameCode}: ${providerMessage}`);
 
-    if (!ipDenied || attempt === 3) break;
+    if (!ipDenied || attempt === 5) break;
     await sleep(250 * attempt);
   }
 
