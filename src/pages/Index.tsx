@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { CasinoSidebar } from "@/components/casino/CasinoSidebar";
 import { TopBar } from "@/components/casino/TopBar";
 import { HeroBanner } from "@/components/casino/HeroBanner";
@@ -22,6 +23,7 @@ const Index = () => {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  useMetaPixel();
 
   const forcedFilter = useMemo(() => {
     const category = searchParams.get("category");

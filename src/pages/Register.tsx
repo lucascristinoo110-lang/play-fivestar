@@ -6,6 +6,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Fingerprint, User, Mail, Phone, Lock } from "lucide-react";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { trackEvent } from "@/hooks/useMetaPixel";
 
 function validateCpf(cpf: string) {
   const nums = cpf.replace(/\D/g, "");
@@ -119,6 +120,7 @@ export default function Register() {
     if (error) {
       toast({ title: "Erro no cadastro", description: error.message, variant: "destructive" });
     } else {
+      trackEvent("CompleteRegistration");
       toast({ title: "Cadastro realizado!", description: "Sua conta foi criada com sucesso." });
       navigate("/");
     }

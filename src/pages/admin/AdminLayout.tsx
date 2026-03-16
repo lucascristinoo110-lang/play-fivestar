@@ -3,7 +3,7 @@ import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import {
   BarChart3, Users, Settings, Shield, ArrowDownToLine,
   ArrowUpFromLine, FileCheck, Palette, Gamepad2, LogOut, Home, Sun, Moon,
-  Image, UserCheck, ChevronRight, Ticket, Menu, X
+  Image, UserCheck, ChevronRight, Ticket, Menu, X, Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -18,6 +18,7 @@ const links = [
   { icon: Gamepad2, label: "Jogos / Provedores", path: "/rei/games" },
   { icon: Image, label: "Banners", path: "/rei/banners" },
   { icon: UserCheck, label: "Afiliados", path: "/rei/affiliates" },
+  { icon: Megaphone, label: "Anúncios / Pixel", path: "/rei/ads" },
   { icon: Palette, label: "Aparência", path: "/rei/appearance" },
   { icon: Shield, label: "Gateway BSPAY", path: "/rei/bspay" },
   { icon: Settings, label: "Configurações", path: "/rei/settings" },

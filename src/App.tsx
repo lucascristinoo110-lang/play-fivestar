@@ -26,6 +26,7 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import AdminBannersPage from "./pages/admin/AdminBannersPage";
 import AdminBetsPage from "./pages/admin/AdminBetsPage";
 import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
+import AdminAdsPage from "./pages/admin/AdminAdsPage";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsConditions from "./pages/legal/TermsConditions";
 import PlayerSupport from "./pages/legal/PlayerSupport";
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="banners" element={<AdminBannersPage />} />
               <Route path="bets" element={<AdminBetsPage />} />
               <Route path="affiliates" element={<AdminAffiliatesPage />} />
+              <Route path="ads" element={<AdminAdsPage />} />
               <Route path="appearance" element={<AdminAppearancePage />} />
               <Route path="bspay" element={<AdminBspayPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />

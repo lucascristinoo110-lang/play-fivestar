@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { trackEvent } from "@/hooks/useMetaPixel";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
@@ -52,6 +53,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
         (payload) => {
           if (payload.new.status === "completed") {
             setStep("success");
+            trackEvent("Purchase", { value: Number(payload.new.amount), currency: "BRL" });
             toast({ title: "Depósito confirmado!", description: `R$ ${Number(payload.new.amount).toFixed(2)} adicionado ao seu saldo.` });
           }
         },
@@ -62,6 +64,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       const { data } = await supabase.from("transactions").select("status").eq("id", transactionId).single();
       if (data?.status === "completed") {
         setStep("success");
+        trackEvent("Purchase", { value: Number(amount), currency: "BRL" });
         toast({ title: "Depósito confirmado!" });
       }
     }, 5000);
@@ -111,6 +114,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       setPixCode(String(pixData.pix_code));
       setQrImage(pixData.qr_code_image || buildQrImageFromPixCode(String(pixData.pix_code)));
       setStep("qrcode");
+      trackEvent("Lead", { value: Number(amount), currency: "BRL" });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
