@@ -104,27 +104,26 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
       const imageFilter = (q: any) => q.not("image_url", "is", null).neq("image_url", "");
 
-      // Curated top live casino game codes (Evolution Live priority)
+      // Top Evolution Live games — curated based on major casino lobbies
       const CURATED_LIVE_CODES = [
         "EVOLIVE_LightningTable01",  // Lightning Roulette
         "EVOLIVE_BacBo00000000001",  // Bac Bo
         "EVOLIVE_TopCard000000001",  // Football Studio
         "EVOLIVE_MegaBall00000001",  // Mega Ball
         "EVOLIVE_LightningBac0001",  // Lightning Baccarat
+        "EVOLIVE_XxxtremeLigh0001",  // XXXtreme Lightning Roulette
         "EVOLIVE_LightningBacBo01",  // Lightning Bac Bo
         "EVOLIVE_oytmvb9m1zysmc44",  // Baccarat A
-        "EVOLIVE_rng-dreamcatcher",  // First Person Dream Catcher
-        "EVOLIVE_gwbaccarat000001",  // Golden Wealth Baccarat
-        "EVOLIVE_7x0b1tgh7agmf6hv",  // Immersive Roulette
         "EVOLIVE_mrfykemt5slanyi5",  // Infinite Blackjack
-        "EVOLIVE_LightningSbj0001",  // Lightning Blackjack
+        "EVOLIVE_SuperSicBo000001",  // Super Sic Bo
+        "EVOLIVE_gwbaccarat000001",  // Golden Wealth Baccarat
+        "EVOLIVE_CrazyBalls000001",  // Crazy Balls
       ];
 
-      const [hot, curatedLive, slots, live, crash] = await Promise.all([
+      const [hot, curatedLive, slots, crash] = await Promise.all([
         imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true)).order("sort_order").limit(12),
         supabase.from("games").select(GAME_FIELDS).eq("is_active", true).in("game_code", CURATED_LIVE_CODES),
         imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots")).order("sort_order").limit(12),
-        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "live").not("game_code", "in", `(${CURATED_LIVE_CODES.join(",")})`)).order("sort_order").limit(12),
         imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash")).order("sort_order").limit(12),
       ]);
 
@@ -139,7 +138,6 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         { id: "hot", title: "Mais Jogados Agora", subtitle: "Jogos com maior tração no cassino", games: normalizeGames(hot.data) },
         { id: "curated-live", title: "🔴 Cassino ao Vivo", subtitle: "As mesas mais quentes com dealers reais", games: curatedLiveGames },
         { id: "slots", title: "Slots Campeões", subtitle: "Títulos que mais convertem em sessão", games: normalizeGames(slots.data) },
-        { id: "live", title: "Ao Vivo em Alta", subtitle: "Mesas e transmissões com alta procura", games: normalizeGames(live.data) },
         { id: "crash", title: "Crash e Multiplicadores", subtitle: "Sessão para gatilho de ação rápida", games: normalizeGames(crash.data) },
       ].filter((section) => section.games.length > 0);
 
