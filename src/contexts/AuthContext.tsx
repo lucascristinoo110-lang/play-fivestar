@@ -104,6 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }
 
+  async function refreshProfile() {
+    if (user?.id) {
+      await fetchProfile(user.id);
+    }
+  }
+
   async function checkAdmin(userId: string) {
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin");
     setIsAdmin(!!data && data.length > 0);
