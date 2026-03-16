@@ -318,6 +318,8 @@ export type Database = {
           maintenance_mode: boolean | null
           max_deposit: number | null
           max_withdraw: number | null
+          meta_api_key: string | null
+          meta_pixel_id: string | null
           min_deposit: number | null
           min_withdraw: number | null
           playfiver_api_key: string | null
@@ -349,6 +351,8 @@ export type Database = {
           maintenance_mode?: boolean | null
           max_deposit?: number | null
           max_withdraw?: number | null
+          meta_api_key?: string | null
+          meta_pixel_id?: string | null
           min_deposit?: number | null
           min_withdraw?: number | null
           playfiver_api_key?: string | null
@@ -380,6 +384,8 @@ export type Database = {
           maintenance_mode?: boolean | null
           max_deposit?: number | null
           max_withdraw?: number | null
+          meta_api_key?: string | null
+          meta_pixel_id?: string | null
           min_deposit?: number | null
           min_withdraw?: number | null
           playfiver_api_key?: string | null
