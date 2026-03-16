@@ -4,6 +4,7 @@ import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Ticket, Clock, CheckCircle, XCircle, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getBetTypeLabel } from "@/lib/sports-odds";
 
 type Bet = {
   id: string;

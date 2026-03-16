@@ -169,13 +169,29 @@ export default function TicketsPage() {
 
                   {/* Match info */}
                   <div className="bg-secondary/30 rounded-lg p-3">
-                    <p className="text-[10px] text-muted-foreground uppercase">{md?.league}</p>
-                    <p className="text-xs font-semibold text-foreground mt-0.5">{md?.home} vs {md?.away}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
-                        {betTypeLabel(bet.bet_type)} @ {Number(bet.odds).toFixed(2)}
-                      </span>
-                    </div>
+                    {bet.bet_type === "accumulator" && md?.selections ? (
+                      <div className="space-y-2">
+                        <p className="text-[10px] text-primary font-semibold uppercase">Aposta Acumulada • {md.selections.length} seleções</p>
+                        {md.selections.map((sel: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between text-xs">
+                            <span className="text-foreground">{sel.home} vs {sel.away}</span>
+                            <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
+                              {sel.label || getBetTypeLabel(sel.betType)} @ {Number(sel.odds).toFixed(2)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-muted-foreground uppercase">{md?.league}</p>
+                        <p className="text-xs font-semibold text-foreground mt-0.5">{md?.home} vs {md?.away}</p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-primary/15 text-primary font-semibold">
+                            {md?.label || getBetTypeLabel(bet.bet_type)} @ {Number(bet.odds).toFixed(2)}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   {/* Amounts */}
