@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Search, Ban, CheckCircle, DollarSign, Eye, MessageCircle } from "lucide-react";
+import { Search, Ban, CheckCircle, DollarSign, Eye } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useOutletContext } from "react-router-dom";
@@ -78,7 +78,6 @@ export default function AdminUsersPage() {
             <tr className={cn("border-b", light ? "border-slate-100 text-slate-400" : "border-border/40 text-muted-foreground")}>
               <th className="text-left p-3 font-medium">Nome</th>
               <th className="text-left p-3 font-medium hidden sm:table-cell">E-mail</th>
-              <th className="text-left p-3 font-medium hidden md:table-cell">WhatsApp</th>
               <th className="text-left p-3 font-medium">Saldo</th>
               <th className="text-left p-3 font-medium hidden md:table-cell">Status</th>
               <th className="text-left p-3 font-medium">Ações</th>
@@ -96,22 +95,6 @@ export default function AdminUsersPage() {
               >
                 <td className={cn("p-3 font-medium", light ? "text-slate-800" : "text-foreground")}>{u.display_name || "—"}</td>
                 <td className={cn("p-3 hidden sm:table-cell", light ? "text-slate-500" : "text-muted-foreground")}>{u.email}</td>
-                <td className={cn("p-3 hidden md:table-cell", light ? "text-slate-500" : "text-muted-foreground")}>
-                  {u.phone ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-xs">{u.phone}</span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openWhatsApp(u.phone, u.display_name); }}
-                        className="p-1 rounded-md hover:bg-emerald-500/15 text-emerald-500 transition-colors"
-                        title="Enviar WhatsApp"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground">—</span>
-                  )}
-                </td>
                 <td className={cn("p-3 font-mono", light ? "text-slate-800" : "text-foreground")}>R$ {Number(u.balance).toFixed(2)}</td>
                 <td className="p-3 hidden md:table-cell">
                   <span className={cn(
