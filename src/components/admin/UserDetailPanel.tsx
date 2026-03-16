@@ -63,6 +63,14 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
 
   if (!user) return null;
 
+  function openWhatsApp() {
+    if (!user?.phone) return;
+    let clean = user.phone.replace(/\D/g, "");
+    if (clean.length <= 11 && !clean.startsWith("55")) clean = "55" + clean;
+    const msg = encodeURIComponent(`Olá ${user.display_name || ""}! Tudo bem?`);
+    window.open(`https://wa.me/${clean}?text=${msg}`, "_blank");
+  }
+
   const fmt = (v: number) => `R$ ${v.toFixed(2)}`;
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 
