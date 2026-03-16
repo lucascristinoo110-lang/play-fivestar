@@ -24,7 +24,21 @@ export function BetSlip() {
   const potentialWin = amount * totalOdds;
   const isAccumulator = selections.length > 1;
 
-  if (selections.length === 0 && !success) return null;
+  if (selections.length === 0 && !success) {
+    // Show empty cupom indicator so user knows it exists
+    return (
+      <button
+        onClick={() => setIsOpen(true)}
+        className={cn("fixed z-50 bg-primary/90 text-primary-foreground flex items-center gap-2 px-4 py-2.5 shadow-lg backdrop-blur-sm transition-all hover:bg-primary",
+          isMobile ? "bottom-16 left-0 right-0 rounded-t-xl justify-center" : "bottom-4 right-4 rounded-xl"
+        )}
+      >
+        <Ticket className="h-4 w-4" />
+        <span className="text-sm font-bold">Cupom</span>
+        <span className="text-[10px] opacity-80">• Selecione uma odd</span>
+      </button>
+    );
+  }
 
   async function placeBet() {
     if (!user || amount <= 0) return;
