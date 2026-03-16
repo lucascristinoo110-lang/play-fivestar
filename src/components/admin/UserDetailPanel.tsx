@@ -6,8 +6,9 @@ import {
 } from "@/components/ui/sheet";
 import {
   DollarSign, ArrowDownToLine, ArrowUpFromLine, TrendingDown, Gamepad2,
-  Calendar, Hash, User, Mail, Phone, Fingerprint, Clock,
+  Calendar, Hash, User, Mail, Phone, Fingerprint, Clock, MessageCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   user: any | null;
@@ -61,6 +62,14 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
   }
 
   if (!user) return null;
+
+  function openWhatsApp() {
+    if (!user?.phone) return;
+    let clean = user.phone.replace(/\D/g, "");
+    if (clean.length <= 11 && !clean.startsWith("55")) clean = "55" + clean;
+    const msg = encodeURIComponent(`Olá ${user.display_name || ""}! Tudo bem?`);
+    window.open(`https://wa.me/${clean}?text=${msg}`, "_blank");
+  }
 
   const fmt = (v: number) => `R$ ${v.toFixed(2)}`;
   const fmtDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
@@ -138,6 +147,16 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
                 Saldo: {fmt(Number(user.balance || 0))}
               </span>
             </div>
+            {user.phone && (
+              <Button
+                size="sm"
+                onClick={openWhatsApp}
+                className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 h-8"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Enviar WhatsApp
+              </Button>
+            )}
           </SheetDescription>
         </SheetHeader>
 
