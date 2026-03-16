@@ -213,8 +213,7 @@ export default function AdminDashboardPage() {
             className={cn("rounded-2xl p-4 border transition-all hover:scale-[1.02]", cardBg)}
           >
             <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center mb-3", c.bg)}>
-              <c.icon className={cn("h-[18px] w-[18px] bg-gradient-to-br bg-clip-text", c.gradient)} style={{ color: "transparent", backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))` }} />
-              <c.icon className={cn("h-[18px] w-[18px] absolute")} style={{ color: c.gradient.includes("blue") ? "#3b82f6" : c.gradient.includes("emerald") ? "#10b981" : c.gradient.includes("orange") ? "#f97316" : c.gradient.includes("purple") ? "#a855f7" : c.gradient.includes("cyan") ? "#06b6d4" : c.gradient.includes("teal") ? "#14b8a6" : c.gradient.includes("amber") ? "#f59e0b" : c.gradient.includes("rose") ? "#f43f5e" : c.gradient.includes("yellow") ? "#eab308" : c.gradient.includes("indigo") ? "#6366f1" : c.gradient.includes("red") ? "#ef4444" : "#10b981" }} />
+              <c.icon className="h-[18px] w-[18px]" style={{ color: iconColor(c.gradient) }} />
             </div>
             <p className={cn("text-lg font-bold font-mono tracking-tight leading-none", light ? "text-slate-800" : "text-white")}>{c.value}</p>
             <p className={cn("text-[11px] font-medium mt-1.5", light ? "text-slate-400" : "text-slate-500")}>{c.label}</p>
