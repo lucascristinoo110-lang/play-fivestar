@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronRight, Trophy } from "lucide-react";
+import { getTeamBadge } from "@/lib/team-badges";
 
 type SportsMatch = {
   id: string;
