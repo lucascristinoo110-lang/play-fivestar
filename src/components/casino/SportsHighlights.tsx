@@ -104,8 +104,8 @@ export function SportsHighlights() {
             league: e._leagueName || String(e.strLeague || "Futebol"),
             home: e.strHomeTeam,
             away: e.strAwayTeam,
-            homeBadge: e.strHomeTeamBadge || "",
-            awayBadge: e.strAwayTeamBadge || "",
+            homeBadge: e.strHomeTeamBadge || getTeamBadge(e.strHomeTeam),
+            awayBadge: e.strAwayTeamBadge || getTeamBadge(e.strAwayTeam),
             kickoff: e.strTimestamp || e.dateEvent,
             odds: deterministicOdds(e.strHomeTeam, e.strAwayTeam),
           }))
