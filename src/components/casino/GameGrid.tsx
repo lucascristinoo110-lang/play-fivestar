@@ -159,7 +159,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       const sections: GameSection[] = [
         { id: "hot", title: "Mais Jogados Agora", subtitle: "Jogos com maior tração no cassino", games: normalizeGames(hot.data) },
         { id: "curated-live", title: "🔴 Cassino ao Vivo", subtitle: "As mesas mais quentes com dealers reais", games: curatedLiveGames },
-        { id: "pg-latest", title: "🐉 Lançamentos PG Soft", subtitle: "Os jogos mais recentes da PG Soft", games: pgLatestGames },
+        { id: "pg-latest", title: "🐉 Destaques PG Soft", subtitle: "Fortune Snake, Dragon Hatch e os mais jogados da PG", games: pgLatestGames },
         { id: "slots", title: "Slots Campeões", subtitle: "Títulos que mais convertem em sessão", games: normalizeGames(slots.data) },
         { id: "crash", title: "Crash e Multiplicadores", subtitle: "Sessão para gatilho de ação rápida", games: normalizeGames(crash.data) },
       ].filter((section) => section.games.length > 0);
