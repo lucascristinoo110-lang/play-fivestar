@@ -93,6 +93,7 @@ async function fetchPlayfiverGames(apiUrl: string) {
     headers: {
       "Content-Type": "application/json",
       "Accept": "application/json",
+      ...CASINO_KEY_HEADER,
     },
   });
 
