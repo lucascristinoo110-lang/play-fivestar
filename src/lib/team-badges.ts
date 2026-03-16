@@ -13,7 +13,7 @@ const TEAM_BADGES: Record<string, string> = {
   "Cruzeiro": "https://r2.thesportsdb.com/images/media/team/badge/upsvvu1473538059.png",
   "Grêmio": "https://r2.thesportsdb.com/images/media/team/badge/uvpwyt1473538089.png",
   "Internacional": "https://r2.thesportsdb.com/images/media/team/badge/yprvxx1473538097.png",
-  "Botafogo": "https://r2.thesportsdb.com/images/media/team/badge/irzu1u1554237406.png",
+  "Botafogo": "https://r2.thesportsdb.com/images/media/team/badge/syptwx1473538074.png", // using Flamengo as placeholder until correct Botafogo badge confirmed
   "Fluminense": "https://r2.thesportsdb.com/images/media/team/badge/stvvwp1473538082.png",
   "Santos": "https://r2.thesportsdb.com/images/media/team/badge/j8xk9g1679447486.png",
   "Bahia": "https://r2.thesportsdb.com/images/media/team/badge/xuvtsv1473539308.png",
