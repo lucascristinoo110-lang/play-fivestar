@@ -62,8 +62,9 @@ function getBrazilianFallbackMatches(): SportsMatch[] {
 }
 
 function TeamBadge({ src, name }: { src: string; name: string }) {
-  if (src) {
-    return <img src={src} alt={name} className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-full bg-secondary/50" loading="lazy" />;
+  const [failed, setFailed] = useState(false);
+  if (src && !failed) {
+    return <img src={src} alt={name} className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-full bg-secondary/50" loading="lazy" onError={() => setFailed(true)} />;
   }
   return (
     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground border border-border/30">

@@ -61,8 +61,9 @@ function deterministicOdds(home: string, away: string) {
 }
 
 function TeamBadge({ src, name, size = "sm" }: { src: string; name: string; size?: "sm" | "md" }) {
+  const [failed, setFailed] = useState(false);
   const cls = size === "md" ? "w-10 h-10" : "w-7 h-7";
-  if (src) return <img src={src} alt={name} className={`${cls} object-contain rounded-full bg-secondary/50`} loading="lazy" />;
+  if (src && !failed) return <img src={src} alt={name} className={`${cls} object-contain rounded-full bg-secondary/50`} loading="lazy" onError={() => setFailed(true)} />;
   return (
     <div className={`${cls} rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-foreground border border-border/30`}>
       {name.slice(0, 2).toUpperCase()}
