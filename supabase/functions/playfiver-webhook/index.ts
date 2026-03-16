@@ -11,6 +11,126 @@ function json(body: Record<string, any>, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders });
 }
 
+type CallbackPayload = Record<string, unknown>;
+
+function asObject(value: unknown): CallbackPayload | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as CallbackPayload)
+    : null;
+}
+
+function flattenFormData(formData: FormData): CallbackPayload {
+  return Object.fromEntries(
+    Array.from(formData.entries()).map(([key, value]) => [
+      key,
+      typeof value === "string" ? value : value.name,
+    ]),
+  );
+}
+
+function parseAmount(value: unknown): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return 0;
+
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+
+  const normalized = trimmed
+    .replace(/R\$/gi, "")
+    .replace(/\s+/g, "")
+    .replace(/\.(?=\d{3}(\D|$))/g, "")
+    .replace(",", ".");
+
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+async function parseRequestPayload(req: Request): Promise<CallbackPayload> {
+  const url = new URL(req.url);
+  const queryPayload = Object.fromEntries(url.searchParams.entries());
+  const contentType = (req.headers.get("content-type") || "").toLowerCase();
+
+  if (req.method === "GET") {
+    return queryPayload;
+  }
+
+  try {
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      return { ...queryPayload, ...flattenFormData(formData) };
+    }
+
+    const raw = await req.text();
+    if (!raw.trim()) return queryPayload;
+
+    if (contentType.includes("application/json")) {
+      const parsed = JSON.parse(raw);
+      return { ...queryPayload, ...(asObject(parsed) ?? { raw }) };
+    }
+
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      return { ...queryPayload, ...Object.fromEntries(new URLSearchParams(raw).entries()) };
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      return { ...queryPayload, ...(asObject(parsed) ?? { raw }) };
+    } catch {
+      const params = Object.fromEntries(new URLSearchParams(raw).entries());
+      return Object.keys(params).length > 0 ? { ...queryPayload, ...params } : { ...queryPayload, raw };
+    }
+  } catch (error) {
+    console.warn("Failed to parse Playfiver callback payload, falling back to query params:", error);
+    return queryPayload;
+  }
+}
+
+function normalizeCallback(body: CallbackPayload) {
+  const slot = asObject(body.slot) ?? {};
+
+  const bet = slot.bet ?? body["slot.bet"] ?? body["slot[bet]"] ?? body.bet ?? body.amount ?? body.value ?? body.wager;
+  const win = slot.win ?? body["slot.win"] ?? body["slot[win]"] ?? body.win ?? body.payout;
+  const gameCode = String(
+    body.game_code ??
+      slot.game_code ??
+      body["slot.game_code"] ??
+      body["slot[game_code]"] ??
+      body.game ??
+      body.provider_game_id ??
+      "",
+  ).trim();
+
+  const detectedType = String(
+    body.type ?? body.action ?? body.event ?? body.callback ?? body.action_type ?? "",
+  ).trim().toUpperCase();
+
+  const betAmt = parseAmount(bet);
+  const winAmt = parseAmount(win);
+
+  return {
+    type: detectedType || ((betAmt > 0 || winAmt > 0) ? "TRANSACTION" : "BALANCE"),
+    userCode: String(
+      body.user_code ?? body.user_id ?? body.username ?? body.player_id ?? body.playerId ?? "",
+    ).trim(),
+    transactionId: String(
+      body.transaction_id ?? body.round_id ?? body.reference_id ?? body.call_id ?? body.tx_id ?? "",
+    ).trim() || null,
+    gameCode,
+    betAmt,
+    winAmt,
+  };
+}
+
+function balanceResponse(balance: number, userCode: string) {
+  return {
+    msg: "",
+    status: true,
+    balance,
+    user_balance: balance,
+    user_code: userCode,
+  };
+}
+
 /**
  * Playfiver Wallet Callback
  * Public endpoint (no JWT) — called directly by Playfiver servers.
@@ -24,58 +144,55 @@ serve(async (req) => {
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const body = await req.json();
-    console.log("Playfiver callback:", JSON.stringify(body));
+    const body = await parseRequestPayload(req);
+    console.log("Playfiver callback:", JSON.stringify({
+      method: req.method,
+      content_type: req.headers.get("content-type"),
+      payload: body,
+    }));
 
-    const type = String(body.type || body.action || "").toUpperCase();
-    const user_code = body.user_code || body.user_id;
-    const transaction_id = body.transaction_id || body.round_id || body.reference_id || null;
+    const { type, userCode, transactionId, betAmt, winAmt, gameCode } = normalizeCallback(body);
 
-    if (!user_code) {
+    if (!userCode) {
       return json({ msg: "user_code required", status: false }, 400);
     }
 
     // ── BALANCE ──
     if (type === "BALANCE") {
-      const balance = await getBalance(supabase, user_code);
+      const balance = await getBalance(supabase, userCode);
       if (balance === null) return json({ msg: "User not found", status: false }, 404);
-      return json({ msg: "", status: true, balance, user_code });
+      return json(balanceResponse(balance, userCode));
     }
 
     // ── DUPLICATE CHECK (idempotency) ──
-    if (transaction_id) {
+    if (transactionId) {
       const { data: existing } = await supabase
         .from("transactions")
         .select("id")
-        .eq("external_id", `pf_${transaction_id}`)
+        .eq("external_id", `pf_${transactionId}`)
         .maybeSingle();
 
       if (existing) {
-        const balance = await getBalance(supabase, user_code);
-        console.log(`Duplicate tx=${transaction_id}, balance=${balance}`);
-        return json({ msg: "", status: true, balance: balance ?? 0, user_code });
+        const balance = await getBalance(supabase, userCode);
+        console.log(`Duplicate tx=${transactionId}, balance=${balance}`);
+        return json(balanceResponse(balance ?? 0, userCode));
       }
     }
-
-    const slot = body.slot || {};
-    const betAmt = Number(slot.bet || body.bet || body.amount || 0);
-    const winAmt = Number(slot.win || body.win || 0);
-    const gameCode = body.game_code || slot.game_code || "";
 
     // ── BET (debit) ──
     if (type === "BET" || type === "LOSEBET" || (type === "TRANSACTION" && betAmt > 0 && winAmt === 0)) {
       const { data, error } = await supabase.rpc("debit_balance", {
-        p_user_id: user_code,
+        p_user_id: userCode,
         p_amount: betAmt,
       });
 
       if (error) {
         if (error.message.includes("Insufficient balance")) {
-          const bal = await getBalance(supabase, user_code);
-          return json({ msg: "Saldo insuficiente", status: false, balance: bal ?? 0 }, 400);
+          const bal = await getBalance(supabase, userCode);
+          return json({ msg: "Saldo insuficiente", status: false, balance: bal ?? 0, user_balance: bal ?? 0 }, 400);
         }
         if (error.message.includes("User not found")) {
           return json({ msg: "User not found", status: false }, 404);
@@ -84,68 +201,65 @@ serve(async (req) => {
       }
 
       const newBalance = Number(data);
-      await recordTx(supabase, user_code, "game_bet", -betAmt, transaction_id, { type, game_code: gameCode, round_id: transaction_id });
-      console.log(`BET: ${user_code} -${betAmt}, balance=${newBalance}`);
-      return json({ msg: "", status: true, balance: newBalance, user_code });
+      await recordTx(supabase, userCode, "game_bet", -betAmt, transactionId, { type, game_code: gameCode, round_id: transactionId, raw_payload: body });
+      console.log(`BET: ${userCode} -${betAmt}, balance=${newBalance}`);
+      return json(balanceResponse(newBalance, userCode));
     }
 
     // ── WIN (credit) ──
     if (type === "WIN" || type === "WINBET" || (type === "TRANSACTION" && winAmt > 0)) {
       const { data, error } = await supabase.rpc("adjust_balance", {
-        p_user_id: user_code,
+        p_user_id: userCode,
         p_amount: winAmt,
       });
       if (error) throw error;
 
       const newBalance = Number(data);
-      await recordTx(supabase, user_code, "game_win", winAmt, transaction_id, { type, game_code: gameCode, round_id: transaction_id });
-      console.log(`WIN: ${user_code} +${winAmt}, balance=${newBalance}`);
-      return json({ msg: "", status: true, balance: newBalance, user_code });
+      await recordTx(supabase, userCode, "game_win", winAmt, transactionId, { type, game_code: gameCode, round_id: transactionId, raw_payload: body });
+      console.log(`WIN: ${userCode} +${winAmt}, balance=${newBalance}`);
+      return json(balanceResponse(newBalance, userCode));
     }
 
     // ── REFUND / CANCEL ──
     if (type === "REFUND" || type === "CANCEL" || type === "ROLLBACK") {
-      const refundAmt = betAmt || winAmt || Number(body.amount || 0);
+      const refundAmt = betAmt || winAmt || parseAmount(body.amount);
       const { data, error } = await supabase.rpc("adjust_balance", {
-        p_user_id: user_code,
+        p_user_id: userCode,
         p_amount: refundAmt,
       });
       if (error) throw error;
 
       const newBalance = Number(data);
-      await recordTx(supabase, user_code, "game_refund", refundAmt, transaction_id, { type, original_transaction: body.original_transaction_id, round_id: transaction_id });
-      console.log(`REFUND: ${user_code} +${refundAmt}, balance=${newBalance}`);
-      return json({ msg: "", status: true, balance: newBalance, user_code });
+      await recordTx(supabase, userCode, "game_refund", refundAmt, transactionId, { type, original_transaction: body.original_transaction_id, round_id: transactionId, raw_payload: body });
+      console.log(`REFUND: ${userCode} +${refundAmt}, balance=${newBalance}`);
+      return json(balanceResponse(newBalance, userCode));
     }
 
     // ── GENERIC (legacy) ──
     const netAmount = -betAmt + winAmt;
     if (betAmt > 0 && winAmt === 0) {
-      const { data, error } = await supabase.rpc("debit_balance", { p_user_id: user_code, p_amount: betAmt });
+      const { data, error } = await supabase.rpc("debit_balance", { p_user_id: userCode, p_amount: betAmt });
       if (error) {
         if (error.message.includes("Insufficient")) {
-          const bal = await getBalance(supabase, user_code);
-          return json({ msg: "Saldo insuficiente", status: false, balance: bal ?? 0 }, 400);
+          const bal = await getBalance(supabase, userCode);
+          return json({ msg: "Saldo insuficiente", status: false, balance: bal ?? 0, user_balance: bal ?? 0 }, 400);
         }
         throw error;
       }
-      // If there's also a win component, credit it
       if (winAmt > 0) {
-        await supabase.rpc("adjust_balance", { p_user_id: user_code, p_amount: winAmt });
+        await supabase.rpc("adjust_balance", { p_user_id: userCode, p_amount: winAmt });
       }
-      const balance = await getBalance(supabase, user_code);
-      console.log(`GENERIC: ${user_code} net=${netAmount}, balance=${balance}`);
-      return json({ msg: "", status: true, balance: balance ?? 0, user_code });
+      const balance = await getBalance(supabase, userCode);
+      console.log(`GENERIC: ${userCode} net=${netAmount}, balance=${balance}`);
+      return json(balanceResponse(balance ?? 0, userCode));
     }
 
-    // Pure credit or zero
     if (netAmount !== 0) {
-      await supabase.rpc("adjust_balance", { p_user_id: user_code, p_amount: netAmount });
+      await supabase.rpc("adjust_balance", { p_user_id: userCode, p_amount: netAmount });
     }
-    const balance = await getBalance(supabase, user_code);
-    console.log(`GENERIC: ${user_code} net=${netAmount}, balance=${balance}`);
-    return json({ msg: "", status: true, balance: balance ?? 0, user_code });
-
+    const balance = await getBalance(supabase, userCode);
+    console.log(`GENERIC: ${userCode} net=${netAmount}, balance=${balance}`);
+    return json(balanceResponse(balance ?? 0, userCode));
   } catch (error: any) {
     console.error("Playfiver callback error:", error);
     return json({ msg: error.message, status: false }, 500);
