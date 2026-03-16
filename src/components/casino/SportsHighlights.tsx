@@ -20,13 +20,6 @@ const BRAZILIAN_LEAGUES = [
   { id: "4480", name: "Copa Libertadores" },
 ];
 
-const FALLBACK_MATCHES: SportsMatch[] = [
-  { id: "f1", league: "Brasileirão Série A", home: "Flamengo", away: "Palmeiras", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 3 * 3600000).toISOString(), odds: { home: 2.05, draw: 3.18, away: 3.22 } },
-  { id: "f2", league: "Brasileirão Série A", home: "Corinthians", away: "São Paulo", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 7 * 3600000).toISOString(), odds: { home: 2.34, draw: 3.01, away: 2.98 } },
-  { id: "f3", league: "Copa Libertadores", home: "Atlético-MG", away: "River Plate", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 11 * 3600000).toISOString(), odds: { home: 2.61, draw: 3.11, away: 2.52 } },
-  { id: "f4", league: "Copa do Brasil", home: "Grêmio", away: "Cruzeiro", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 16 * 3600000).toISOString(), odds: { home: 2.74, draw: 3.27, away: 2.3 } },
-];
-
 function deterministicOdds(home: string, away: string) {
   const seed = `${home}-${away}`.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return {
@@ -34,6 +27,36 @@ function deterministicOdds(home: string, away: string) {
     draw: Number((2.8 + (seed % 55) / 100).toFixed(2)),
     away: Number((1.8 + ((seed * 3) % 95) / 100).toFixed(2)),
   };
+}
+
+// Deterministic Brazilian fallback data so all users see the same matches
+function getBrazilianFallbackMatches(): SportsMatch[] {
+  const now = new Date();
+  const baseTime = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+  const matches: Array<[string, string, string, number]> = [
+    ["Flamengo", "Palmeiras", "Brasileirão Série A", 1],
+    ["Corinthians", "São Paulo", "Brasileirão Série A", 2],
+    ["Atlético-MG", "Cruzeiro", "Brasileirão Série A", 3],
+    ["Grêmio", "Internacional", "Brasileirão Série A", 4],
+    ["Botafogo", "Fluminense", "Brasileirão Série A", 5],
+    ["Santos", "Bahia", "Brasileirão Série A", 6],
+    ["Fortaleza", "Vasco da Gama", "Copa do Brasil", 7],
+    ["Flamengo", "River Plate", "Copa Libertadores", 8],
+    ["Palmeiras", "Boca Juniors", "Copa Libertadores", 9],
+    ["Sport", "Ceará", "Brasileirão Série B", 10],
+  ];
+
+  return matches.map(([home, away, league, dayOffset], i) => ({
+    id: `br-${i}`,
+    league,
+    home,
+    away,
+    homeBadge: "",
+    awayBadge: "",
+    kickoff: new Date(baseTime + dayOffset * 86400000 + 72000000).toISOString(), // 20:00
+    odds: deterministicOdds(home, away),
+  }));
 }
 
 function TeamBadge({ src, name }: { src: string; name: string }) {
@@ -49,7 +72,7 @@ function TeamBadge({ src, name }: { src: string; name: string }) {
 
 export function SportsHighlights() {
   const navigate = useNavigate();
-  const [matches, setMatches] = useState<SportsMatch[]>(FALLBACK_MATCHES);
+  const [matches, setMatches] = useState<SportsMatch[]>(getBrazilianFallbackMatches());
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
@@ -64,10 +87,13 @@ export function SportsHighlights() {
         const events = (await Promise.all(res.map(async (r, i) => {
           if (r.status !== "fulfilled" || !r.value.ok) return [];
           const d = await r.value.json().catch(() => null);
-          return (Array.isArray(d?.events) ? d.events : []).map((e: any) => ({
-            ...e,
-            _leagueName: BRAZILIAN_LEAGUES[i].name,
-          }));
+          return (Array.isArray(d?.events) ? d.events : [])
+            // CRITICAL: Only include events that actually belong to the requested league
+            .filter((e: any) => String(e?.idLeague) === BRAZILIAN_LEAGUES[i].id)
+            .map((e: any) => ({
+              ...e,
+              _leagueName: BRAZILIAN_LEAGUES[i].name,
+            }));
         }))).flat();
 
         const mapped = events
@@ -85,11 +111,15 @@ export function SportsHighlights() {
           .sort((a, b) => new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime())
           .slice(0, 16);
 
-        if (!cancelled && mapped.length) setMatches(mapped);
-      } catch { /* fallback */ }
+        // Only use API data if we got actual Brazilian league matches
+        if (!cancelled && mapped.length > 0) {
+          setMatches(mapped);
+        }
+        // Otherwise keep the fallback Brazilian data
+      } catch { /* keep fallback */ }
     }
     load();
-    const iv = setInterval(load, 60000);
+    const iv = setInterval(load, 300000); // refresh every 5 minutes
     return () => { cancelled = true; clearInterval(iv); };
   }, []);
 
@@ -97,9 +127,9 @@ export function SportsHighlights() {
     if (matches.length <= 1) return;
     const iv = setInterval(() => setActiveIndex(p => (p + 1) % matches.length), 5000);
     return () => clearInterval(iv);
-  }, [matches]);
+  }, [matches.length]);
 
-  const m = matches[activeIndex] || FALLBACK_MATCHES[0];
+  const m = matches[activeIndex] || matches[0];
   const hyp = useMemo(() => ({
     home: (100 * m.odds.home).toFixed(2),
     draw: (100 * m.odds.draw).toFixed(2),
@@ -159,7 +189,7 @@ export function SportsHighlights() {
       </button>
 
       <div className="flex justify-center gap-1.5">
-        {matches.slice(0, 8).map((_, i) => (
+        {matches.slice(0, 10).map((_, i) => (
           <button
             key={i}
             onClick={() => setActiveIndex(i)}
