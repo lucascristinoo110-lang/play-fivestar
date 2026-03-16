@@ -5,7 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2 } from "lucide-react";
+import { useOutletContext } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2, Upload, Search, Image } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type GameRow = {
   id: string;
@@ -20,13 +23,24 @@ type GameRow = {
   sort_order: number;
 };
 
+const CATEGORIES = [
+  { value: "slots", label: "Slots" },
+  { value: "crash", label: "Crash" },
+  { value: "live", label: "Cassino ao Vivo" },
+  { value: "table", label: "Mesa" },
+  { value: "fish", label: "Fish" },
+  { value: "arcade", label: "Arcade" },
+  { value: "virtual", label: "Virtual" },
+  { value: "bingo", label: "Bingo" },
+  { value: "pgsoft", label: "PG Soft" },
+  { value: "evolution", label: "Evolution" },
+];
+
 function splitPlayfiverCredential(value?: string | null) {
   const raw = value?.trim() ?? "";
   const separatorIndex = raw.indexOf(":");
-
   if (!raw) return { token: "", secret: "" };
   if (separatorIndex === -1) return { token: raw, secret: "" };
-
   return {
     token: raw.slice(0, separatorIndex).trim(),
     secret: raw.slice(separatorIndex + 1).trim(),
@@ -34,6 +48,7 @@ function splitPlayfiverCredential(value?: string | null) {
 }
 
 export default function AdminGamesPage() {
+  const { light } = useOutletContext<{ light: boolean }>();
   const [settings, setSettings] = useState<any>(null);
   const [games, setGames] = useState<GameRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,20 +57,19 @@ export default function AdminGamesPage() {
   const [editGame, setEditGame] = useState<Partial<GameRow> | null>(null);
   const [playfiverToken, setPlayfiverToken] = useState("");
   const [playfiverSecret, setPlayfiverSecret] = useState("");
+  const [search, setSearch] = useState("");
+  const [filterCategory, setFilterCategory] = useState("all");
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     const [{ data: s }, { data: g }] = await Promise.all([
       supabase.from("site_settings").select("*").limit(1).single(),
       supabase.from("games").select("*").order("sort_order"),
     ]);
-
     setSettings(s);
     setGames((g as GameRow[]) || []);
-
     const parsed = splitPlayfiverCredential(s?.playfiver_api_key);
     setPlayfiverToken(parsed.token);
     setPlayfiverSecret(parsed.secret);
@@ -68,60 +82,57 @@ export default function AdminGamesPage() {
 
   async function saveProviders() {
     if (!settings) return;
-
     if ((playfiverToken.trim() && !playfiverSecret.trim()) || (!playfiverToken.trim() && playfiverSecret.trim())) {
-      toast({
-        title: "Credencial incompleta",
-        description: "Preencha Agent Token e Secret Key para salvar a Playfiver.",
-        variant: "destructive",
-      });
+      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key para salvar a Playfiver.", variant: "destructive" });
       return;
     }
-
-    const playfiverCredential = hasPlayfiverCredential
-      ? `${playfiverToken.trim()}:${playfiverSecret.trim()}`
-      : null;
-
+    const playfiverCredential = hasPlayfiverCredential ? `${playfiverToken.trim()}:${playfiverSecret.trim()}` : null;
     setLoading(true);
-    const { error } = await supabase
-      .from("site_settings")
-      .update({
-        playfiver_api_key: playfiverCredential,
-        playfiver_api_url: settings.playfiver_api_url,
-        igamewin_api_key: settings.igamewin_api_key,
-        igamewin_api_url: settings.igamewin_api_url,
-      })
-      .eq("id", settings.id);
+    const { error } = await supabase.from("site_settings").update({
+      playfiver_api_key: playfiverCredential,
+      playfiver_api_url: settings.playfiver_api_url,
+      igamewin_api_key: settings.igamewin_api_key,
+      igamewin_api_url: settings.igamewin_api_url,
+    }).eq("id", settings.id);
     setLoading(false);
-
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-      return;
-    }
-
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Provedores salvos!" });
     loadData();
+  }
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editGame) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `games/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("site-assets").upload(path, file, { upsert: true });
+    if (error) {
+      toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("site-assets").getPublicUrl(path);
+    setEditGame({ ...editGame, image_url: urlData.publicUrl });
+    setUploading(false);
+    toast({ title: "Imagem enviada!" });
   }
 
   async function saveGame() {
     if (!editGame?.name) return;
     setLoading(true);
-
     if (editGame.id) {
-      await supabase
-        .from("games")
-        .update({
-          name: editGame.name,
-          provider: editGame.provider || "playfiver",
-          category: editGame.category || "slots",
-          image_url: editGame.image_url,
-          game_code: editGame.game_code,
-          is_hot: editGame.is_hot || false,
-          is_new: editGame.is_new || false,
-          is_active: editGame.is_active ?? true,
-          sort_order: editGame.sort_order || 0,
-        })
-        .eq("id", editGame.id);
+      await supabase.from("games").update({
+        name: editGame.name,
+        provider: editGame.provider || "playfiver",
+        category: editGame.category || "slots",
+        image_url: editGame.image_url,
+        game_code: editGame.game_code,
+        is_hot: editGame.is_hot || false,
+        is_new: editGame.is_new || false,
+        is_active: editGame.is_active ?? true,
+        sort_order: editGame.sort_order || 0,
+      }).eq("id", editGame.id);
     } else {
       await supabase.from("games").insert({
         name: editGame.name,
@@ -134,7 +145,6 @@ export default function AdminGamesPage() {
         sort_order: editGame.sort_order || 0,
       });
     }
-
     setLoading(false);
     setEditGame(null);
     setShowForm(false);
@@ -150,28 +160,14 @@ export default function AdminGamesPage() {
 
   async function importFromPlayfiver() {
     if (!hasPlayfiverCredential) {
-      toast({
-        title: "Credenciais ausentes",
-        description: "Preencha Agent Token e Secret Key da Playfiver antes de importar.",
-        variant: "destructive",
-      });
+      toast({ title: "Credenciais ausentes", description: "Preencha Agent Token e Secret Key da Playfiver antes de importar.", variant: "destructive" });
       return;
     }
-
     setImporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("playfiver-api", {
-        body: { action: "sync_games" },
-      });
-
-      if (error || !data?.status) {
-        throw new Error(data?.error || "Erro ao importar jogos da Playfiver");
-      }
-
-      toast({
-        title: "Importação concluída",
-        description: `${data.imported} novos e ${data.updated} atualizados (${data.total_received} recebidos).`,
-      });
+      const { data, error } = await supabase.functions.invoke("playfiver-api", { body: { action: "sync_games" } });
+      if (error || !data?.status) throw new Error(data?.error || "Erro ao importar jogos da Playfiver");
+      toast({ title: "Importação concluída", description: `${data.imported} novos e ${data.updated} atualizados (${data.total_received} recebidos).` });
       loadData();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -179,17 +175,23 @@ export default function AdminGamesPage() {
     setImporting(false);
   }
 
-  if (!settings) return <p className="text-muted-foreground">Carregando...</p>;
+  const filtered = games.filter(g => {
+    const matchSearch = g.name.toLowerCase().includes(search.toLowerCase()) || (g.game_code || "").toLowerCase().includes(search.toLowerCase());
+    const matchCategory = filterCategory === "all" || g.category === filterCategory;
+    return matchSearch && matchCategory;
+  });
+
+  if (!settings) return <p className={cn("text-sm", light ? "text-gray-400" : "text-muted-foreground")}>Carregando...</p>;
+
+  const cardClass = cn("rounded-xl border p-6 space-y-4", light ? "bg-white border-gray-200 shadow-sm" : "bg-card border-border/40 card-shadow");
+  const inputClass = cn("h-9 text-sm font-mono", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40");
+  const selectClass = cn("h-9 w-full rounded-md border text-sm px-3", light ? "bg-gray-50 border-gray-200 text-gray-900" : "bg-secondary border-border/40 text-foreground");
+  const sectionClass = cn("rounded-xl border overflow-hidden", light ? "bg-white border-gray-200 shadow-sm" : "bg-card border-border/40 card-shadow");
 
   const field = (label: string, key: string, placeholder: string) => (
     <div className="space-y-1">
       <Label className="text-xs">{label}</Label>
-      <Input
-        value={settings[key] ?? ""}
-        onChange={(e) => setSettings({ ...settings, [key]: e.target.value })}
-        placeholder={placeholder}
-        className="bg-secondary border-border/40 h-9 text-sm font-mono"
-      />
+      <Input value={settings[key] ?? ""} onChange={(e) => setSettings({ ...settings, [key]: e.target.value })} placeholder={placeholder} className={inputClass} />
     </div>
   );
 
@@ -197,170 +199,119 @@ export default function AdminGamesPage() {
     <div className="space-y-6">
       {/* Provider settings */}
       <div className="max-w-2xl space-y-6">
-        <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow space-y-4">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Gamepad2 className="h-4 w-4 text-primary" />
-            Provedor: Playfiver
+        <div className={cardClass}>
+          <h2 className={cn("text-sm font-semibold flex items-center gap-2", light ? "text-gray-900" : "text-foreground")}>
+            <Gamepad2 className="h-4 w-4 text-primary" /> Provedor: Playfiver
           </h2>
-          <p className="text-xs text-muted-foreground">
-            Configure token e secret em abas separadas para habilitar lançamento real e importação automática de jogos.
-          </p>
-
           <Tabs defaultValue="token" className="space-y-3">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="token">Agent Token</TabsTrigger>
               <TabsTrigger value="secret">Secret Key</TabsTrigger>
             </TabsList>
-
             <TabsContent value="token" className="space-y-1">
               <Label className="text-xs">Agent Token</Label>
-              <Input
-                value={playfiverToken}
-                onChange={(e) => setPlayfiverToken(e.target.value)}
-                placeholder="Cole o agentToken"
-                className="bg-secondary border-border/40 h-9 text-sm font-mono"
-              />
+              <Input value={playfiverToken} onChange={(e) => setPlayfiverToken(e.target.value)} placeholder="Cole o agentToken" className={inputClass} />
             </TabsContent>
-
             <TabsContent value="secret" className="space-y-1">
               <Label className="text-xs">Secret Key</Label>
-              <Input
-                type="password"
-                value={playfiverSecret}
-                onChange={(e) => setPlayfiverSecret(e.target.value)}
-                placeholder="Cole a secretKey"
-                className="bg-secondary border-border/40 h-9 text-sm font-mono"
-              />
+              <Input type="password" value={playfiverSecret} onChange={(e) => setPlayfiverSecret(e.target.value)} placeholder="Cole a secretKey" className={inputClass} />
             </TabsContent>
           </Tabs>
-
           {field("URL da API (opcional)", "playfiver_api_url", "https://api.playfivers.com")}
         </div>
 
-        <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow space-y-4">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <Gamepad2 className="h-4 w-4 text-accent" />
-            Provedor: iGameWin
+        <div className={cardClass}>
+          <h2 className={cn("text-sm font-semibold flex items-center gap-2", light ? "text-gray-900" : "text-foreground")}>
+            <Gamepad2 className="h-4 w-4 text-accent" /> Provedor: iGameWin
           </h2>
           {field("API Key", "igamewin_api_key", "Sua chave API")}
           {field("URL da API", "igamewin_api_url", "https://api.igamewin.com")}
         </div>
 
         <Button onClick={saveProviders} disabled={loading} className="bg-primary text-primary-foreground font-semibold">
-          <Save className="h-4 w-4 mr-2" />
-          Salvar Provedores
+          <Save className="h-4 w-4 mr-2" /> Salvar Provedores
         </Button>
       </div>
 
       {/* Games management */}
-      <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-foreground">Jogos Cadastrados ({games.length})</h2>
+      <div className={sectionClass}>
+        <div className={cn("p-4 border-b flex items-center justify-between flex-wrap gap-3", light ? "border-gray-200" : "border-border/40")}>
+          <h2 className={cn("text-sm font-semibold", light ? "text-gray-900" : "text-foreground")}>
+            Jogos Cadastrados ({filtered.length}/{games.length})
+          </h2>
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={importFromPlayfiver} disabled={importing}>
-              {importing ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
-              Importar da Playfiver
+            <Button size="sm" variant="outline" onClick={importFromPlayfiver} disabled={importing} className={cn("text-xs h-8", light ? "bg-white border-gray-200" : "")}>
+              {importing ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
+              Importar Playfiver
             </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setEditGame({ provider: "playfiver", category: "slots", is_active: true });
-                setShowForm(true);
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
+            <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }} className="bg-primary text-primary-foreground text-xs h-8">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Jogo
             </Button>
           </div>
         </div>
 
-        {/* Game form */}
-        {showForm && editGame && (
-          <div className="rounded-lg bg-secondary/50 border border-border/40 p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-xs font-semibold">{editGame.id ? "Editar Jogo" : "Novo Jogo"}</h3>
-              <button onClick={() => { setShowForm(false); setEditGame(null); }}>
-                <X className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Nome</Label>
-                <Input value={editGame.name || ""} onChange={(e) => setEditGame({ ...editGame, name: e.target.value })} className="h-8 text-xs bg-secondary" />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Provedor</Label>
-                <select value={editGame.provider || "playfiver"} onChange={(e) => setEditGame({ ...editGame, provider: e.target.value })} className="h-8 w-full rounded-md border border-border/40 bg-secondary text-xs px-2">
-                  <option value="playfiver">Playfiver</option>
-                  <option value="igamewin">iGameWin</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Categoria</Label>
-                <select value={editGame.category || "slots"} onChange={(e) => setEditGame({ ...editGame, category: e.target.value })} className="h-8 w-full rounded-md border border-border/40 bg-secondary text-xs px-2">
-                  <option value="slots">Slots</option>
-                  <option value="crash">Crash</option>
-                  <option value="live">Ao Vivo</option>
-                  <option value="table">Mesa</option>
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Código do Jogo</Label>
-                <Input value={editGame.game_code || ""} onChange={(e) => setEditGame({ ...editGame, game_code: e.target.value })} className="h-8 text-xs bg-secondary" placeholder="ex: 126" />
-              </div>
-              <div className="col-span-2 space-y-1">
-                <Label className="text-xs">URL da Imagem</Label>
-                <Input value={editGame.image_url || ""} onChange={(e) => setEditGame({ ...editGame, image_url: e.target.value })} className="h-8 text-xs bg-secondary" placeholder="https://..." />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Ordem</Label>
-                <Input type="number" value={editGame.sort_order ?? 0} onChange={(e) => setEditGame({ ...editGame, sort_order: parseInt(e.target.value) || 0 })} className="h-8 text-xs bg-secondary" />
-              </div>
-              <div className="flex items-center gap-4 pt-4">
-                <label className="flex items-center gap-1.5 text-xs">
-                  <input type="checkbox" checked={editGame.is_hot || false} onChange={(e) => setEditGame({ ...editGame, is_hot: e.target.checked })} /> Hot
-                </label>
-                <label className="flex items-center gap-1.5 text-xs">
-                  <input type="checkbox" checked={editGame.is_new || false} onChange={(e) => setEditGame({ ...editGame, is_new: e.target.checked })} /> Novo
-                </label>
-                <label className="flex items-center gap-1.5 text-xs">
-                  <input type="checkbox" checked={editGame.is_active ?? true} onChange={(e) => setEditGame({ ...editGame, is_active: e.target.checked })} /> Ativo
-                </label>
-              </div>
-            </div>
-            <Button size="sm" onClick={saveGame} disabled={loading} className="bg-primary text-primary-foreground">
-              <Save className="h-3 w-3 mr-1" /> Salvar Jogo
-            </Button>
+        {/* Filters */}
+        <div className={cn("p-4 border-b flex items-center gap-3 flex-wrap", light ? "border-gray-200 bg-gray-50/50" : "border-border/40 bg-secondary/20")}>
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input placeholder="Buscar por nome ou código..." value={search} onChange={e => setSearch(e.target.value)} className={cn("pl-9 h-8 text-xs", inputClass)} />
           </div>
-        )}
+          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className={cn("h-8 rounded-md border text-xs px-2", light ? "bg-white border-gray-200" : "bg-secondary border-border/40 text-foreground")}>
+            <option value="all">Todas categorias</option>
+            {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
 
-        {/* Games list */}
-        <div className="overflow-hidden rounded-lg border border-border/20">
+        {/* Games table */}
+        <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-border/40 text-muted-foreground bg-secondary/30">
-                <th className="text-left p-2 font-medium">Nome</th>
-                <th className="text-left p-2 font-medium">Provedor</th>
-                <th className="text-left p-2 font-medium">Categoria</th>
-                <th className="text-left p-2 font-medium">Status</th>
-                <th className="text-left p-2 font-medium">Ações</th>
+              <tr className={cn("border-b", light ? "border-gray-200 text-gray-500 bg-gray-50/50" : "border-border/40 text-muted-foreground bg-secondary/30")}>
+                <th className="text-left p-2.5 font-medium w-10"></th>
+                <th className="text-left p-2.5 font-medium">Nome</th>
+                <th className="text-left p-2.5 font-medium">Código</th>
+                <th className="text-left p-2.5 font-medium">Provedor</th>
+                <th className="text-left p-2.5 font-medium">Categoria</th>
+                <th className="text-left p-2.5 font-medium">Status</th>
+                <th className="text-left p-2.5 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {games.map((g) => (
-                <tr key={g.id} className="border-b border-border/20 hover:bg-surface-hover transition-colors">
-                  <td className="p-2 text-foreground font-medium">{g.name}</td>
-                  <td className="p-2 text-muted-foreground uppercase">{g.provider}</td>
-                  <td className="p-2 text-muted-foreground capitalize">{g.category}</td>
-                  <td className="p-2">
-                    <span className={`text-[10px] font-semibold ${g.is_active ? "text-primary" : "text-destructive"}`}>
+              {filtered.map((g) => (
+                <tr key={g.id} className={cn("border-b transition-colors", light ? "border-gray-100 hover:bg-gray-50" : "border-border/20 hover:bg-surface-hover")}>
+                  <td className="p-2.5">
+                    {g.image_url ? (
+                      <img src={g.image_url} alt={g.name} className="w-8 h-8 rounded object-cover" />
+                    ) : (
+                      <div className={cn("w-8 h-8 rounded flex items-center justify-center", light ? "bg-gray-100" : "bg-secondary")}>
+                        <Image className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                    )}
+                  </td>
+                  <td className={cn("p-2.5 font-medium", light ? "text-gray-900" : "text-foreground")}>
+                    {g.name}
+                    <div className="flex gap-1 mt-0.5">
+                      {g.is_hot && <span className="text-[9px] px-1 rounded bg-orange-500/15 text-orange-500 font-semibold">HOT</span>}
+                      {g.is_new && <span className="text-[9px] px-1 rounded bg-blue-500/15 text-blue-500 font-semibold">NOVO</span>}
+                    </div>
+                  </td>
+                  <td className={cn("p-2.5 font-mono text-[10px]", light ? "text-gray-500" : "text-muted-foreground")}>{g.game_code || "—"}</td>
+                  <td className={cn("p-2.5 uppercase text-[10px]", light ? "text-gray-500" : "text-muted-foreground")}>{g.provider}</td>
+                  <td className="p-2.5">
+                    <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold", light ? "bg-gray-100 text-gray-600" : "bg-secondary text-muted-foreground")}>
+                      {CATEGORIES.find(c => c.value === g.category)?.label || g.category}
+                    </span>
+                  </td>
+                  <td className="p-2.5">
+                    <span className={cn("text-[10px] font-semibold", g.is_active ? "text-primary" : "text-destructive")}>
                       {g.is_active ? "Ativo" : "Inativo"}
                     </span>
                   </td>
-                  <td className="p-2 flex gap-1">
-                    <button onClick={() => { setEditGame(g); setShowForm(true); }} className="p-1 hover:bg-secondary rounded">
+                  <td className="p-2.5 flex gap-1">
+                    <button onClick={() => { setEditGame(g); setShowForm(true); }} className={cn("p-1.5 rounded", light ? "hover:bg-gray-100" : "hover:bg-secondary")}>
                       <Edit2 className="h-3 w-3 text-muted-foreground" />
                     </button>
-                    <button onClick={() => deleteGame(g.id)} className="p-1 hover:bg-destructive/10 rounded">
+                    <button onClick={() => deleteGame(g.id)} className="p-1.5 rounded hover:bg-destructive/10">
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </button>
                   </td>
@@ -368,9 +319,91 @@ export default function AdminGamesPage() {
               ))}
             </tbody>
           </table>
-          {games.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">Nenhum jogo cadastrado.</p>}
+          {filtered.length === 0 && <p className={cn("p-6 text-center text-sm", light ? "text-gray-400" : "text-muted-foreground")}>Nenhum jogo encontrado.</p>}
         </div>
       </div>
+
+      {/* Edit/Add Dialog */}
+      <Dialog open={showForm} onOpenChange={(o) => { if (!o) { setShowForm(false); setEditGame(null); } }}>
+        <DialogContent className={cn("max-w-lg", light ? "bg-white" : "bg-card border-border/40")}>
+          <DialogHeader>
+            <DialogTitle className={light ? "text-gray-900" : "text-foreground"}>
+              {editGame?.id ? "Editar Jogo" : "Novo Jogo"}
+            </DialogTitle>
+          </DialogHeader>
+          {editGame && (
+            <div className="space-y-4">
+              {/* Image preview + upload */}
+              <div className="space-y-2">
+                <Label className="text-xs">Imagem do Jogo</Label>
+                <div className="flex items-start gap-3">
+                  {editGame.image_url ? (
+                    <img src={editGame.image_url} alt="" className="w-20 h-20 rounded-lg object-cover border" />
+                  ) : (
+                    <div className={cn("w-20 h-20 rounded-lg flex items-center justify-center border", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40")}>
+                      <Image className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-2">
+                    <label className={cn("flex items-center justify-center gap-2 h-9 rounded-md border text-xs font-medium cursor-pointer transition-colors", light ? "border-gray-200 hover:bg-gray-50" : "border-border/40 hover:bg-secondary")}>
+                      {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                      {uploading ? "Enviando..." : "Upload Imagem"}
+                      <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                    </label>
+                    <Input value={editGame.image_url || ""} onChange={(e) => setEditGame({ ...editGame, image_url: e.target.value })} placeholder="Ou cole a URL da imagem" className={cn("h-8 text-[11px]", inputClass)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Nome do Jogo</Label>
+                  <Input value={editGame.name || ""} onChange={(e) => setEditGame({ ...editGame, name: e.target.value })} className={cn("h-9 text-sm", inputClass)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Código do Jogo (Playfiver)</Label>
+                  <Input value={editGame.game_code || ""} onChange={(e) => setEditGame({ ...editGame, game_code: e.target.value })} placeholder="ex: 126" className={cn("h-9 text-sm font-mono", inputClass)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Provedor</Label>
+                  <select value={editGame.provider || "playfiver"} onChange={(e) => setEditGame({ ...editGame, provider: e.target.value })} className={selectClass}>
+                    <option value="playfiver">Playfiver</option>
+                    <option value="igamewin">iGameWin</option>
+                    <option value="evolution">Evolution</option>
+                    <option value="pgsoft">PG Soft</option>
+                    <option value="pragmatic">Pragmatic Play</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Categoria / Seção</Label>
+                  <select value={editGame.category || "slots"} onChange={(e) => setEditGame({ ...editGame, category: e.target.value })} className={selectClass}>
+                    {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Ordem de exibição</Label>
+                  <Input type="number" value={editGame.sort_order ?? 0} onChange={(e) => setEditGame({ ...editGame, sort_order: parseInt(e.target.value) || 0 })} className={cn("h-9 text-sm", inputClass)} />
+                </div>
+                <div className="flex items-center gap-4 pt-5">
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={editGame.is_hot || false} onChange={(e) => setEditGame({ ...editGame, is_hot: e.target.checked })} /> 🔥 Hot
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={editGame.is_new || false} onChange={(e) => setEditGame({ ...editGame, is_new: e.target.checked })} /> ✨ Novo
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                    <input type="checkbox" checked={editGame.is_active ?? true} onChange={(e) => setEditGame({ ...editGame, is_active: e.target.checked })} /> Ativo
+                  </label>
+                </div>
+              </div>
+
+              <Button onClick={saveGame} disabled={loading} className="w-full bg-primary text-primary-foreground text-sm">
+                <Save className="h-3.5 w-3.5 mr-1.5" /> {editGame.id ? "Salvar Alterações" : "Adicionar Jogo"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
