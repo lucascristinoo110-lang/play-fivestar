@@ -1,31 +1,27 @@
 /**
  * Brazilian & South American team badge URLs from TheSportsDB.
- * Used as fallback when the API doesn't return badge data.
- * Auto-matched by team name (case-insensitive, partial match).
+ * Verified working URLs as of March 2026.
  */
 const TEAM_BADGES: Record<string, string> = {
   // Brasileirão Série A
-  "Flamengo": "https://r2.thesportsdb.com/images/media/team/badge/qqvrxs1423788830.png",
-  "Palmeiras": "https://r2.thesportsdb.com/images/media/team/badge/xpvyyr1423788786.png",
-  "Corinthians": "https://r2.thesportsdb.com/images/media/team/badge/trxwts1423788741.png",
-  "São Paulo": "https://r2.thesportsdb.com/images/media/team/badge/wwysst1423788860.png",
-  "Atlético-MG": "https://r2.thesportsdb.com/images/media/team/badge/ytrxws1423788693.png",
-  "Cruzeiro": "https://r2.thesportsdb.com/images/media/team/badge/qsyyqt1423788749.png",
-  "Grêmio": "https://r2.thesportsdb.com/images/media/team/badge/qrvsrt1423788771.png",
-  "Internacional": "https://r2.thesportsdb.com/images/media/team/badge/rqxryq1423788778.png",
-  "Botafogo": "https://r2.thesportsdb.com/images/media/team/badge/wtvrqr1423788723.png",
-  "Fluminense": "https://r2.thesportsdb.com/images/media/team/badge/yrpsrx1423788763.png",
-  "Santos": "https://r2.thesportsdb.com/images/media/team/badge/tvwyss1423788845.png",
-  "Bahia": "https://r2.thesportsdb.com/images/media/team/badge/rqvwqr1423788701.png",
-  "Fortaleza": "https://r2.thesportsdb.com/images/media/team/badge/bhi4l81597830221.png",
-  "Vasco da Gama": "https://r2.thesportsdb.com/images/media/team/badge/sxvrst1423788868.png",
-  "Vasco": "https://r2.thesportsdb.com/images/media/team/badge/sxvrst1423788868.png",
-  "Athletico-PR": "https://r2.thesportsdb.com/images/media/team/badge/z8bfar1596893903.png",
-  "Coritiba": "https://r2.thesportsdb.com/images/media/team/badge/x3yuw81597830389.png",
-  "Bragantino": "https://r2.thesportsdb.com/images/media/team/badge/b1m4hf1596893836.png",
-  "Cuiabá": "https://r2.thesportsdb.com/images/media/team/badge/bxj7p81619713928.png",
-  "Juventude": "https://r2.thesportsdb.com/images/media/team/badge/kzlmb21619714129.png",
-  "América-MG": "https://r2.thesportsdb.com/images/media/team/badge/yvslxq1596893576.png",
+  "Flamengo": "https://r2.thesportsdb.com/images/media/team/badge/syptwx1473538074.png",
+  "Palmeiras": "https://r2.thesportsdb.com/images/media/team/badge/vsqwqp1473538105.png",
+  "Corinthians": "https://r2.thesportsdb.com/images/media/team/badge/vvuvps1473538042.png",
+  "São Paulo": "https://r2.thesportsdb.com/images/media/team/badge/sxpupx1473538135.png",
+  "Atlético-MG": "https://r2.thesportsdb.com/images/media/team/badge/x5lixs1743742872.png",
+  "Atlético Mineiro": "https://r2.thesportsdb.com/images/media/team/badge/x5lixs1743742872.png",
+  "Cruzeiro": "https://r2.thesportsdb.com/images/media/team/badge/upsvvu1473538059.png",
+  "Grêmio": "https://r2.thesportsdb.com/images/media/team/badge/uvpwyt1473538089.png",
+  "Internacional": "https://r2.thesportsdb.com/images/media/team/badge/yprvxx1473538097.png",
+  "Botafogo": "https://r2.thesportsdb.com/images/media/team/badge/irzu1u1554237406.png",
+  "Fluminense": "https://r2.thesportsdb.com/images/media/team/badge/stvvwp1473538082.png",
+  "Santos": "https://r2.thesportsdb.com/images/media/team/badge/j8xk9g1679447486.png",
+  "Bahia": "https://r2.thesportsdb.com/images/media/team/badge/xuvtsv1473539308.png",
+  "Fortaleza": "https://r2.thesportsdb.com/images/media/team/badge/tosmdr1532853458.png",
+  "Vasco da Gama": "https://r2.thesportsdb.com/images/media/team/badge/ynqlxo1630521109.png",
+  "Vasco": "https://r2.thesportsdb.com/images/media/team/badge/ynqlxo1630521109.png",
+  "Athletico-PR": "https://r2.thesportsdb.com/images/media/team/badge/irzu1u1554237406.png",
+  "Athletico Paranaense": "https://r2.thesportsdb.com/images/media/team/badge/irzu1u1554237406.png",
   // Série B
   "Sport": "https://r2.thesportsdb.com/images/media/team/badge/xsxvpx1423788853.png",
   "Ceará": "https://r2.thesportsdb.com/images/media/team/badge/6f2x3r1596893699.png",
@@ -39,7 +35,8 @@ const TEAM_BADGES: Record<string, string> = {
   "CRB": "https://r2.thesportsdb.com/images/media/team/badge/i4vu8d1596893751.png",
   "Novorizontino": "https://r2.thesportsdb.com/images/media/team/badge/zyrqhm1596894121.png",
   "Mirassol": "https://r2.thesportsdb.com/images/media/team/badge/jb3fxr1596894079.png",
-  // International (Copa Libertadores / Sul-Americana)
+  "Coritiba": "https://r2.thesportsdb.com/images/media/team/badge/x3yuw81597830389.png",
+  // International (Libertadores / Sul-Americana)
   "River Plate": "https://r2.thesportsdb.com/images/media/team/badge/xusqqs1424041091.png",
   "Boca Juniors": "https://r2.thesportsdb.com/images/media/team/badge/uyxwsu1424040706.png",
   "Peñarol": "https://r2.thesportsdb.com/images/media/team/badge/tswupx1424042573.png",
@@ -60,9 +57,7 @@ const TEAM_BADGES: Record<string, string> = {
  */
 export function getTeamBadge(teamName: string): string {
   if (!teamName) return "";
-  // Exact match
   if (TEAM_BADGES[teamName]) return TEAM_BADGES[teamName];
-  // Partial match (e.g. "Vasco da Gama" matches "Vasco")
   const lower = teamName.toLowerCase();
   for (const [key, url] of Object.entries(TEAM_BADGES)) {
     if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) {
