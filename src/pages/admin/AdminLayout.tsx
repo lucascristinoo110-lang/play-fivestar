@@ -46,7 +46,7 @@ export default function AdminLayout() {
   const sidebarContent = (
     <>
       {/* Brand */}
-      <div className={cn("h-16 flex items-center justify-between px-5 border-b shrink-0", light ? "border-slate-200/60" : "border-white/[0.06]")}>
+      <div className={cn("h-16 flex items-center justify-between px-5 border-b shrink-0", light ? "border-slate-200/60" : "border-slate-700/40")}>
         <div className="flex items-center gap-2.5">
           <div className={cn(
             "w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shadow-lg",
@@ -60,10 +60,10 @@ export default function AdminLayout() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setLight(!light)} className={cn("p-2 rounded-lg transition-colors", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-white/[0.06] text-slate-500")}>
+          <button onClick={() => setLight(!light)} className={cn("p-2 rounded-lg transition-colors", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-slate-700/50 text-slate-400")}>
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
-          <button onClick={() => setSidebarOpen(false)} className={cn("p-2 rounded-lg lg:hidden", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-white/[0.06] text-slate-500")}>
+          <button onClick={() => setSidebarOpen(false)} className={cn("p-2 rounded-lg lg:hidden", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-slate-700/50 text-slate-400")}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -86,7 +86,7 @@ export default function AdminLayout() {
                     : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                   : light
                     ? "text-slate-500 hover:text-slate-800 hover:bg-slate-50/80 border border-transparent"
-                    : "text-slate-400 hover:text-slate-200 hover:bg-white/[0.04] border border-transparent"
+                    : "text-slate-300 hover:text-white hover:bg-slate-700/40 border border-transparent"
               )}
             >
               <Icon className={cn("h-[18px] w-[18px] shrink-0 transition-all", active ? "" : "opacity-50 group-hover:opacity-80")} />
@@ -98,8 +98,8 @@ export default function AdminLayout() {
       </nav>
 
       {/* Footer */}
-      <div className={cn("px-3 py-4 border-t space-y-1 shrink-0", light ? "border-slate-200/60" : "border-white/[0.06]")}>
-        <Link to="/" className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium border border-transparent", light ? "text-slate-500 hover:bg-slate-50 hover:text-slate-800" : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200")}>
+      <div className={cn("px-3 py-4 border-t space-y-1 shrink-0", light ? "border-slate-200/60" : "border-slate-700/40")}>
+        <Link to="/" className={cn("flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium border border-transparent", light ? "text-slate-500 hover:bg-slate-50 hover:text-slate-800" : "text-slate-300 hover:bg-slate-700/40 hover:text-white")}>
           <Home className="h-[18px] w-[18px] opacity-50" />
           <span>Voltar ao site</span>
         </Link>
@@ -112,13 +112,13 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className={cn("flex min-h-screen", light ? "bg-slate-50 text-slate-900" : "bg-[#080c14] text-slate-100")}>
+    <div className={cn("flex min-h-screen", light ? "bg-slate-50 text-slate-900" : "bg-[#111827] text-slate-100")}>
       {/* Desktop Sidebar */}
       <aside className={cn(
         "hidden lg:flex w-[260px] h-screen sticky top-0 flex-col shrink-0",
         light
           ? "bg-white/80 backdrop-blur-xl border-r border-slate-200/60"
-          : "bg-[#0c1221]/80 backdrop-blur-xl border-r border-white/[0.06]"
+          : "bg-[#1a2236]/90 backdrop-blur-xl border-r border-slate-700/40"
       )}>
         {sidebarContent}
       </aside>
@@ -131,7 +131,7 @@ export default function AdminLayout() {
             "relative w-[280px] h-full flex flex-col",
             light
               ? "bg-white border-r border-slate-200/60"
-              : "bg-[#0c1221] border-r border-white/[0.06]"
+              : "bg-[#1a2236] border-r border-slate-700/40"
           )}>
             {sidebarContent}
           </aside>
@@ -142,7 +142,7 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col min-w-0">
         <header className={cn(
           "sticky top-0 z-30 h-14 flex items-center justify-between px-4 lg:px-8 border-b backdrop-blur-xl",
-          light ? "bg-white/70 border-slate-200/60" : "bg-[#080c14]/70 border-white/[0.06]"
+          light ? "bg-white/70 border-slate-200/60" : "bg-[#111827]/80 border-slate-700/40"
         )}>
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className={cn("p-2 rounded-lg lg:hidden", light ? "hover:bg-slate-100 text-slate-500" : "hover:bg-white/[0.06] text-slate-400")}>
@@ -153,7 +153,7 @@ export default function AdminLayout() {
             </div>
           </div>
         </header>
-        <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto", light ? "bg-slate-50" : "bg-[#080c14]")}>
+        <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto", light ? "bg-slate-50" : "bg-[#111827]")}>
           <Outlet context={{ light }} />
         </main>
       </div>
