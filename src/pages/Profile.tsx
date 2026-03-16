@@ -3,12 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { CasinoSidebar } from "@/components/casino/CasinoSidebar";
 import { TopBar } from "@/components/casino/TopBar";
+import { BottomNavBar } from "@/components/casino/BottomNavBar";
 import { DepositModal } from "@/components/casino/DepositModal";
+import { AuthOverlayModal, type AuthMode } from "@/components/casino/AuthOverlayModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { User, Shield, Upload, Wallet, ArrowDownToLine, ArrowUpFromLine, History, FileText, CheckCircle, Clock, XCircle } from "lucide-react";
 import { Navigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Transaction = {
   id: string;
@@ -28,10 +31,13 @@ type KycDoc = {
 
 export default function Profile() {
   const { user, profile, loading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<"overview" | "kyc" | "history">("overview");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [kycDocs, setKycDocs] = useState<KycDoc[]>([]);
   const [depositOpen, setDepositOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState<"rg" | "cnh">("rg");
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -93,21 +99,16 @@ export default function Profile() {
 
   async function handleWithdrawRequest() {
     if (!user) return;
-
     const amount = Number(withdrawAmount);
-
     if (!amount || amount <= 0) {
       toast({ title: "Valor inválido", description: "Informe um valor válido para saque.", variant: "destructive" });
       return;
     }
-
     if (amount > availableToWithdraw) {
       toast({ title: "Saldo insuficiente", description: "Você não possui saldo disponível para este saque.", variant: "destructive" });
       return;
     }
-
     setWithdrawing(true);
-
     const { error } = await supabase.from("transactions").insert({
       user_id: user.id,
       type: "withdraw",
@@ -116,18 +117,15 @@ export default function Profile() {
       status: "pending",
       metadata: withdrawPixKey ? { pix_key: withdrawPixKey } : {},
     });
-
     setWithdrawing(false);
-
     if (error) {
-      toast({ title: "Erro ao solicitar saque", description: error.message, variant: "destructive" });
-      return;
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Saque solicitado!", description: "Aguarde aprovação." });
+      setWithdrawAmount("");
+      setWithdrawPixKey("");
+      await loadUserData(user.id);
     }
-
-    setWithdrawAmount("");
-    setWithdrawPixKey("");
-    toast({ title: "Saque solicitado", description: "Seu saque foi enviado para análise." });
-    await loadUserData(user.id);
   }
 
   const statusIcon = (s: string) => {
@@ -144,56 +142,72 @@ export default function Profile() {
 
   return (
     <div className="flex min-h-screen w-full bg-background">
-      <CasinoSidebar />
+      {!user && authMode && (
+        <AuthOverlayModal open={!!authMode} mode={authMode} onModeChange={setAuthMode} onClose={() => setAuthMode(null)} />
+      )}
+
+      {isMobile && sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <div className={`${isMobile ? "fixed inset-y-0 left-0 z-50 transition-transform duration-200" : ""} ${isMobile && !sidebarOpen ? "-translate-x-full" : "translate-x-0"}`}>
+        <CasinoSidebar onClose={() => setSidebarOpen(false)} />
+      </div>
+
       <div className="flex-1 flex flex-col min-w-0">
-        <TopBar onSearch={() => {}} onDeposit={() => setDepositOpen(true)} />
-        <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+        <TopBar
+          onSearch={() => {}}
+          onDeposit={() => setDepositOpen(true)}
+          onMenuToggle={() => setSidebarOpen(!sidebarOpen)}
+          onOpenAuth={setAuthMode}
+        />
+        <main className={`flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto ${isMobile ? "pb-24" : ""}`}>
           {/* Profile Header */}
-          <div className="rounded-xl bg-card border border-border/40 p-6 card-shadow">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
-                <User className="h-7 w-7 text-primary" />
+          <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-6 card-shadow">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                <User className="h-5 w-5 sm:h-7 sm:w-7 text-primary" />
               </div>
-              <div>
-                <h1 className="text-lg font-bold text-foreground">{profile?.display_name || "Jogador"}</h1>
-                <p className="text-sm text-muted-foreground">{profile?.email}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-lg font-bold text-foreground truncate">{profile?.display_name || "Jogador"}</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">{profile?.email}</p>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="shrink-0">
                 {profile?.kyc_verified ? (
-                  <span className="flex items-center gap-1 text-xs text-primary font-medium"><CheckCircle className="h-3.5 w-3.5" /> Verificado</span>
+                  <span className="flex items-center gap-1 text-[10px] sm:text-xs text-primary font-medium"><CheckCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Verificado</span>
                 ) : (
-                  <span className="flex items-center gap-1 text-xs text-accent font-medium"><Clock className="h-3.5 w-3.5" /> Não verificado</span>
+                  <span className="flex items-center gap-1 text-[10px] sm:text-xs text-accent font-medium"><Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> Não verificado</span>
                 )}
               </div>
             </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-xl bg-card border border-border/40 p-4 card-shadow text-center">
-              <Wallet className="h-5 w-5 text-primary mx-auto mb-1" />
-              <p className="text-lg font-bold font-mono text-foreground">R$ {Number(balance).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-              <p className="text-[10px] text-muted-foreground">Saldo Atual</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="rounded-xl bg-card border border-border/40 p-3 sm:p-4 card-shadow text-center">
+              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-primary mx-auto mb-1" />
+              <p className="text-xs sm:text-lg font-bold font-mono text-foreground">R$ {Number(balance).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Saldo Atual</p>
             </div>
-            <div className="rounded-xl bg-card border border-border/40 p-4 card-shadow text-center">
-              <ArrowDownToLine className="h-5 w-5 text-primary mx-auto mb-1" />
-              <p className="text-lg font-bold font-mono text-foreground">R$ {totalDeposits.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-              <p className="text-[10px] text-muted-foreground">Total Depositado</p>
+            <div className="rounded-xl bg-card border border-border/40 p-3 sm:p-4 card-shadow text-center">
+              <ArrowDownToLine className="h-4 w-4 sm:h-5 sm:w-5 text-primary mx-auto mb-1" />
+              <p className="text-xs sm:text-lg font-bold font-mono text-foreground">R$ {totalDeposits.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Depositado</p>
             </div>
-            <div className="rounded-xl bg-card border border-border/40 p-4 card-shadow text-center">
-              <ArrowUpFromLine className="h-5 w-5 text-primary mx-auto mb-1" />
-              <p className="text-lg font-bold font-mono text-foreground">R$ {totalWithdrawals.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
-              <p className="text-[10px] text-muted-foreground">Total Sacado</p>
+            <div className="rounded-xl bg-card border border-border/40 p-3 sm:p-4 card-shadow text-center">
+              <ArrowUpFromLine className="h-4 w-4 sm:h-5 sm:w-5 text-primary mx-auto mb-1" />
+              <p className="text-xs sm:text-lg font-bold font-mono text-foreground">R$ {totalWithdrawals.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground">Total Sacado</p>
             </div>
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 border-b border-border/40 pb-0">
+          <div className="flex gap-1 border-b border-border/40 pb-0 overflow-x-auto scrollbar-hide">
             {tabs.map(t => (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium border-b-2 transition-all ${
+                className={`flex items-center gap-1.5 px-3 sm:px-4 py-2.5 text-[11px] sm:text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
                   tab === t.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -206,40 +220,40 @@ export default function Profile() {
           {/* Tab Content */}
           {tab === "overview" && (
             <div className="space-y-4">
-              <div className="rounded-xl bg-card border border-border/40 p-5 card-shadow space-y-3">
+              <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Dados Pessoais</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div>
                     <p className="text-[10px] text-muted-foreground">Nome</p>
-                    <p className="text-foreground font-medium">{profile?.display_name || "—"}</p>
+                    <p className="text-foreground font-medium text-xs sm:text-sm">{profile?.display_name || "—"}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground">E-mail</p>
-                    <p className="text-foreground font-medium">{profile?.email || "—"}</p>
+                    <p className="text-foreground font-medium text-xs sm:text-sm truncate">{profile?.email || "—"}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground">CPF</p>
-                    <p className="text-foreground font-medium">{profile?.cpf || "—"}</p>
+                    <p className="text-foreground font-medium text-xs sm:text-sm">{profile?.cpf || "—"}</p>
                   </div>
                   <div>
                     <p className="text-[10px] text-muted-foreground">Telefone</p>
-                    <p className="text-foreground font-medium">{profile?.phone || "—"}</p>
+                    <p className="text-foreground font-medium text-xs sm:text-sm">{profile?.phone || "—"}</p>
                   </div>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Button onClick={() => setDepositOpen(true)} className="bg-primary text-primary-foreground font-semibold w-full">
+                <Button onClick={() => setDepositOpen(true)} className="bg-primary text-primary-foreground font-semibold w-full text-xs sm:text-sm">
                   <ArrowDownToLine className="h-4 w-4 mr-2" /> Depositar
                 </Button>
-                <Button variant="outline" className="border-border/40 w-full" onClick={() => setTab("kyc")}>
+                <Button variant="outline" className="border-border/40 w-full text-xs sm:text-sm" onClick={() => setTab("kyc")}>
                   <Shield className="h-4 w-4 mr-2" /> Verificar Identidade
                 </Button>
               </div>
 
               <div className="rounded-xl bg-card border border-border/40 p-4 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-1">
                   <h4 className="text-sm font-semibold text-foreground">Solicitar saque via PIX</h4>
-                  <span className="text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input
@@ -248,18 +262,18 @@ export default function Profile() {
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder="Valor do saque"
-                    className="bg-secondary border-border/40"
+                    className="bg-secondary border-border/40 text-sm"
                   />
                   <Input
                     value={withdrawPixKey}
                     onChange={(e) => setWithdrawPixKey(e.target.value)}
                     placeholder="Chave PIX (opcional)"
-                    className="bg-secondary border-border/40"
+                    className="bg-secondary border-border/40 text-sm"
                   />
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-[11px] text-muted-foreground">Saques entram como pendentes até aprovação no admin.</p>
-                  <Button onClick={handleWithdrawRequest} disabled={withdrawing || !withdrawAmount} className="bg-primary text-primary-foreground font-semibold">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <p className="text-[11px] text-muted-foreground">Saques entram como pendentes até aprovação.</p>
+                  <Button onClick={handleWithdrawRequest} disabled={withdrawing || !withdrawAmount} className="bg-primary text-primary-foreground font-semibold w-full sm:w-auto text-xs sm:text-sm">
                     <ArrowUpFromLine className="h-4 w-4 mr-2" /> {withdrawing ? "Enviando..." : "Solicitar saque"}
                   </Button>
                 </div>
@@ -269,7 +283,7 @@ export default function Profile() {
 
           {tab === "kyc" && (
             <div className="space-y-4">
-              <div className="rounded-xl bg-card border border-border/40 p-5 card-shadow space-y-4">
+              <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow space-y-4">
                 <h3 className="text-sm font-semibold text-foreground">Enviar Documento de Identificação</h3>
                 <p className="text-xs text-muted-foreground">Para realizar saques, envie uma foto legível do seu RG ou CNH.</p>
                 <div className="flex gap-2">
@@ -287,7 +301,7 @@ export default function Profile() {
               </div>
 
               {kycDocs.length > 0 && (
-                <div className="rounded-xl bg-card border border-border/40 p-5 card-shadow space-y-3">
+                <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow space-y-3">
                   <h3 className="text-sm font-semibold text-foreground">Documentos Enviados</h3>
                   {kycDocs.map(doc => (
                     <div key={doc.id} className="flex items-center justify-between py-2 border-b border-border/20 last:border-0">
@@ -307,7 +321,7 @@ export default function Profile() {
           )}
 
           {tab === "history" && (
-            <div className="rounded-xl bg-card border border-border/40 p-5 card-shadow">
+            <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow">
               <h3 className="text-sm font-semibold text-foreground mb-3">Histórico de Transações</h3>
               {transactions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Nenhuma transação encontrada.</p>
@@ -315,11 +329,11 @@ export default function Profile() {
                 <div className="space-y-0">
                   {transactions.map(tx => (
                     <div key={tx.id} className="flex items-center justify-between py-2.5 border-b border-border/20 last:border-0">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {tx.type === "deposit" ? (
-                          <ArrowDownToLine className="h-4 w-4 text-primary" />
+                          <ArrowDownToLine className="h-4 w-4 text-primary shrink-0" />
                         ) : (
-                          <ArrowUpFromLine className="h-4 w-4 text-accent" />
+                          <ArrowUpFromLine className="h-4 w-4 text-accent shrink-0" />
                         )}
                         <div>
                           <p className="text-xs font-medium text-foreground capitalize">{tx.type === "deposit" ? "Depósito" : "Saque"}</p>
@@ -327,7 +341,7 @@ export default function Profile() {
                         </div>
                       </div>
                       <div className="text-right flex items-center gap-2">
-                        <span className={`text-sm font-mono font-semibold ${tx.type === "deposit" ? "text-primary" : "text-foreground"}`}>
+                        <span className={`text-xs sm:text-sm font-mono font-semibold ${tx.type === "deposit" ? "text-primary" : "text-foreground"}`}>
                           {tx.type === "deposit" ? "+" : "-"} R$ {Number(tx.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </span>
                         {statusIcon(tx.status ?? "pending")}
@@ -340,6 +354,8 @@ export default function Profile() {
           )}
         </main>
       </div>
+
+      {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} onOpenAuth={setAuthMode} />}
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
     </div>
   );
