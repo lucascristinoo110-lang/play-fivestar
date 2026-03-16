@@ -6,8 +6,9 @@ import {
 } from "@/components/ui/sheet";
 import {
   DollarSign, ArrowDownToLine, ArrowUpFromLine, TrendingDown, Gamepad2,
-  Calendar, Hash, User, Mail, Phone, Fingerprint, Clock,
+  Calendar, Hash, User, Mail, Phone, Fingerprint, Clock, MessageCircle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   user: any | null;
