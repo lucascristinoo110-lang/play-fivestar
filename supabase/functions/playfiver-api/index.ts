@@ -264,30 +264,34 @@ serve(async (req) => {
 
     console.log(`Launching game via VPS ${PLAYFIVER_API}/api/v2/game_launch for user ${user_id}, game ${game_code}`);
 
-    const response = await fetch(`${PLAYFIVER_API}/api/v2/game_launch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json", ...getCasinoKeyHeader() },
-      body: JSON.stringify({
-        agentToken: token,
-        secretKey,
-        user_code: profile.user_id,
-        game_code,
-        provider: String(provider).trim(),
-        game_original: false,
-        user_balance: Number(profile.balance) || 0,
-        lang: "pt",
-      }),
+    const normalizedProvider = String(provider).trim();
+    const launchResult = await launchGameWithRetry({
+      token,
+      secretKey,
+      userCode: profile.user_id,
+      gameCode: game_code,
+      provider: normalizedProvider,
+      userBalance: Number(profile.balance) || 0,
     });
 
-    const rawText = await response.text();
-    const parsed = parseJsonSafe(rawText) ?? { raw: rawText };
+    if (!launchResult.ok) {
+      const gameDeactivated = launchResult.ipDenied
+        ? await deactivateBlockedGame(supabase, game_code, normalizedProvider)
+        : false;
 
-    if (!response.ok || !parsed?.status || !parsed?.launch_url) {
-      const providerMessage = String(parsed?.msg || parsed?.message || rawText || "Falha ao abrir jogo");
-      return new Response(JSON.stringify({ error: normalizeLaunchError(providerMessage), provider_message: providerMessage, details: parsed }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({
+        error: normalizeLaunchError(launchResult.providerMessage, gameDeactivated),
+        provider_message: launchResult.providerMessage,
+        details: launchResult.parsed,
+        game_deactivated: gameDeactivated,
+      }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    return new Response(JSON.stringify({ launch_url: parsed.launch_url, user_balance: parsed.user_balance, name: parsed.name }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({
+      launch_url: launchResult.parsed.launch_url,
+      user_balance: launchResult.parsed.user_balance,
+      name: launchResult.parsed.name,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (error: any) {
     console.error("Playfiver error:", error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
