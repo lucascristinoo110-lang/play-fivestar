@@ -44,8 +44,8 @@ const LEAGUES: League[] = [
   { id: "seriea", name: "Serie A (Itália)", country: "🇮🇹", apiId: "4332" },
   { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", apiId: "4331" },
   { id: "ligue1", name: "Ligue 1", country: "🇫🇷", apiId: "4334" },
-  { id: "champions", name: "Champions League", country: "🇪🇺", apiId: "4480" },
-  { id: "europa", name: "Europa League", country: "🇪🇺", apiId: "4481" },
+  { id: "champions", name: "Champions League", country: "🇪🇺", apiId: "4364" },
+  { id: "europa", name: "Europa League", country: "🇪🇺", apiId: "4365" },
 ];
 
 function deterministicOdds(home: string, away: string) {
