@@ -13,11 +13,18 @@ type SportsMatch = {
   odds: { home: number; draw: number; away: number };
 };
 
+const BRAZILIAN_LEAGUES = [
+  { id: "4351", name: "Brasileirão Série A" },
+  { id: "4404", name: "Brasileirão Série B" },
+  { id: "4405", name: "Copa do Brasil" },
+  { id: "4480", name: "Copa Libertadores" },
+];
+
 const FALLBACK_MATCHES: SportsMatch[] = [
-  { id: "f1", league: "Brasil Série A", home: "Flamengo", away: "Palmeiras", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 3 * 3600000).toISOString(), odds: { home: 2.05, draw: 3.18, away: 3.22 } },
-  { id: "f2", league: "Brasil Série A", home: "Corinthians", away: "São Paulo", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 7 * 3600000).toISOString(), odds: { home: 2.34, draw: 3.01, away: 2.98 } },
+  { id: "f1", league: "Brasileirão Série A", home: "Flamengo", away: "Palmeiras", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 3 * 3600000).toISOString(), odds: { home: 2.05, draw: 3.18, away: 3.22 } },
+  { id: "f2", league: "Brasileirão Série A", home: "Corinthians", away: "São Paulo", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 7 * 3600000).toISOString(), odds: { home: 2.34, draw: 3.01, away: 2.98 } },
   { id: "f3", league: "Copa Libertadores", home: "Atlético-MG", away: "River Plate", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 11 * 3600000).toISOString(), odds: { home: 2.61, draw: 3.11, away: 2.52 } },
-  { id: "f4", league: "Champions League", home: "Real Madrid", away: "Manchester City", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 16 * 3600000).toISOString(), odds: { home: 2.74, draw: 3.27, away: 2.3 } },
+  { id: "f4", league: "Copa do Brasil", home: "Grêmio", away: "Cruzeiro", homeBadge: "", awayBadge: "", kickoff: new Date(Date.now() + 16 * 3600000).toISOString(), odds: { home: 2.74, draw: 3.27, away: 2.3 } },
 ];
 
 function deterministicOdds(home: string, away: string) {
@@ -33,7 +40,6 @@ function TeamBadge({ src, name }: { src: string; name: string }) {
   if (src) {
     return <img src={src} alt={name} className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-full bg-secondary/50" loading="lazy" />;
   }
-  // Fallback: first 2 letters
   return (
     <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold text-foreground border border-border/30">
       {name.slice(0, 2).toUpperCase()}
@@ -50,22 +56,25 @@ export function SportsHighlights() {
     let cancelled = false;
     async function load() {
       try {
-        // Fetch from multiple Brazilian leagues + Libertadores
-        const leagueIds = ["4351", "4404", "4405", "4480"]; // Série A, Série B, Copa do Brasil, Libertadores
         const res = await Promise.allSettled(
-          leagueIds.map(id => fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${id}`))
+          BRAZILIAN_LEAGUES.map(l =>
+            fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${l.id}`)
+          )
         );
-        const events = (await Promise.all(res.map(async r => {
+        const events = (await Promise.all(res.map(async (r, i) => {
           if (r.status !== "fulfilled" || !r.value.ok) return [];
           const d = await r.value.json().catch(() => null);
-          return Array.isArray(d?.events) ? d.events : [];
+          return (Array.isArray(d?.events) ? d.events : []).map((e: any) => ({
+            ...e,
+            _leagueName: BRAZILIAN_LEAGUES[i].name,
+          }));
         }))).flat();
 
         const mapped = events
           .filter((e: any) => e?.strHomeTeam && e?.strAwayTeam && (e?.strTimestamp || e?.dateEvent))
           .map((e: any) => ({
             id: String(e.idEvent),
-            league: String(e.strLeague || "Futebol"),
+            league: e._leagueName || String(e.strLeague || "Futebol"),
             home: e.strHomeTeam,
             away: e.strAwayTeam,
             homeBadge: e.strHomeTeamBadge || "",
@@ -110,18 +119,13 @@ export function SportsHighlights() {
       </div>
 
       <button onClick={() => navigate("/football")} className="w-full text-left rounded-xl border border-border/40 bg-card card-shadow p-4 hover:bg-surface-hover transition-colors">
-        {/* League */}
         <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{m.league}</p>
 
-        {/* Teams with badges */}
         <div className="flex items-center justify-between mt-3">
-          {/* Home */}
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <TeamBadge src={m.homeBadge} name={m.home} />
             <span className="text-sm sm:text-base font-bold text-foreground truncate">{m.home}</span>
           </div>
-
-          {/* VS */}
           <div className="px-3 text-center shrink-0">
             <span className="text-xs font-bold text-muted-foreground">VS</span>
             <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
@@ -129,15 +133,12 @@ export function SportsHighlights() {
               {new Date(m.kickoff).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
-
-          {/* Away */}
           <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
             <span className="text-sm sm:text-base font-bold text-foreground truncate text-right">{m.away}</span>
             <TeamBadge src={m.awayBadge} name={m.away} />
           </div>
         </div>
 
-        {/* Odds */}
         <div className="grid grid-cols-3 gap-2 mt-4">
           {[{ l: "Casa", v: m.odds.home }, { l: "Empate", v: m.odds.draw }, { l: "Fora", v: m.odds.away }].map(o => (
             <div key={o.l} className="rounded-lg bg-secondary border border-border/30 p-2 text-center">
@@ -147,7 +148,6 @@ export function SportsHighlights() {
           ))}
         </div>
 
-        {/* Hypothetical returns */}
         <div className="grid grid-cols-3 gap-2 mt-2">
           {[{ l: "Casa", v: hyp.home }, { l: "Empate", v: hyp.draw }, { l: "Fora", v: hyp.away }].map(o => (
             <div key={o.l} className="rounded-md bg-primary/10 border border-primary/20 p-1.5 text-center">
@@ -158,7 +158,6 @@ export function SportsHighlights() {
         </div>
       </button>
 
-      {/* Match dots indicator */}
       <div className="flex justify-center gap-1.5">
         {matches.slice(0, 8).map((_, i) => (
           <button

@@ -64,7 +64,7 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
           {user ? (
             <>
               {isMobile ? (
-                /* Mobile: just balance + deposit */
+                /* Mobile: balance + deposit button */
                 <>
                   <div className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-secondary border border-border/40">
                     <Wallet className="h-3.5 w-3.5 text-primary" />
@@ -72,6 +72,13 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
                       R$ {Number(balance).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
+                  <button
+                    onClick={onDeposit}
+                    className="relative px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold"
+                  >
+                    <span className="absolute inset-0 rounded-lg animate-pulse bg-primary/40" />
+                    <span className="relative">Depositar</span>
+                  </button>
                 </>
               ) : (
                 /* Desktop: full controls */
