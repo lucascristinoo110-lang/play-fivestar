@@ -4,6 +4,7 @@ import { ArrowLeft, Ticket, Clock, CheckCircle, XCircle, Loader2 } from "lucide-
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { getBetTypeLabel, getMarketLabel } from "@/lib/sports-odds";
 
 type Bet = {
   id: string;
@@ -25,8 +26,6 @@ const statusConfig: Record<string, { label: string; icon: any; color: string; bg
   lost: { label: "Perdeu", icon: XCircle, color: "text-destructive", bg: "bg-destructive/10" },
   cancelled: { label: "Cancelado", icon: XCircle, color: "text-muted-foreground", bg: "bg-muted" },
 };
-
-const betTypeLabel = (t: string) => t === "home" ? "Casa" : t === "draw" ? "Empate" : "Fora";
 
 export default function TicketsPage() {
   const { user } = useAuth();
