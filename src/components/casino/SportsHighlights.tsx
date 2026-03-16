@@ -53,8 +53,8 @@ function getBrazilianFallbackMatches(): SportsMatch[] {
     league,
     home,
     away,
-    homeBadge: "",
-    awayBadge: "",
+    homeBadge: getTeamBadge(home),
+    awayBadge: getTeamBadge(away),
     kickoff: new Date(baseTime + dayOffset * 86400000 + 72000000).toISOString(), // 20:00
     odds: deterministicOdds(home, away),
   }));
