@@ -18,6 +18,7 @@ const links = [
   { icon: Gamepad2, label: "Jogos / Provedores", path: "/rei/games" },
   { icon: Image, label: "Banners", path: "/rei/banners" },
   { icon: UserCheck, label: "Afiliados", path: "/rei/affiliates" },
+  { icon: Megaphone, label: "Anúncios / Pixel", path: "/rei/ads" },
   { icon: Palette, label: "Aparência", path: "/rei/appearance" },
   { icon: Shield, label: "Gateway BSPAY", path: "/rei/bspay" },
   { icon: Settings, label: "Configurações", path: "/rei/settings" },
