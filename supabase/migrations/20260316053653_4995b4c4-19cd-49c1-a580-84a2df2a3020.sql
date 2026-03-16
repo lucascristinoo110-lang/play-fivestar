@@ -1,0 +1,1 @@
+UPDATE games SET is_active = false WHERE provider = 'igamewin' AND game_code IN ('big-bass-bonanza', 'book-of-dead');
