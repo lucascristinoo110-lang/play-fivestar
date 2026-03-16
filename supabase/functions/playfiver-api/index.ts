@@ -149,7 +149,7 @@ async function launchGameWithRetry({
 
     console.warn(`Game launch failed on attempt ${attempt} for ${provider}/${gameCode}: ${providerMessage}`);
 
-    if (!ipDenied || attempt === 3) break;
+    if (!ipDenied || attempt === 5) break;
     await sleep(250 * attempt);
   }
 
