@@ -60,7 +60,7 @@ export default function AdminLayout() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => setLight(!light)} className={cn("p-2 rounded-lg transition-colors", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-white/[0.06] text-slate-500")}>
+          <button onClick={() => setLight(!light)} className={cn("p-2 rounded-lg transition-colors", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-slate-700/50 text-slate-400")}>
             {light ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
           <button onClick={() => setSidebarOpen(false)} className={cn("p-2 rounded-lg lg:hidden", light ? "hover:bg-slate-100 text-slate-400" : "hover:bg-white/[0.06] text-slate-500")}>
