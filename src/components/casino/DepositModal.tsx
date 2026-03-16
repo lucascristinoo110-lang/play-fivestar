@@ -114,6 +114,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
       setPixCode(String(pixData.pix_code));
       setQrImage(pixData.qr_code_image || buildQrImageFromPixCode(String(pixData.pix_code)));
       setStep("qrcode");
+      trackEvent("Lead", { value: Number(amount), currency: "BRL" });
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally {
