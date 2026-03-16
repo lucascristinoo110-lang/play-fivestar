@@ -118,7 +118,7 @@ export default function AdminLayout() {
         "hidden lg:flex w-[260px] h-screen sticky top-0 flex-col shrink-0",
         light
           ? "bg-white/80 backdrop-blur-xl border-r border-slate-200/60"
-          : "bg-[#0c1221]/80 backdrop-blur-xl border-r border-white/[0.06]"
+          : "bg-[#1a2236]/90 backdrop-blur-xl border-r border-slate-700/40"
       )}>
         {sidebarContent}
       </aside>
