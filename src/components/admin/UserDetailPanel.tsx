@@ -147,6 +147,17 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
                 Saldo: {fmt(Number(user.balance || 0))}
               </span>
             </div>
+            {user.phone && (
+              <Button
+                size="sm"
+                onClick={openWhatsApp}
+                className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 h-8"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Enviar WhatsApp
+              </Button>
+            )}
+            </div>
           </SheetDescription>
         </SheetHeader>
 
