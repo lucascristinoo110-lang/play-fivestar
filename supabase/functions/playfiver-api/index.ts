@@ -343,6 +343,7 @@ serve(async (req) => {
       headers: {
         "Content-Type": "application/json",
         "Accept": "application/json",
+        ...CASINO_KEY_HEADER,
       },
       body: JSON.stringify({
         agentToken: token,
