@@ -117,12 +117,29 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         "EVOLIVE_mrfykemt5slanyi5",  // Infinite Blackjack
         "EVOLIVE_SuperSicBo000001",  // Super Sic Bo
         "EVOLIVE_gwbaccarat000001",  // Golden Wealth Baccarat
-        
+        "EVOLIVE_NoCommBac0000001",  // No Commission Baccarat
       ];
 
-      const [hot, curatedLive, slots, crash] = await Promise.all([
+      // Latest PG Soft releases
+      const PG_LATEST_CODES = [
+        "2012025",   // Skylight Wonders
+        "1971587",   // Majestic Empire
+        "1964781",   // Pharaoh Royals
+        "1940257",   // Alibabas Cave of Fortune
+        "1935269",   // Diner Frenzy Spins
+        "1929177",   // Kraken Gold Rush
+        "1903012",   // Grimms Bounty Hansel Gretel
+        "1897678",   // Dragons Treasure Quest
+        "1881268",   // Knockout Riches
+        "1865521",   // Dead Mans Riches
+        "1834850",   // Jack the Giant Hunter
+        "1760238",   // Yakuza Honor
+      ];
+
+      const [hot, curatedLive, pgLatest, slots, crash] = await Promise.all([
         imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true)).order("sort_order").limit(12),
         supabase.from("games").select(GAME_FIELDS).eq("is_active", true).in("game_code", CURATED_LIVE_CODES),
+        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).in("game_code", PG_LATEST_CODES),
         imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots")).order("sort_order").limit(12),
         imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash")).order("sort_order").limit(12),
       ]);
@@ -134,9 +151,15 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       const codeOrder = new Map(CURATED_LIVE_CODES.map((c, i) => [c, i]));
       curatedLiveGames.sort((a, b) => (codeOrder.get(a.game_code || "") ?? 99) - (codeOrder.get(b.game_code || "") ?? 99));
 
+      // Sort PG latest by code order
+      const pgLatestGames = normalizeGames(pgLatest.data);
+      const pgOrder = new Map(PG_LATEST_CODES.map((c, i) => [c, i]));
+      pgLatestGames.sort((a, b) => (pgOrder.get(a.game_code || "") ?? 99) - (pgOrder.get(b.game_code || "") ?? 99));
+
       const sections: GameSection[] = [
         { id: "hot", title: "Mais Jogados Agora", subtitle: "Jogos com maior tração no cassino", games: normalizeGames(hot.data) },
         { id: "curated-live", title: "🔴 Cassino ao Vivo", subtitle: "As mesas mais quentes com dealers reais", games: curatedLiveGames },
+        { id: "pg-latest", title: "🐉 Lançamentos PG Soft", subtitle: "Os jogos mais recentes da PG Soft", games: pgLatestGames },
         { id: "slots", title: "Slots Campeões", subtitle: "Títulos que mais convertem em sessão", games: normalizeGames(slots.data) },
         { id: "crash", title: "Crash e Multiplicadores", subtitle: "Sessão para gatilho de ação rápida", games: normalizeGames(crash.data) },
       ].filter((section) => section.games.length > 0);
