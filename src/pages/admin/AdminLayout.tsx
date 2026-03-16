@@ -131,7 +131,7 @@ export default function AdminLayout() {
             "relative w-[280px] h-full flex flex-col",
             light
               ? "bg-white border-r border-slate-200/60"
-              : "bg-[#0c1221] border-r border-white/[0.06]"
+              : "bg-[#1a2236] border-r border-slate-700/40"
           )}>
             {sidebarContent}
           </aside>
