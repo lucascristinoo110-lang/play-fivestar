@@ -112,7 +112,7 @@ export default function AdminLayout() {
   );
 
   return (
-    <div className={cn("flex min-h-screen", light ? "bg-slate-50 text-slate-900" : "bg-[#080c14] text-slate-100")}>
+    <div className={cn("flex min-h-screen", light ? "bg-slate-50 text-slate-900" : "bg-[#111827] text-slate-100")}>
       {/* Desktop Sidebar */}
       <aside className={cn(
         "hidden lg:flex w-[260px] h-screen sticky top-0 flex-col shrink-0",
