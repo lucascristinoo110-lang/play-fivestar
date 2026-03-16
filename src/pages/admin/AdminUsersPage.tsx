@@ -78,7 +78,6 @@ export default function AdminUsersPage() {
             <tr className={cn("border-b", light ? "border-slate-100 text-slate-400" : "border-border/40 text-muted-foreground")}>
               <th className="text-left p-3 font-medium">Nome</th>
               <th className="text-left p-3 font-medium hidden sm:table-cell">E-mail</th>
-              <th className="text-left p-3 font-medium hidden md:table-cell">WhatsApp</th>
               <th className="text-left p-3 font-medium">Saldo</th>
               <th className="text-left p-3 font-medium hidden md:table-cell">Status</th>
               <th className="text-left p-3 font-medium">Ações</th>
