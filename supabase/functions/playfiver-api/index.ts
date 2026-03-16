@@ -77,9 +77,18 @@ async function fetchPlayfiverGames() {
   return { games, raw: parsed, rawTotal: gamesRaw.length };
 }
 
-function normalizeLaunchError(message: string) {
+function isIpDeniedMessage(message: string) {
   const lower = message.toLowerCase();
-  if (lower.includes("ip não permitido") || lower.includes("ip nao permitido")) return "IP do backend não permitido na Playfiver. Libere o IP do servidor no painel da Playfiver e tente novamente.";
+  return lower.includes("ip não permitido") || lower.includes("ip nao permitido");
+}
+
+function normalizeLaunchError(message: string, gameDeactivated = false) {
+  const lower = message.toLowerCase();
+  if (isIpDeniedMessage(message)) {
+    return gameDeactivated
+      ? "Este jogo foi bloqueado pelo provedor e removido temporariamente do catálogo. Tente outro jogo."
+      : "IP do backend não permitido na Playfiver. Libere o IP do servidor no painel da Playfiver e tente novamente.";
+  }
   if (lower.includes("não autorizado") || lower.includes("nao autorizado") || lower.includes("unauthorized") || lower.includes("token") || lower.includes("secret")) return "Credenciais da Playfiver inválidas. Revise Agent Token e Secret Key no admin.";
   return message;
 }
@@ -88,6 +97,81 @@ function chunkArray<T>(items: T[], size: number) {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
   return chunks;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function launchGameWithRetry({
+  token,
+  secretKey,
+  userCode,
+  gameCode,
+  provider,
+  userBalance,
+}: {
+  token: string;
+  secretKey: string;
+  userCode: string;
+  gameCode: string;
+  provider: string;
+  userBalance: number;
+}) {
+  let lastResult: { parsed: any; providerMessage: string; ipDenied: boolean } | null = null;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const response = await fetch(`${PLAYFIVER_API}/api/v2/game_launch`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json", ...getCasinoKeyHeader() },
+      body: JSON.stringify({
+        agentToken: token,
+        secretKey,
+        user_code: userCode,
+        game_code: gameCode,
+        provider,
+        game_original: false,
+        user_balance: userBalance,
+        lang: "pt",
+      }),
+    });
+
+    const rawText = await response.text();
+    const parsed = parseJsonSafe(rawText) ?? { raw: rawText };
+
+    if (response.ok && parsed?.status && parsed?.launch_url) {
+      return { ok: true as const, parsed };
+    }
+
+    const providerMessage = String(parsed?.msg || parsed?.message || rawText || "Falha ao abrir jogo");
+    const ipDenied = isIpDeniedMessage(providerMessage);
+    lastResult = { parsed, providerMessage, ipDenied };
+
+    console.warn(`Game launch failed on attempt ${attempt} for ${provider}/${gameCode}: ${providerMessage}`);
+
+    if (!ipDenied || attempt === 3) break;
+    await sleep(250 * attempt);
+  }
+
+  return { ok: false as const, ...(lastResult ?? { parsed: null, providerMessage: "Falha ao abrir jogo", ipDenied: false }) };
+}
+
+async function deactivateBlockedGame(supabase: ReturnType<typeof createClient>, gameCode: string, provider: string) {
+  const { data, error } = await supabase
+    .from("games")
+    .update({ is_active: false })
+    .eq("game_code", gameCode)
+    .eq("provider", provider)
+    .eq("is_active", true)
+    .select("id")
+    .limit(1);
+
+  if (error) {
+    console.error(`Failed to deactivate blocked game ${provider}/${gameCode}:`, error);
+    return false;
+  }
+
+  return Boolean(data && data.length > 0);
 }
 
 serve(async (req) => {

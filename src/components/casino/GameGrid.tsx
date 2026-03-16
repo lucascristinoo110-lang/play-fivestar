@@ -180,6 +180,13 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
     };
   }, [trimmedSearch, forcedFilter]);
 
+  function removeGameFromCatalog(gameId: string) {
+    setFeaturedSections((sections) => sections
+      .map((section) => ({ ...section, games: section.games.filter((item) => item.id !== gameId) }))
+      .filter((section) => section.games.length > 0));
+    setFilteredGames((games) => games.filter((item) => item.id !== gameId));
+  }
+
   async function handlePlay(game: Game) {
     if (!user) {
       toast({ title: "Faça login para jogar", description: "Você precisa estar logado para jogar.", variant: "destructive" });
@@ -204,30 +211,36 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
       const data = response.data;
       const fnError = response.error;
+      let gameDeactivated = false;
 
       if (fnError) {
-        // Try to extract JSON error from the FunctionsHttpError context
         let errorMessage = "Erro ao abrir o jogo";
         try {
           const ctx = (fnError as any)?.context;
           if (ctx && typeof ctx.json === "function") {
             const body = await ctx.json();
             errorMessage = body?.error || body?.provider_message || errorMessage;
+            gameDeactivated = Boolean(body?.game_deactivated);
           } else if (typeof (fnError as any)?.message === "string") {
-            // Try to parse JSON from the message
             const msgMatch = (fnError as any).message;
             try {
               const parsed = JSON.parse(msgMatch);
               errorMessage = parsed?.error || parsed?.provider_message || errorMessage;
+              gameDeactivated = Boolean(parsed?.game_deactivated);
             } catch {
               errorMessage = msgMatch || errorMessage;
             }
           }
-        } catch { /* fallback */ }
+        } catch {
+          /* fallback */
+        }
+
+        if (gameDeactivated) removeGameFromCatalog(game.id);
         throw new Error(errorMessage);
       }
 
       if (!data?.launch_url) {
+        if (data?.game_deactivated) removeGameFromCatalog(game.id);
         throw new Error(data?.error || data?.provider_message || "Erro ao abrir o jogo");
       }
 
@@ -236,7 +249,11 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       setLaunchImage(game.image_url);
       setLaunchUrl(data.launch_url);
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      toast({
+        title: err.message?.includes("removido temporariamente") ? "Jogo indisponível" : "Erro",
+        description: err.message,
+        variant: "destructive",
+      });
     } finally {
       setLaunching(false);
     }
