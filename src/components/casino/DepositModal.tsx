@@ -53,6 +53,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
         (payload) => {
           if (payload.new.status === "completed") {
             setStep("success");
+            trackEvent("Purchase", { value: Number(payload.new.amount), currency: "BRL" });
             toast({ title: "Depósito confirmado!", description: `R$ ${Number(payload.new.amount).toFixed(2)} adicionado ao seu saldo.` });
           }
         },
