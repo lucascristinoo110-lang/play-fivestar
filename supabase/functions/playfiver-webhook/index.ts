@@ -182,8 +182,43 @@ serve(async (req) => {
       }
     }
 
-    // ── BET (debit) ──
-    if (type === "BET" || type === "LOSEBET" || (type === "TRANSACTION" && betAmt > 0 && winAmt === 0)) {
+    // ── BET (debit) — prioritize amounts over type string ──
+    // Playfiver sends type "WinBet" for ALL transactions; actual intent is in bet/win values
+    // txn_type "debit_credit" means: debit bet, credit win in one callback
+
+    // ── REFUND / CANCEL (check first) ──
+    if (type === "REFUND" || type === "CANCEL" || type === "ROLLBACK") {
+      const refundAmt = betAmt || winAmt || parseAmount(body.amount);
+      const { data, error } = await supabase.rpc("adjust_balance", {
+        p_user_id: userCode,
+        p_amount: refundAmt,
+      });
+      if (error) throw error;
+
+      const newBalance = Number(data);
+      await recordTx(supabase, userCode, "game_refund", refundAmt, transactionId, { type, original_transaction: body.original_transaction_id, round_id: transactionId, raw_payload: body });
+      console.log(`REFUND: ${userCode} +${refundAmt}, balance=${newBalance}`);
+      return json(balanceResponse(newBalance, userCode));
+    }
+
+    // ── BET+WIN combined (debit_credit) — e.g. bet=0.4, win=1.2 ──
+    if (betAmt > 0 && winAmt > 0) {
+      // Net credit = win - bet
+      const net = winAmt - betAmt;
+      const { data, error } = await supabase.rpc("adjust_balance", {
+        p_user_id: userCode,
+        p_amount: net,
+      });
+      if (error) throw error;
+
+      const newBalance = Number(data);
+      await recordTx(supabase, userCode, "game_win", net, transactionId, { type, game_code: gameCode, round_id: transactionId, bet: betAmt, win: winAmt, raw_payload: body });
+      console.log(`BET+WIN: ${userCode} bet=${betAmt} win=${winAmt} net=${net}, balance=${newBalance}`);
+      return json(balanceResponse(newBalance, userCode));
+    }
+
+    // ── PURE BET (loss) — bet>0, win=0 ──
+    if (betAmt > 0 && winAmt === 0) {
       const { data, error } = await supabase.rpc("debit_balance", {
         p_user_id: userCode,
         p_amount: betAmt,
@@ -206,8 +241,8 @@ serve(async (req) => {
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── WIN (credit) ──
-    if (type === "WIN" || type === "WINBET" || (type === "TRANSACTION" && winAmt > 0)) {
+    // ── PURE WIN (free spin / bonus) — bet=0, win>0 ──
+    if (winAmt > 0) {
       const { data, error } = await supabase.rpc("adjust_balance", {
         p_user_id: userCode,
         p_amount: winAmt,
@@ -220,43 +255,7 @@ serve(async (req) => {
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── REFUND / CANCEL ──
-    if (type === "REFUND" || type === "CANCEL" || type === "ROLLBACK") {
-      const refundAmt = betAmt || winAmt || parseAmount(body.amount);
-      const { data, error } = await supabase.rpc("adjust_balance", {
-        p_user_id: userCode,
-        p_amount: refundAmt,
-      });
-      if (error) throw error;
-
-      const newBalance = Number(data);
-      await recordTx(supabase, userCode, "game_refund", refundAmt, transactionId, { type, original_transaction: body.original_transaction_id, round_id: transactionId, raw_payload: body });
-      console.log(`REFUND: ${userCode} +${refundAmt}, balance=${newBalance}`);
-      return json(balanceResponse(newBalance, userCode));
-    }
-
-    // ── GENERIC (legacy) ──
-    const netAmount = -betAmt + winAmt;
-    if (betAmt > 0 && winAmt === 0) {
-      const { data, error } = await supabase.rpc("debit_balance", { p_user_id: userCode, p_amount: betAmt });
-      if (error) {
-        if (error.message.includes("Insufficient")) {
-          const bal = await getBalance(supabase, userCode);
-          return json({ msg: "Saldo insuficiente", status: false, balance: bal ?? 0, user_balance: bal ?? 0 }, 400);
-        }
-        throw error;
-      }
-      if (winAmt > 0) {
-        await supabase.rpc("adjust_balance", { p_user_id: userCode, p_amount: winAmt });
-      }
-      const balance = await getBalance(supabase, userCode);
-      console.log(`GENERIC: ${userCode} net=${netAmount}, balance=${balance}`);
-      return json(balanceResponse(balance ?? 0, userCode));
-    }
-
-    if (netAmount !== 0) {
-      await supabase.rpc("adjust_balance", { p_user_id: userCode, p_amount: netAmount });
-    }
+    // ── BALANCE-only or unknown ──
     const balance = await getBalance(supabase, userCode);
     console.log(`GENERIC: ${userCode} net=${netAmount}, balance=${balance}`);
     return json(balanceResponse(balance ?? 0, userCode));
