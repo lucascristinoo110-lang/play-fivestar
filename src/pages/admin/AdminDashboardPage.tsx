@@ -289,7 +289,7 @@ export default function AdminDashboardPage() {
             </div>
             <h3 className={cn("text-sm font-bold", light ? "text-slate-700" : "text-slate-200")}>Últimos Cadastros</h3>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
             <table className="w-full">
               <thead>
                 <tr className={cn("text-[11px] font-semibold uppercase tracking-wide", light ? "text-slate-400 bg-slate-50/50" : "text-slate-500 bg-white/[0.02]")}>
@@ -322,7 +322,7 @@ export default function AdminDashboardPage() {
             </div>
             <h3 className={cn("text-sm font-bold", light ? "text-slate-700" : "text-slate-200")}>Últimas Transações</h3>
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
             <table className="w-full">
               <thead>
                 <tr className={cn("text-[11px] font-semibold uppercase tracking-wide", light ? "text-slate-400 bg-slate-50/50" : "text-slate-500 bg-white/[0.02]")}>
