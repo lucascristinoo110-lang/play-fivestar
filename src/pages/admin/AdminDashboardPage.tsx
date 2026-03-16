@@ -138,6 +138,21 @@ export default function AdminDashboardPage() {
     ? "bg-white border-slate-200/60 shadow-sm shadow-slate-200/50"
     : "bg-[#111827]/60 border-white/[0.06] shadow-lg shadow-black/10";
 
+  const iconColor = (gradient: string) => {
+    if (gradient.includes("blue")) return "#3b82f6";
+    if (gradient.includes("cyan")) return "#06b6d4";
+    if (gradient.includes("emerald")) return "#10b981";
+    if (gradient.includes("teal")) return "#14b8a6";
+    if (gradient.includes("orange")) return "#f97316";
+    if (gradient.includes("amber")) return "#f59e0b";
+    if (gradient.includes("purple")) return "#a855f7";
+    if (gradient.includes("indigo")) return "#6366f1";
+    if (gradient.includes("rose")) return "#f43f5e";
+    if (gradient.includes("yellow")) return "#eab308";
+    if (gradient.includes("red")) return "#ef4444";
+    return "#10b981";
+  };
+
   const cards = [
     { label: "Total Usuários", value: String(stats.totalUsers), icon: Users, gradient: "from-blue-500 to-blue-600", bg: light ? "bg-blue-50" : "bg-blue-500/10" },
     { label: "Cadastros Hoje", value: String(stats.todaySignups), icon: UserPlus, gradient: "from-cyan-500 to-cyan-600", bg: light ? "bg-cyan-50" : "bg-cyan-500/10" },
