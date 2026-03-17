@@ -35,8 +35,15 @@ export default function AdminAffiliatesPage() {
     }
   }
 
+  function generateCode() {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let result = "";
+    for (let i = 0; i < 6; i++) result += chars[Math.floor(Math.random() * chars.length)];
+    return result;
+  }
+
   async function addAffiliate() {
-    if (!email || !code) return;
+    if (!email) return;
     setSaving(true);
     const { data: profile } = await supabase.from("profiles").select("user_id").eq("email", email.trim()).single();
     if (!profile) {
@@ -44,20 +51,21 @@ export default function AdminAffiliatesPage() {
       setSaving(false);
       return;
     }
+    const autoCode = generateCode();
     const { error } = await supabase.from("affiliates").insert({
       user_id: profile.user_id,
-      affiliate_code: code.trim().toLowerCase(),
+      affiliate_code: autoCode,
       commission_type: commType,
       commission_cpa: parseFloat(cpa) || 0,
       commission_revshare: parseFloat(rev) || 0,
+      baseline: parseFloat(baseline) || 0,
     });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Afiliado adicionado!" });
+      toast({ title: "Afiliado adicionado!", description: `Código: ${autoCode}` });
       setShowAdd(false);
       setEmail("");
-      setCode("");
       load();
     }
     setSaving(false);
