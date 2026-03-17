@@ -48,6 +48,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <PixelLoader />
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
