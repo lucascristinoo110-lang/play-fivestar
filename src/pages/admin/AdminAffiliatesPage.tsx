@@ -216,6 +216,9 @@ export default function AdminAffiliatesPage() {
                     </span>
                   </td>
                   <td className={cn("p-3 font-mono", light ? "text-gray-900" : "text-foreground")}>
+                    {(a.commission_type === "cpa" || a.commission_type === "hybrid") ? `R$${Number(a.baseline || 0).toFixed(0)}` : "—"}
+                  </td>
+                  <td className={cn("p-3 font-mono", light ? "text-gray-900" : "text-foreground")}>
                     R${Number(a.commission_cpa).toFixed(0)} / {Number(a.commission_revshare).toFixed(0)}%
                   </td>
                   <td className={cn("p-3 font-mono", light ? "text-gray-900" : "text-foreground")}>{a.total_signups || 0}</td>
