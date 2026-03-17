@@ -10,8 +10,33 @@ export default function AdminWithdrawalsPage() {
   useEffect(() => { fetch(); }, []);
 
   async function fetch() {
-    const { data } = await supabase.from("transactions").select("*, profiles!inner(display_name, email, kyc_verified)").eq("type", "withdraw").order("created_at", { ascending: false });
-    setTransactions(data || []);
+    // Fetch withdrawals
+    const { data: txData } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("type", "withdraw")
+      .order("created_at", { ascending: false });
+
+    if (!txData || txData.length === 0) {
+      setTransactions([]);
+      return;
+    }
+
+    // Get unique user_ids and fetch profiles separately (no FK join available)
+    const userIds = [...new Set(txData.map(t => t.user_id))];
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("user_id, display_name, email, kyc_verified")
+      .in("user_id", userIds);
+
+    const profileMap = new Map((profilesData || []).map(p => [p.user_id, p]));
+
+    const merged = txData.map(t => ({
+      ...t,
+      profiles: profileMap.get(t.user_id) || null,
+    }));
+
+    setTransactions(merged);
   }
 
   async function updateStatus(id: string, status: string) {
