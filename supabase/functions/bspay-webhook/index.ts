@@ -109,9 +109,12 @@ serve(async (req) => {
           const isFirstDeposit = (count || 0) === 0;
 
           if (isFirstDeposit) {
-            const bonusPercent = Number(siteSettings.welcome_bonus_percent) / 100;
+            // welcome_bonus_percent is now a multiplier (e.g. 3 = 3x the deposit as total balance)
+            const multiplier = Number(siteSettings.welcome_bonus_percent);
             const bonusMax = Number(siteSettings.welcome_bonus_max) || 99999;
-            const bonusAmount = Math.min(depositAmount * bonusPercent, bonusMax);
+            // Bonus = (multiplier - 1) * deposit, capped at max
+            // e.g. 3x on R$20: bonus = (3-1)*20 = R$40, total = 20+40 = R$60
+            const bonusAmount = Math.min((multiplier - 1) * depositAmount, bonusMax);
 
             if (bonusAmount > 0) {
               // Add bonus directly to real balance
@@ -120,7 +123,7 @@ serve(async (req) => {
                 p_amount: bonusAmount,
               });
 
-              console.log(`First deposit bonus applied to real balance: user ${transaction.user_id}, bonus R$${bonusAmount.toFixed(2)}`);
+              console.log(`First deposit bonus applied: user ${transaction.user_id}, ${multiplier}x on R$${depositAmount.toFixed(2)}, bonus R$${bonusAmount.toFixed(2)}, total R$${(depositAmount + bonusAmount).toFixed(2)}`);
             }
           }
         }
