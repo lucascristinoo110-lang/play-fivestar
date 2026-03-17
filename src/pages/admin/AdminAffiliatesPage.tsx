@@ -258,10 +258,9 @@ export default function AdminAffiliatesPage() {
               <Label className="text-xs">E-mail do usuário</Label>
               <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" className={inputClass} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Código do afiliado (slug único)</Label>
-              <Input value={code} onChange={e => setCode(e.target.value)} placeholder="joao123" className={cn("font-mono", inputClass)} />
-            </div>
+            <p className={cn("text-[11px]", light ? "text-gray-400" : "text-muted-foreground")}>
+              O código do afiliado será gerado automaticamente.
+            </p>
             <div className="space-y-1">
               <Label className="text-xs">Tipo de comissão</Label>
               <select value={commType} onChange={e => setCommType(e.target.value)} className={cn("w-full h-9 rounded-md px-3 text-sm border", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40 text-foreground")}>
@@ -280,6 +279,12 @@ export default function AdminAffiliatesPage() {
                 <Input type="number" value={rev} onChange={e => setRev(e.target.value)} className={inputClass} />
               </div>
             </div>
+            {(commType === "cpa" || commType === "hybrid") && (
+              <div className="space-y-1">
+                <Label className="text-xs">Baseline (R$) — depósito mínimo para ativar CPA</Label>
+                <Input type="number" value={baseline} onChange={e => setBaseline(e.target.value)} className={inputClass} />
+              </div>
+            )}
             <Button onClick={addAffiliate} disabled={saving} className="w-full bg-primary text-primary-foreground text-sm">
               {saving ? "Salvando..." : "Adicionar Afiliado"}
             </Button>
