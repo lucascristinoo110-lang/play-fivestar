@@ -195,7 +195,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
           >
             {bannerUrl && (
               <div className="w-full shrink-0">
-                <img src={bannerUrl} alt="Promoção" className="w-full h-24 sm:h-28 object-cover" loading="lazy" decoding="async" />
+                <img src={bannerUrl} alt="Promoção" className="w-full object-contain rounded-t-3xl sm:rounded-t-2xl" loading="lazy" decoding="async" />
               </div>
             )}
 
