@@ -104,6 +104,10 @@ export default function Profile() {
       toast({ title: "Valor inválido", description: "Informe um valor válido para saque.", variant: "destructive" });
       return;
     }
+    if (!withdrawPixKey.trim()) {
+      toast({ title: "Chave PIX obrigatória", description: "Informe sua chave PIX para receber o saque.", variant: "destructive" });
+      return;
+    }
     if (amount > availableToWithdraw) {
       toast({ title: "Saldo insuficiente", description: "Você não possui saldo disponível para este saque.", variant: "destructive" });
       return;
@@ -115,7 +119,7 @@ export default function Profile() {
       amount,
       payment_method: "pix",
       status: "pending",
-      metadata: withdrawPixKey ? { pix_key: withdrawPixKey } : {},
+      metadata: { pix_key: withdrawPixKey.trim() },
     });
     setWithdrawing(false);
     if (error) {
@@ -255,6 +259,13 @@ export default function Profile() {
                   <h4 className="text-sm font-semibold text-foreground">Solicitar saque via PIX</h4>
                   <span className="text-[10px] sm:text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
+
+                <div className="rounded-lg bg-accent/10 border border-accent/30 p-3">
+                  <p className="text-[11px] text-accent font-medium">
+                    ⚠️ A chave PIX informada deve pertencer a uma conta no mesmo CPF cadastrado na plataforma ({profile?.cpf || "não informado"}). Saques para contas de terceiros serão recusados.
+                  </p>
+                </div>
+
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Input
                     type="number"
@@ -267,13 +278,13 @@ export default function Profile() {
                   <Input
                     value={withdrawPixKey}
                     onChange={(e) => setWithdrawPixKey(e.target.value)}
-                    placeholder="Chave PIX (opcional)"
+                    placeholder="Sua chave PIX (CPF, e-mail, celular ou aleatória)"
                     className="bg-secondary border-border/40 text-sm"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <p className="text-[11px] text-muted-foreground">Saques entram como pendentes até aprovação.</p>
-                  <Button onClick={handleWithdrawRequest} disabled={withdrawing || !withdrawAmount} className="bg-primary text-primary-foreground font-semibold w-full sm:w-auto text-xs sm:text-sm">
+                  <Button onClick={handleWithdrawRequest} disabled={withdrawing || !withdrawAmount || !withdrawPixKey.trim()} className="bg-primary text-primary-foreground font-semibold w-full sm:w-auto text-xs sm:text-sm">
                     <ArrowUpFromLine className="h-4 w-4 mr-2" /> {withdrawing ? "Enviando..." : "Solicitar saque"}
                   </Button>
                 </div>
