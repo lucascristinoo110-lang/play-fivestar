@@ -17,10 +17,10 @@ export default function AdminAffiliatesPage() {
   const [showPayout, setShowPayout] = useState<any | null>(null);
   const [payoutAmount, setPayoutAmount] = useState("");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
   const [commType, setCommType] = useState("revshare");
   const [cpa, setCpa] = useState("50");
   const [rev, setRev] = useState("30");
+  const [baseline, setBaseline] = useState("50");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
