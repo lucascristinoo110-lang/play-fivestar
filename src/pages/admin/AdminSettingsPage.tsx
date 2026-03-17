@@ -32,6 +32,11 @@ export default function AdminSettingsPage() {
       welcome_bonus_percent: settings.welcome_bonus_percent,
       welcome_bonus_max: settings.welcome_bonus_max,
       maintenance_mode: settings.maintenance_mode,
+      welcome_popup_active: settings.welcome_popup_active,
+      welcome_popup_title: settings.welcome_popup_title,
+      welcome_popup_body: settings.welcome_popup_body,
+      welcome_popup_button_text: settings.welcome_popup_button_text,
+      welcome_popup_timer_minutes: settings.welcome_popup_timer_minutes,
     }).eq("id", settings.id);
     setLoading(false);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
