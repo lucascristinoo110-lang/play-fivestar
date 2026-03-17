@@ -157,7 +157,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
 
   if (!open) return null;
 
-  const bannerUrl = settings?.deposit_banner_url;
+  const bannerUrl = settings?.deposit_banner_url || defaultDepositBanner;
   const finalAmount = getFinalAmount();
   const isBelowMin = finalAmount > 0 && finalAmount < minDeposit;
   const isAboveMax = finalAmount > maxDeposit;
