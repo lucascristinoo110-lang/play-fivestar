@@ -360,28 +360,94 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
               })}
             </div>
           ) : (
-            <div className="space-y-1.5">
-              {bets.length === 0 ? (
-                <p className={cn("text-xs text-center py-8", light ? "text-slate-400" : "text-slate-500")}>Nenhuma aposta encontrada.</p>
-              ) : bets.map(bet => {
-                const st = getStatus(bet.status);
-                return (
-                  <div key={bet.id} className={cn("flex items-center gap-3 p-3 rounded-lg text-xs", light ? "bg-slate-50" : "bg-slate-800/30")}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-blue-500/10">
-                      <Gamepad2 className="h-3.5 w-3.5 text-blue-500" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={cn("font-medium", light ? "text-slate-700" : "text-slate-200")}>
-                        {bet.ticket_number} — {fmt(Number(bet.amount))}
-                      </p>
-                      <p className={cn("text-[10px]", light ? "text-slate-400" : "text-slate-500")}>
-                        {fmtDate(bet.created_at)} • Odd: {Number(bet.odds).toFixed(2)} • Ganho pot.: {fmt(Number(bet.potential_win))}
-                      </p>
-                    </div>
-                    <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-semibold", st.cls)}>{st.label}</span>
+            <div className="space-y-4">
+              {/* Sports bets */}
+              {bets.length > 0 && (
+                <div>
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", light ? "text-slate-400" : "text-slate-500")}>⚽ Apostas Esportivas</p>
+                  <div className="space-y-1.5">
+                    {bets.map(bet => {
+                      const st = getStatus(bet.status);
+                      return (
+                        <div key={bet.id} className={cn("flex items-center gap-3 p-3 rounded-lg text-xs", light ? "bg-slate-50" : "bg-slate-800/30")}>
+                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
+                            bet.status === "won" ? "bg-emerald-500/10" : bet.status === "lost" ? "bg-red-500/10" : "bg-blue-500/10"
+                          )}>
+                            <Gamepad2 className={cn("h-3.5 w-3.5",
+                              bet.status === "won" ? "text-emerald-500" : bet.status === "lost" ? "text-red-500" : "text-blue-500"
+                            )} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("font-medium", light ? "text-slate-700" : "text-slate-200")}>
+                              {bet.ticket_number} — Aposta: {fmt(Number(bet.amount))}
+                            </p>
+                            <p className={cn("text-[10px]", light ? "text-slate-400" : "text-slate-500")}>
+                              {fmtDate(bet.created_at)} • Odd: {Number(bet.odds).toFixed(2)}
+                              {bet.status === "won" && ` • Ganho: ${fmt(Number(bet.potential_win))}`}
+                              {bet.status === "lost" && ` • Perda: -${fmt(Number(bet.amount))}`}
+                            </p>
+                          </div>
+                          <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-semibold", st.cls)}>{st.label}</span>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
+                </div>
+              )}
+
+              {/* Casino bets */}
+              {casinoHistory.length > 0 && (
+                <div>
+                  <p className={cn("text-[10px] font-bold uppercase tracking-wider mb-2", light ? "text-slate-400" : "text-slate-500")}>🎰 Apostas Cassino</p>
+                  <div className="space-y-1.5">
+                    {casinoHistory.map(h => {
+                      const gameName = gameNames.get(h.game_code) || h.game_code;
+                      const isWin = h.result === "won";
+                      const isLoss = h.result === "lost";
+                      const isRefund = h.result === "refund";
+                      return (
+                        <div key={h.id} className={cn("flex items-center gap-3 p-3 rounded-lg text-xs", light ? "bg-slate-50" : "bg-slate-800/30")}>
+                          <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
+                            isWin ? "bg-emerald-500/10" : isLoss ? "bg-red-500/10" : "bg-amber-500/10"
+                          )}>
+                            {isWin ? (
+                              <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                            ) : isLoss ? (
+                              <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+                            ) : (
+                              <Clock className="h-3.5 w-3.5 text-amber-500" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={cn("font-medium truncate", light ? "text-slate-700" : "text-slate-200")}>
+                              {gameName}
+                            </p>
+                            <p className={cn("text-[10px]", light ? "text-slate-400" : "text-slate-500")}>
+                              {fmtDate(h.created_at)}
+                              {h.bet_amount > 0 && ` • Aposta: ${fmt(h.bet_amount)}`}
+                              {isWin && ` • Ganho: +${fmt(h.win_amount)}`}
+                              {isLoss && ` • Perda: -${fmt(h.bet_amount)}`}
+                              {isRefund && ` • Reembolso: +${fmt(h.win_amount)}`}
+                            </p>
+                          </div>
+                          <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-semibold",
+                            isWin ? "bg-emerald-500/10 text-emerald-500" :
+                            isLoss ? "bg-red-500/10 text-red-500" :
+                            isRefund ? "bg-amber-500/10 text-amber-500" :
+                            "bg-slate-500/10 text-slate-400"
+                          )}>
+                            {isWin ? "Ganhou" : isLoss ? "Perdeu" : isRefund ? "Reembolso" : "—"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {bets.length === 0 && casinoHistory.length === 0 && (
+                <p className={cn("text-xs text-center py-8", light ? "text-slate-400" : "text-slate-500")}>Nenhuma aposta encontrada.</p>
+              )}
             </div>
           )}
         </div>
