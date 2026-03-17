@@ -4,9 +4,26 @@ import { supabase } from "@/integrations/supabase/client";
 export default function AdminDepositsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
 
-  useEffect(() => {
-    supabase.from("transactions").select("*, profiles!inner(display_name, email)").eq("type", "deposit").order("created_at", { ascending: false }).then(({ data }) => setTransactions(data || []));
-  }, []);
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    const { data: txData } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("type", "deposit")
+      .order("created_at", { ascending: false });
+
+    if (!txData || txData.length === 0) { setTransactions([]); return; }
+
+    const userIds = [...new Set(txData.map(t => t.user_id))];
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("user_id, display_name, email")
+      .in("user_id", userIds);
+
+    const profileMap = new Map((profilesData || []).map(p => [p.user_id, p]));
+    setTransactions(txData.map(t => ({ ...t, profiles: profileMap.get(t.user_id) || null })));
+  }
 
   return (
     <div className="space-y-4">
@@ -24,7 +41,7 @@ export default function AdminDepositsPage() {
           <tbody>
             {transactions.map(t => (
               <tr key={t.id} className="border-b border-border/20 hover:bg-surface-hover transition-colors">
-                <td className="p-3 text-foreground">{(t as any).profiles?.display_name || "—"}</td>
+                <td className="p-3 text-foreground">{t.profiles?.display_name || "—"}</td>
                 <td className="p-3 font-mono text-foreground">R$ {Number(t.amount).toFixed(2)}</td>
                 <td className="p-3">
                   <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold ${t.status === "completed" ? "bg-primary/15 text-primary" : t.status === "failed" ? "bg-destructive/15 text-destructive" : "bg-accent/15 text-accent"}`}>
