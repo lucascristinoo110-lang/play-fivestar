@@ -114,20 +114,13 @@ serve(async (req) => {
             const bonusAmount = Math.min(depositAmount * bonusPercent, bonusMax);
 
             if (bonusAmount > 0) {
-              // Add bonus to bonus_balance
-              const { data: profile } = await supabase
-                .from("profiles")
-                .select("bonus_balance")
-                .eq("user_id", transaction.user_id)
-                .single();
+              // Add bonus directly to real balance
+              await supabase.rpc("adjust_balance", {
+                p_user_id: transaction.user_id,
+                p_amount: bonusAmount,
+              });
 
-              const currentBonus = Number(profile?.bonus_balance || 0);
-              await supabase
-                .from("profiles")
-                .update({ bonus_balance: currentBonus + bonusAmount })
-                .eq("user_id", transaction.user_id);
-
-              console.log(`First deposit bonus applied: user ${transaction.user_id}, bonus R$${bonusAmount.toFixed(2)}`);
+              console.log(`First deposit bonus applied to real balance: user ${transaction.user_id}, bonus R$${bonusAmount.toFixed(2)}`);
             }
           }
         }
