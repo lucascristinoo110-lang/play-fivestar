@@ -75,6 +75,8 @@ const Index = () => {
       {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} onOpenAuth={setAuthMode} />}
 
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
+
+      {user && <WelcomePopup onDeposit={() => setDepositOpen(true)} />}
     </div>
   );
 };
