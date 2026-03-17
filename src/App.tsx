@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
