@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useMetaPixel } from "@/hooks/useMetaPixel";
 import { CasinoSidebar } from "@/components/casino/CasinoSidebar";
 import { TopBar } from "@/components/casino/TopBar";
 import { HeroBanner } from "@/components/casino/HeroBanner";
