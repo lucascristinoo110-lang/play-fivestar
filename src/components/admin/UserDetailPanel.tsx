@@ -23,7 +23,9 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
   const [tab, setTab] = useState<TabKey>("overview");
   const [transactions, setTransactions] = useState<any[]>([]);
   const [bets, setBets] = useState<any[]>([]);
-  const [stats, setStats] = useState({ totalDeposits: 0, totalWithdrawals: 0, totalBets: 0, totalWins: 0, totalLosses: 0 });
+  const [casinoHistory, setCasinoHistory] = useState<any[]>([]);
+  const [gameNames, setGameNames] = useState<Map<string, string>>(new Map());
+  const [stats, setStats] = useState({ totalDeposits: 0, totalWithdrawals: 0, totalBets: 0, totalWins: 0, totalLosses: 0, casinoBets: 0, casinoWins: 0, casinoLosses: 0 });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -36,27 +38,115 @@ export default function UserDetailPanel({ user, open, onClose, light }: Props) {
     if (!user) return;
     setLoading(true);
 
-    const [txRes, betsRes] = await Promise.all([
+    const [txRes, betsRes, casinoRes] = await Promise.all([
       supabase.from("transactions").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false }).limit(50),
       supabase.from("bets").select("*").eq("user_id", user.user_id).order("created_at", { ascending: false }).limit(50),
+      supabase.from("transactions").select("*").eq("user_id", user.user_id).in("type", ["game_bet", "game_win", "game_refund"]).order("created_at", { ascending: false }).limit(200),
     ]);
 
     const txs = txRes.data || [];
     const bts = betsRes.data || [];
+    const casinoTxs = casinoRes.data || [];
     setTransactions(txs);
     setBets(bts);
+
+    // Group casino transactions by round_id to pair bets with wins
+    const roundMap = new Map<string, { bet: any; win: any }>();
+    const standalone: any[] = [];
+
+    for (const tx of casinoTxs) {
+      const meta = tx.metadata as any;
+      const roundId = meta?.round_id || tx.external_id || tx.id;
+      const key = String(roundId);
+
+      if (tx.type === "game_bet") {
+        if (roundMap.has(key)) {
+          roundMap.get(key)!.bet = tx;
+        } else {
+          roundMap.set(key, { bet: tx, win: null });
+        }
+      } else if (tx.type === "game_win") {
+        if (roundMap.has(key)) {
+          roundMap.get(key)!.win = tx;
+        } else {
+          roundMap.set(key, { bet: null, win: tx });
+        }
+      } else {
+        standalone.push(tx);
+      }
+    }
+
+    // Build unified casino history
+    const history: any[] = [];
+    const gameCodes = new Set<string>();
+
+    for (const [, round] of roundMap) {
+      const meta = (round.bet?.metadata || round.win?.metadata) as any;
+      const gameCode = meta?.game_code || "—";
+      gameCodes.add(gameCode);
+
+      const betAmt = round.bet ? Math.abs(Number(round.bet.amount)) : 0;
+      const winAmt = round.win ? Math.abs(Number(round.win.amount)) : 0;
+      // If there's a bet with no win, or net is negative = loss
+      const net = winAmt - betAmt;
+      const result = net > 0 ? "won" : net === 0 && winAmt > 0 ? "draw" : "lost";
+
+      history.push({
+        id: round.bet?.id || round.win?.id,
+        game_code: gameCode,
+        bet_amount: betAmt,
+        win_amount: winAmt,
+        net,
+        result,
+        created_at: round.bet?.created_at || round.win?.created_at,
+      });
+    }
+
+    for (const tx of standalone) {
+      const meta = tx.metadata as any;
+      const gameCode = meta?.game_code || "—";
+      gameCodes.add(gameCode);
+      history.push({
+        id: tx.id,
+        game_code: gameCode,
+        bet_amount: 0,
+        win_amount: Math.abs(Number(tx.amount)),
+        net: Number(tx.amount),
+        result: tx.type === "game_refund" ? "refund" : "won",
+        created_at: tx.created_at,
+      });
+    }
+
+    history.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setCasinoHistory(history);
+
+    // Fetch game names
+    const codeArr = [...gameCodes].filter(c => c && c !== "—");
+    if (codeArr.length > 0) {
+      const { data: gamesData } = await supabase.from("games").select("game_code, name").in("game_code", codeArr);
+      const map = new Map<string, string>();
+      (gamesData || []).forEach(g => map.set(g.game_code || "", g.name));
+      setGameNames(map);
+    }
 
     const completedDeposits = txs.filter(t => t.type === "deposit" && t.status === "completed");
     const completedWithdrawals = txs.filter(t => t.type === "withdrawal" && t.status === "completed");
     const wonBets = bts.filter(b => b.status === "won");
     const lostBets = bts.filter(b => b.status === "lost");
 
+    const casinoBetTotal = history.reduce((s, h) => s + h.bet_amount, 0);
+    const casinoWinTotal = history.filter(h => h.result === "won").reduce((s, h) => s + h.win_amount, 0);
+    const casinoLossTotal = history.filter(h => h.result === "lost").reduce((s, h) => s + h.bet_amount, 0);
+
     setStats({
       totalDeposits: completedDeposits.reduce((s, t) => s + Number(t.amount), 0),
       totalWithdrawals: completedWithdrawals.reduce((s, t) => s + Number(t.amount), 0),
-      totalBets: bts.reduce((s, b) => s + Number(b.amount), 0),
-      totalWins: wonBets.reduce((s, b) => s + Number(b.potential_win), 0),
-      totalLosses: lostBets.reduce((s, b) => s + Number(b.amount), 0),
+      totalBets: bts.reduce((s, b) => s + Number(b.amount), 0) + casinoBetTotal,
+      totalWins: wonBets.reduce((s, b) => s + Number(b.potential_win), 0) + casinoWinTotal,
+      totalLosses: lostBets.reduce((s, b) => s + Number(b.amount), 0) + casinoLossTotal,
+      casinoBets: casinoBetTotal,
+      casinoWins: casinoWinTotal,
+      casinoLosses: casinoLossTotal,
     });
     setLoading(false);
   }
