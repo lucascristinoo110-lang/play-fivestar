@@ -50,17 +50,11 @@ export default function AdminAffiliatesPage() {
   }
 
   async function addAffiliate() {
-    if (!email) return;
+    if (!selectedUser) return;
     setSaving(true);
-    const { data: profile } = await supabase.from("profiles").select("user_id").eq("email", email.trim()).single();
-    if (!profile) {
-      toast({ title: "Usuário não encontrado com esse e-mail", variant: "destructive" });
-      setSaving(false);
-      return;
-    }
     const autoCode = generateCode();
     const { error } = await supabase.from("affiliates").insert({
-      user_id: profile.user_id,
+      user_id: selectedUser.user_id,
       affiliate_code: autoCode,
       commission_type: commType,
       commission_cpa: parseFloat(cpa) || 0,
@@ -72,7 +66,8 @@ export default function AdminAffiliatesPage() {
     } else {
       toast({ title: "Afiliado adicionado!", description: `Código: ${autoCode}` });
       setShowAdd(false);
-      setEmail("");
+      setSelectedUser(null);
+      setUserSearch("");
       load();
     }
     setSaving(false);
