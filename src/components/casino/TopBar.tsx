@@ -16,11 +16,25 @@ type TopBarProps = {
 };
 
 export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBarProps) {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, signOut } = useAuth();
+  const navigate = useNavigate();
   const balance = profile?.balance ?? 0;
   const isMobile = useIsMobile();
   const { settings } = useSiteSettings();
   const [refreshing, setRefreshing] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [profileMenuOpen]);
 
   const showPromo = settings?.promo_message_active && settings?.promo_message;
 
