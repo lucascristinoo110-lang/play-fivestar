@@ -1,4 +1,4 @@
-import { Search, Bell, User, Wallet, Menu, RefreshCw } from "lucide-react";
+import { Search, Bell, User, Wallet, Menu, RefreshCw, LogOut, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
