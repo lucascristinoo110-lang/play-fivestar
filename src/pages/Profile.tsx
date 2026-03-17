@@ -112,6 +112,43 @@ export default function Profile() {
       toast({ title: "Saldo insuficiente", description: "Você não possui saldo disponível para este saque.", variant: "destructive" });
       return;
     }
+
+    // Rollover check: user must have wagered (total deposits * rollover_multiplier) before withdrawing
+    try {
+      const { data: siteSettings } = await supabase.from("site_settings").select("rollover_multiplier").limit(1).single();
+      const rollover = Number(siteSettings?.rollover_multiplier ?? 1);
+
+      if (rollover > 0) {
+        const { data: deposits } = await supabase
+          .from("transactions")
+          .select("amount")
+          .eq("user_id", user.id)
+          .eq("type", "deposit")
+          .eq("status", "completed");
+
+        const totalDeposited = (deposits || []).reduce((s, d) => s + Number(d.amount), 0);
+        const requiredWager = totalDeposited * rollover;
+
+        const { data: betsData } = await supabase
+          .from("bets")
+          .select("amount")
+          .eq("user_id", user.id);
+
+        const totalWagered = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
+
+        if (totalWagered < requiredWager) {
+          toast({
+            title: "Rollover não atingido",
+            description: `Você precisa apostar R$ ${requiredWager.toFixed(2)} antes de sacar. Apostado até agora: R$ ${totalWagered.toFixed(2)}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Rollover check error:", err);
+    }
+
     setWithdrawing(true);
     const { error } = await supabase.from("transactions").insert({
       user_id: user.id,
