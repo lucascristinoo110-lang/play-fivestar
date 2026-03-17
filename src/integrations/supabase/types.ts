@@ -332,6 +332,7 @@ export type Database = {
           secondary_color: string | null
           site_name: string | null
           updated_at: string | null
+          welcome_bonus_active: boolean | null
           welcome_bonus_max: number | null
           welcome_bonus_percent: number | null
         }
@@ -365,6 +366,7 @@ export type Database = {
           secondary_color?: string | null
           site_name?: string | null
           updated_at?: string | null
+          welcome_bonus_active?: boolean | null
           welcome_bonus_max?: number | null
           welcome_bonus_percent?: number | null
         }
@@ -398,6 +400,7 @@ export type Database = {
           secondary_color?: string | null
           site_name?: string | null
           updated_at?: string | null
+          welcome_bonus_active?: boolean | null
           welcome_bonus_max?: number | null
           welcome_bonus_percent?: number | null
         }
