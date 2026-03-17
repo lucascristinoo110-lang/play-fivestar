@@ -132,16 +132,16 @@ export default function AdminSettingsPage() {
           <>
             <div className={cn("rounded-lg p-3 flex items-start gap-2 text-xs", light ? "bg-emerald-50 text-emerald-700" : "bg-emerald-500/10 text-emerald-400")}>
               <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-              <p>O bônus é calculado como porcentagem do primeiro depósito e adicionado como saldo bônus separado. O saldo bônus está sujeito ao rollover antes de poder ser sacado.</p>
+              <p>O bônus usa multiplicador. Ex: 3x = saldo total será 3 vezes o depósito. O valor extra é adicionado ao saldo real automaticamente.</p>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {field("Porcentagem do Bônus (%)", "welcome_bonus_percent", "number", "Ex: 100 = 100% do depósito vira bônus")}
-              {field("Valor Máximo do Bônus (R$)", "welcome_bonus_max", "number", "Teto do bônus independente da porcentagem")}
+              {field("Multiplicador (ex: 2, 3)", "welcome_bonus_percent", "number", "Ex: 3 = depósito x3 de saldo total")}
+              {field("Valor Máximo do Bônus (R$)", "welcome_bonus_max", "number", "Teto do bônus independente do multiplicador")}
             </div>
             <div className={cn("rounded-lg p-3 text-xs space-y-1", light ? "bg-slate-50 text-slate-500" : "bg-secondary/50 text-muted-foreground")}>
-              <p><strong>Exemplo:</strong> Bônus 100% com máximo R$500</p>
-              <p>→ Depósito de R$200: recebe R$200 de bônus</p>
-              <p>→ Depósito de R$800: recebe R$500 de bônus (limitado pelo máximo)</p>
+              <p><strong>Exemplo:</strong> Multiplicador 3x com máximo R$500</p>
+              <p>→ Depósito de R$20: saldo total = R$60 (R$20 + R$40 bônus)</p>
+              <p>→ Depósito de R$300: saldo total = R$800 (R$300 + R$500 bônus, limitado pelo máximo)</p>
             </div>
           </>
         )}
