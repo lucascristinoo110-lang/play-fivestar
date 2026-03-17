@@ -261,8 +261,58 @@ export default function AdminAffiliatesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1">
-              <Label className="text-xs">E-mail do usuário</Label>
-              <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" className={inputClass} />
+              <Label className="text-xs">Selecionar usuário</Label>
+              {selectedUser ? (
+                <div className={cn("flex items-center justify-between rounded-md px-3 py-2 border", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40")}>
+                  <div>
+                    <p className={cn("text-sm font-medium", light ? "text-gray-900" : "text-foreground")}>{selectedUser.display_name || "—"}</p>
+                    <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>{selectedUser.email}</p>
+                  </div>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setSelectedUser(null); setUserSearch(""); }}>Trocar</Button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={userSearch}
+                    onChange={e => setUserSearch(e.target.value)}
+                    placeholder="Buscar por nome, e-mail ou CPF..."
+                    className={cn("pl-9", inputClass)}
+                  />
+                  {userSearch.length >= 2 && (
+                    <div className={cn("absolute z-50 w-full mt-1 rounded-md border max-h-48 overflow-y-auto shadow-lg", light ? "bg-white border-gray-200" : "bg-card border-border/40")}>
+                      {allUsers
+                        .filter(u => {
+                          const q = userSearch.toLowerCase();
+                          return (
+                            !affiliates.some(a => a.user_id === u.user_id) &&
+                            ((u.display_name || "").toLowerCase().includes(q) ||
+                            (u.email || "").toLowerCase().includes(q) ||
+                            (u.cpf || "").includes(q))
+                          );
+                        })
+                        .slice(0, 10)
+                        .map(u => (
+                          <button
+                            key={u.user_id}
+                            onClick={() => { setSelectedUser(u); setUserSearch(""); }}
+                            className={cn("w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors border-b last:border-0", light ? "border-gray-100" : "border-border/20")}
+                          >
+                            <span className={cn("font-medium", light ? "text-gray-900" : "text-foreground")}>{u.display_name || "—"}</span>
+                            <span className={cn("ml-2 text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>{u.email}</span>
+                          </button>
+                        ))
+                      }
+                      {allUsers.filter(u => {
+                        const q = userSearch.toLowerCase();
+                        return !affiliates.some(a => a.user_id === u.user_id) && ((u.display_name || "").toLowerCase().includes(q) || (u.email || "").toLowerCase().includes(q) || (u.cpf || "").includes(q));
+                      }).length === 0 && (
+                        <p className={cn("px-3 py-2 text-xs", light ? "text-gray-400" : "text-muted-foreground")}>Nenhum usuário encontrado.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             <p className={cn("text-[11px]", light ? "text-gray-400" : "text-muted-foreground")}>
               O código do afiliado será gerado automaticamente.
