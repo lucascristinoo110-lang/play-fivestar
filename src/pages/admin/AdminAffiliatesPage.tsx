@@ -191,6 +191,7 @@ export default function AdminAffiliatesPage() {
               <th className="text-left p-3 font-medium">Afiliado</th>
               <th className="text-left p-3 font-medium">Código</th>
               <th className="text-left p-3 font-medium">Tipo</th>
+              <th className="text-left p-3 font-medium">Baseline</th>
               <th className="text-left p-3 font-medium">CPA / Rev%</th>
               <th className="text-left p-3 font-medium">Cadastros</th>
               <th className="text-left p-3 font-medium">Ganhos</th>
