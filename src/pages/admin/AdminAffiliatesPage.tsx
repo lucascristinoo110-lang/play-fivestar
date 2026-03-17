@@ -17,10 +17,10 @@ export default function AdminAffiliatesPage() {
   const [showPayout, setShowPayout] = useState<any | null>(null);
   const [payoutAmount, setPayoutAmount] = useState("");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
   const [commType, setCommType] = useState("revshare");
   const [cpa, setCpa] = useState("50");
   const [rev, setRev] = useState("30");
+  const [baseline, setBaseline] = useState("50");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -35,8 +35,15 @@ export default function AdminAffiliatesPage() {
     }
   }
 
+  function generateCode() {
+    const chars = "abcdefghjkmnpqrstuvwxyz23456789";
+    let result = "";
+    for (let i = 0; i < 6; i++) result += chars[Math.floor(Math.random() * chars.length)];
+    return result;
+  }
+
   async function addAffiliate() {
-    if (!email || !code) return;
+    if (!email) return;
     setSaving(true);
     const { data: profile } = await supabase.from("profiles").select("user_id").eq("email", email.trim()).single();
     if (!profile) {
@@ -44,20 +51,21 @@ export default function AdminAffiliatesPage() {
       setSaving(false);
       return;
     }
+    const autoCode = generateCode();
     const { error } = await supabase.from("affiliates").insert({
       user_id: profile.user_id,
-      affiliate_code: code.trim().toLowerCase(),
+      affiliate_code: autoCode,
       commission_type: commType,
       commission_cpa: parseFloat(cpa) || 0,
       commission_revshare: parseFloat(rev) || 0,
+      baseline: parseFloat(baseline) || 0,
     });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Afiliado adicionado!" });
+      toast({ title: "Afiliado adicionado!", description: `Código: ${autoCode}` });
       setShowAdd(false);
       setEmail("");
-      setCode("");
       load();
     }
     setSaving(false);
@@ -183,6 +191,7 @@ export default function AdminAffiliatesPage() {
               <th className="text-left p-3 font-medium">Afiliado</th>
               <th className="text-left p-3 font-medium">Código</th>
               <th className="text-left p-3 font-medium">Tipo</th>
+              <th className="text-left p-3 font-medium">Baseline</th>
               <th className="text-left p-3 font-medium">CPA / Rev%</th>
               <th className="text-left p-3 font-medium">Cadastros</th>
               <th className="text-left p-3 font-medium">Ganhos</th>
@@ -205,6 +214,9 @@ export default function AdminAffiliatesPage() {
                     <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-semibold", a.commission_type === "cpa" ? "bg-blue-500/15 text-blue-600" : a.commission_type === "hybrid" ? "bg-purple-500/15 text-purple-600" : "bg-emerald-500/15 text-emerald-600")}>
                       {a.commission_type === "cpa" ? "CPA" : a.commission_type === "hybrid" ? "Híbrido" : "RevShare"}
                     </span>
+                  </td>
+                  <td className={cn("p-3 font-mono", light ? "text-gray-900" : "text-foreground")}>
+                    {(a.commission_type === "cpa" || a.commission_type === "hybrid") ? `R$${Number(a.baseline || 0).toFixed(0)}` : "—"}
                   </td>
                   <td className={cn("p-3 font-mono", light ? "text-gray-900" : "text-foreground")}>
                     R${Number(a.commission_cpa).toFixed(0)} / {Number(a.commission_revshare).toFixed(0)}%
@@ -250,10 +262,9 @@ export default function AdminAffiliatesPage() {
               <Label className="text-xs">E-mail do usuário</Label>
               <Input value={email} onChange={e => setEmail(e.target.value)} placeholder="email@exemplo.com" className={inputClass} />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Código do afiliado (slug único)</Label>
-              <Input value={code} onChange={e => setCode(e.target.value)} placeholder="joao123" className={cn("font-mono", inputClass)} />
-            </div>
+            <p className={cn("text-[11px]", light ? "text-gray-400" : "text-muted-foreground")}>
+              O código do afiliado será gerado automaticamente.
+            </p>
             <div className="space-y-1">
               <Label className="text-xs">Tipo de comissão</Label>
               <select value={commType} onChange={e => setCommType(e.target.value)} className={cn("w-full h-9 rounded-md px-3 text-sm border", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40 text-foreground")}>
@@ -272,6 +283,12 @@ export default function AdminAffiliatesPage() {
                 <Input type="number" value={rev} onChange={e => setRev(e.target.value)} className={inputClass} />
               </div>
             </div>
+            {(commType === "cpa" || commType === "hybrid") && (
+              <div className="space-y-1">
+                <Label className="text-xs">Baseline (R$) — depósito mínimo para ativar CPA</Label>
+                <Input type="number" value={baseline} onChange={e => setBaseline(e.target.value)} className={inputClass} />
+              </div>
+            )}
             <Button onClick={addAffiliate} disabled={saving} className="w-full bg-primary text-primary-foreground text-sm">
               {saving ? "Salvando..." : "Adicionar Afiliado"}
             </Button>
