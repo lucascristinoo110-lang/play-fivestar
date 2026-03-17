@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { AuthMode } from "./AuthOverlayModal";
 
 type TopBarProps = {
