@@ -16,7 +16,9 @@ export default function AdminAffiliatesPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showPayout, setShowPayout] = useState<any | null>(null);
   const [payoutAmount, setPayoutAmount] = useState("");
-  const [email, setEmail] = useState("");
+  const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [commType, setCommType] = useState("revshare");
   const [cpa, setCpa] = useState("50");
   const [rev, setRev] = useState("30");
