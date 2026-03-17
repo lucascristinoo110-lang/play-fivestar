@@ -2,7 +2,7 @@ import { Search, Bell, User, Wallet, Menu, RefreshCw, LogOut, UserCircle } from 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useState } from "react";
