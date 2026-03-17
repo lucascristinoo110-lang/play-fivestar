@@ -25,7 +25,12 @@ export default function AdminAffiliatesPage() {
   const [baseline, setBaseline] = useState("50");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadUsers(); }, []);
+
+  async function loadUsers() {
+    const { data } = await supabase.from("profiles").select("user_id, display_name, email, cpf").order("created_at", { ascending: false });
+    if (data) setAllUsers(data);
+  }
 
   async function load() {
     const { data } = await supabase.from("affiliates").select("*").order("created_at", { ascending: false });
