@@ -87,6 +87,54 @@ serve(async (req) => {
       });
 
       console.log(`Deposit confirmed: user ${transaction.user_id}, amount ${depositAmount}, result:`, newBalance);
+
+      // Check if this is the user's first completed deposit and bonus is active
+      try {
+        const { data: siteSettings } = await supabase
+          .from("site_settings")
+          .select("welcome_bonus_active, welcome_bonus_percent, welcome_bonus_max")
+          .limit(1)
+          .single();
+
+        if (siteSettings?.welcome_bonus_active && siteSettings.welcome_bonus_percent > 0) {
+          // Count completed deposits for this user (excluding current one)
+          const { count } = await supabase
+            .from("transactions")
+            .select("id", { count: "exact", head: true })
+            .eq("user_id", transaction.user_id)
+            .eq("type", "deposit")
+            .eq("status", "completed")
+            .neq("id", transaction.id);
+
+          const isFirstDeposit = (count || 0) === 0;
+
+          if (isFirstDeposit) {
+            const bonusPercent = Number(siteSettings.welcome_bonus_percent) / 100;
+            const bonusMax = Number(siteSettings.welcome_bonus_max) || 99999;
+            const bonusAmount = Math.min(depositAmount * bonusPercent, bonusMax);
+
+            if (bonusAmount > 0) {
+              // Add bonus to bonus_balance
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("bonus_balance")
+                .eq("user_id", transaction.user_id)
+                .single();
+
+              const currentBonus = Number(profile?.bonus_balance || 0);
+              await supabase
+                .from("profiles")
+                .update({ bonus_balance: currentBonus + bonusAmount })
+                .eq("user_id", transaction.user_id);
+
+              console.log(`First deposit bonus applied: user ${transaction.user_id}, bonus R$${bonusAmount.toFixed(2)}`);
+            }
+          }
+        }
+      } catch (bonusErr) {
+        console.error("Error applying bonus:", bonusErr);
+        // Don't fail the webhook if bonus fails
+      }
     } else if (["failed", "expired", "cancelled", "canceled", "rejected"].includes(status)) {
       await supabase
         .from("transactions")
