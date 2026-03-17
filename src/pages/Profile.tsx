@@ -104,6 +104,10 @@ export default function Profile() {
       toast({ title: "Valor inválido", description: "Informe um valor válido para saque.", variant: "destructive" });
       return;
     }
+    if (!withdrawPixKey.trim()) {
+      toast({ title: "Chave PIX obrigatória", description: "Informe sua chave PIX para receber o saque.", variant: "destructive" });
+      return;
+    }
     if (amount > availableToWithdraw) {
       toast({ title: "Saldo insuficiente", description: "Você não possui saldo disponível para este saque.", variant: "destructive" });
       return;
@@ -115,7 +119,7 @@ export default function Profile() {
       amount,
       payment_method: "pix",
       status: "pending",
-      metadata: withdrawPixKey ? { pix_key: withdrawPixKey } : {},
+      metadata: { pix_key: withdrawPixKey.trim() },
     });
     setWithdrawing(false);
     if (error) {
