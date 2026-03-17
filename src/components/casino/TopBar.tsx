@@ -90,7 +90,7 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
           {user ? (
             <>
               {isMobile ? (
-                /* Mobile: balance + refresh + deposit button */
+                /* Mobile: balance + refresh + deposit button + profile */
                 <>
                   <button
                     onClick={handleRefreshBalance}
@@ -109,6 +109,37 @@ export function TopBar({ onSearch, onDeposit, onMenuToggle, onOpenAuth }: TopBar
                     <span className="absolute inset-0 rounded-lg animate-pulse bg-primary/40" />
                     <span className="relative">Depositar</span>
                   </button>
+                  {/* Profile dropdown mobile */}
+                  <div className="relative" ref={profileMenuRef}>
+                    <button
+                      onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                      className="p-1.5 rounded-lg bg-secondary border border-border/40 text-muted-foreground active:scale-95 transition-transform"
+                    >
+                      <User className="h-4 w-4" />
+                    </button>
+                    {profileMenuOpen && (
+                      <div className="absolute right-0 top-full mt-2 w-48 rounded-xl bg-card border border-border/40 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
+                        <div className="px-4 py-3 border-b border-border/30">
+                          <p className="text-xs font-semibold text-foreground truncate">{profile?.display_name || profile?.email || "Usuário"}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{profile?.email}</p>
+                        </div>
+                        <button
+                          onClick={() => { setProfileMenuOpen(false); navigate("/profile"); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-secondary/80 transition-colors"
+                        >
+                          <UserCircle className="h-4 w-4 text-muted-foreground" />
+                          Meu Perfil
+                        </button>
+                        <button
+                          onClick={() => { setProfileMenuOpen(false); signOut(); }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sair
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 /* Desktop: full controls */
