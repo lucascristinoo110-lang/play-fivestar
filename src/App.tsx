@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useMetaPixel } from "@/hooks/useMetaPixel";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -36,12 +37,18 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function PixelLoader() {
+  useMetaPixel();
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <PixelLoader />
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
