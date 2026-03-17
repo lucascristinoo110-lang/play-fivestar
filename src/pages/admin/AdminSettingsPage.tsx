@@ -32,6 +32,11 @@ export default function AdminSettingsPage() {
       welcome_bonus_percent: settings.welcome_bonus_percent,
       welcome_bonus_max: settings.welcome_bonus_max,
       maintenance_mode: settings.maintenance_mode,
+      welcome_popup_active: settings.welcome_popup_active,
+      welcome_popup_title: settings.welcome_popup_title,
+      welcome_popup_body: settings.welcome_popup_body,
+      welcome_popup_button_text: settings.welcome_popup_button_text,
+      welcome_popup_timer_minutes: settings.welcome_popup_timer_minutes,
     }).eq("id", settings.id);
     setLoading(false);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
@@ -138,6 +143,43 @@ export default function AdminSettingsPage() {
               <p>→ Depósito de R$200: recebe R$200 de bônus</p>
               <p>→ Depósito de R$800: recebe R$500 de bônus (limitado pelo máximo)</p>
             </div>
+          </>
+        )}
+      </div>
+
+      {/* Popup de Boas-Vindas */}
+      <div className={cardCls}>
+        <div className="flex items-center gap-2">
+          <h2 className={cn("text-sm font-semibold", light ? "text-slate-800" : "text-foreground")}>Popup de Boas-Vindas</h2>
+          <div className={cn("px-2 py-0.5 rounded text-[10px] font-semibold",
+            settings.welcome_popup_active
+              ? "bg-emerald-500/10 text-emerald-500"
+              : light ? "bg-slate-100 text-slate-400" : "bg-secondary text-muted-foreground"
+          )}>
+            {settings.welcome_popup_active ? "Ativo" : "Desativado"}
+          </div>
+        </div>
+        {toggle("Ativar Popup após Cadastro", "welcome_popup_active", "Exibe um popup com oferta para novos cadastros na primeira visita")}
+        
+        {settings.welcome_popup_active && (
+          <>
+            <div className={cn("rounded-lg p-3 flex items-start gap-2 text-xs", light ? "bg-blue-50 text-blue-700" : "bg-primary/10 text-primary")}>
+              <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <p>O popup aparece apenas uma vez para cada usuário que acabou de se cadastrar e ainda não fez nenhum depósito. Ao clicar no botão, o modal de depósito é aberto.</p>
+            </div>
+            {field("Título do Popup", "welcome_popup_title")}
+            <div className="space-y-1">
+              <Label className={labelCls}>Corpo do Popup</Label>
+              <textarea
+                value={settings.welcome_popup_body ?? ""}
+                onChange={e => setSettings({ ...settings, welcome_popup_body: e.target.value })}
+                rows={8}
+                className={cn("w-full rounded-md px-3 py-2 text-sm resize-y", inputCls)}
+              />
+              <p className={hintCls}>Use quebras de linha para separar parágrafos. Emojis como 💰 ✅ ⚠️ são destacados automaticamente.</p>
+            </div>
+            {field("Texto do Botão", "welcome_popup_button_text")}
+            {field("Tempo do Cronômetro (minutos)", "welcome_popup_timer_minutes", "number", "Contagem regressiva exibida no popup")}
           </>
         )}
       </div>

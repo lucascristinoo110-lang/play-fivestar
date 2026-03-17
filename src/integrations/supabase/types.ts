@@ -338,6 +338,11 @@ export type Database = {
           welcome_bonus_active: boolean | null
           welcome_bonus_max: number | null
           welcome_bonus_percent: number | null
+          welcome_popup_active: boolean | null
+          welcome_popup_body: string | null
+          welcome_popup_button_text: string | null
+          welcome_popup_timer_minutes: number | null
+          welcome_popup_title: string | null
         }
         Insert: {
           accent_color?: string | null
@@ -372,6 +377,11 @@ export type Database = {
           welcome_bonus_active?: boolean | null
           welcome_bonus_max?: number | null
           welcome_bonus_percent?: number | null
+          welcome_popup_active?: boolean | null
+          welcome_popup_body?: string | null
+          welcome_popup_button_text?: string | null
+          welcome_popup_timer_minutes?: number | null
+          welcome_popup_title?: string | null
         }
         Update: {
           accent_color?: string | null
@@ -406,6 +416,11 @@ export type Database = {
           welcome_bonus_active?: boolean | null
           welcome_bonus_max?: number | null
           welcome_bonus_percent?: number | null
+          welcome_popup_active?: boolean | null
+          welcome_popup_body?: string | null
+          welcome_popup_button_text?: string | null
+          welcome_popup_timer_minutes?: number | null
+          welcome_popup_title?: string | null
         }
         Relationships: []
       }

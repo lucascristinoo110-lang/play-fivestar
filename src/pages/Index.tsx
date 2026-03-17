@@ -10,6 +10,7 @@ import { AuthOverlayModal, type AuthMode } from "@/components/casino/AuthOverlay
 import { SportsHighlights } from "@/components/casino/SportsHighlights";
 import { CasinoFooter } from "@/components/casino/CasinoFooter";
 import { BottomNavBar } from "@/components/casino/BottomNavBar";
+import { WelcomePopup } from "@/components/casino/WelcomePopup";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearchParams } from "react-router-dom";
@@ -74,6 +75,8 @@ const Index = () => {
       {isMobile && <BottomNavBar onDeposit={() => setDepositOpen(true)} onOpenAuth={setAuthMode} />}
 
       <DepositModal open={depositOpen} onClose={() => setDepositOpen(false)} />
+
+      {user && <WelcomePopup onDeposit={() => setDepositOpen(true)} />}
     </div>
   );
 };
