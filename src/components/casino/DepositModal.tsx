@@ -7,6 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { X, QrCode, Copy, CheckCircle, Loader2, Zap, Shield, Clock, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import defaultDepositBanner from "@/assets/deposit-banner.png";
 
 const presets = [30, 50, 100, 200, 500];
 
@@ -156,7 +157,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
 
   if (!open) return null;
 
-  const bannerUrl = settings?.deposit_banner_url;
+  const bannerUrl = settings?.deposit_banner_url || defaultDepositBanner;
   const finalAmount = getFinalAmount();
   const isBelowMin = finalAmount > 0 && finalAmount < minDeposit;
   const isAboveMax = finalAmount > maxDeposit;
