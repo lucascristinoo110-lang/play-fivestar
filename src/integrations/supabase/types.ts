@@ -50,6 +50,7 @@ export type Database = {
         Row: {
           affiliate_code: string
           balance: number | null
+          baseline: number | null
           commission_cpa: number | null
           commission_revshare: number | null
           commission_type: string
@@ -66,6 +67,7 @@ export type Database = {
         Insert: {
           affiliate_code: string
           balance?: number | null
+          baseline?: number | null
           commission_cpa?: number | null
           commission_revshare?: number | null
           commission_type?: string
@@ -82,6 +84,7 @@ export type Database = {
         Update: {
           affiliate_code?: string
           balance?: number | null
+          baseline?: number | null
           commission_cpa?: number | null
           commission_revshare?: number | null
           commission_type?: string
