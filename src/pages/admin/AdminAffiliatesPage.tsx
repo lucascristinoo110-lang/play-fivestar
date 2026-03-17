@@ -341,7 +341,7 @@ export default function AdminAffiliatesPage() {
                 <Input type="number" value={baseline} onChange={e => setBaseline(e.target.value)} className={inputClass} />
               </div>
             )}
-            <Button onClick={addAffiliate} disabled={saving} className="w-full bg-primary text-primary-foreground text-sm">
+            <Button onClick={addAffiliate} disabled={saving || !selectedUser} className="w-full bg-primary text-primary-foreground text-sm">
               {saving ? "Salvando..." : "Adicionar Afiliado"}
             </Button>
           </div>
