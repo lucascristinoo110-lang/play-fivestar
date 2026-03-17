@@ -22,7 +22,7 @@ const Index = () => {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  useMetaPixel();
+  
 
   const forcedFilter = useMemo(() => {
     const category = searchParams.get("category");
