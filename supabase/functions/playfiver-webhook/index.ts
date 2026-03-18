@@ -100,6 +100,9 @@ function normalizeCallback(body: CallbackPayload) {
       "",
   ).trim();
 
+  const txnId = slot.txn_id ?? slot.round_id ?? body.transaction_id ?? body.round_id ?? body.reference_id ?? body.call_id ?? body.tx_id ?? "";
+  const roundId = slot.round_id ?? body.round_id ?? "";
+
   const detectedType = String(
     body.type ?? body.action ?? body.event ?? body.callback ?? body.action_type ?? "",
   ).trim().toUpperCase();
@@ -112,9 +115,8 @@ function normalizeCallback(body: CallbackPayload) {
     userCode: String(
       body.user_code ?? body.user_id ?? body.username ?? body.player_id ?? body.playerId ?? "",
     ).trim(),
-    transactionId: String(
-      body.transaction_id ?? body.round_id ?? body.reference_id ?? body.call_id ?? body.tx_id ?? "",
-    ).trim() || null,
+    transactionId: String(txnId).trim() || null,
+    roundId: String(roundId).trim() || null,
     gameCode,
     betAmt,
     winAmt,
@@ -203,7 +205,7 @@ serve(async (req) => {
       payload: body,
     }));
 
-    const { type, userCode, transactionId, betAmt, winAmt, gameCode } = normalizeCallback(body);
+    const { type, userCode, transactionId, roundId, betAmt, winAmt, gameCode } = normalizeCallback(body);
 
     if (!userCode) {
       return json({ msg: "user_code required", status: false }, 400);
