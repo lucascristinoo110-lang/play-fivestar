@@ -115,9 +115,8 @@ function normalizeCallback(body: CallbackPayload) {
     userCode: String(
       body.user_code ?? body.user_id ?? body.username ?? body.player_id ?? body.playerId ?? "",
     ).trim(),
-    transactionId: String(
-      body.transaction_id ?? body.round_id ?? body.reference_id ?? body.call_id ?? body.tx_id ?? "",
-    ).trim() || null,
+    transactionId: String(txnId).trim() || null,
+    roundId: String(roundId).trim() || null,
     gameCode,
     betAmt,
     winAmt,
