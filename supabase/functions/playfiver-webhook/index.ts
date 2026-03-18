@@ -140,8 +140,6 @@ function balanceResponse(balance: number, userCode: string) {
  */
 async function trackAffiliateRevShare(supabase: any, userId: string, netAmount: number) {
   try {
-    // netAmount: negative = user lost, positive = user won
-    // Find if user was referred by an affiliate
     const { data: referral } = await supabase
       .from("affiliate_referrals")
       .select("affiliate_id")
@@ -159,16 +157,12 @@ async function trackAffiliateRevShare(supabase: any, userId: string, netAmount: 
 
     if (!affiliate) return;
 
-    // Only process if affiliate has revshare component
     if (affiliate.commission_type !== "revshare" && affiliate.commission_type !== "hybrid") return;
 
     const revPercent = Number(affiliate.commission_revshare || 0) / 100;
     if (revPercent <= 0) return;
 
-    // netAmount negative = house won (user lost) → affiliate earns
-    // netAmount positive = user won → affiliate loses (negative revshare)
-    const commission = -netAmount * revPercent; // e.g. user lost R$10 → netAmount=-10 → commission=+3 (30%)
-
+    const commission = -netAmount * revPercent;
     const newBalance = Number(affiliate.balance || 0) + commission;
     const newEarnings = Number(affiliate.total_earnings || 0) + commission;
 
@@ -211,14 +205,12 @@ serve(async (req) => {
       return json({ msg: "user_code required", status: false }, 400);
     }
 
-    // ── BALANCE ──
     if (type === "BALANCE") {
       const balance = await getBalance(supabase, userCode);
       if (balance === null) return json({ msg: "User not found", status: false }, 404);
       return json(balanceResponse(balance, userCode));
     }
 
-    // ── DUPLICATE CHECK (idempotency) ──
     if (transactionId) {
       const { data: existing } = await supabase
         .from("transactions")
@@ -233,7 +225,6 @@ serve(async (req) => {
       }
     }
 
-    // ── REFUND / CANCEL ──
     if (type === "REFUND" || type === "CANCEL" || type === "ROLLBACK") {
       const refundAmt = betAmt || winAmt || parseAmount(body.amount);
       const { data, error } = await supabase.rpc("adjust_balance", {
@@ -249,15 +240,13 @@ serve(async (req) => {
         round_id: roundId ?? transactionId,
         raw_payload: body,
       });
-      
-      // Reverse affiliate tracking for refund
+
       await trackAffiliateRevShare(supabase, userCode, refundAmt);
-      
+
       console.log(`REFUND: ${userCode} +${refundAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── BET+WIN combined ──
     if (betAmt > 0 && winAmt > 0) {
       const net = winAmt - betAmt;
       const { data, error } = await supabase.rpc("adjust_balance", {
@@ -275,15 +264,13 @@ serve(async (req) => {
         win: winAmt,
         raw_payload: body,
       });
-      
-      // Track affiliate: net positive = user won, net negative = user lost
+
       await trackAffiliateRevShare(supabase, userCode, net);
-      
+
       console.log(`BET+WIN: ${userCode} bet=${betAmt} win=${winAmt} net=${net}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── PURE BET (loss) — bet>0, win=0 ──
     if (betAmt > 0 && winAmt === 0) {
       const { data, error } = await supabase.rpc("debit_balance", {
         p_user_id: userCode,
@@ -308,15 +295,13 @@ serve(async (req) => {
         round_id: roundId ?? transactionId,
         raw_payload: body,
       });
-      
-      // User lost → netAmount is negative (house profit)
+
       await trackAffiliateRevShare(supabase, userCode, -betAmt);
-      
+
       console.log(`BET: ${userCode} -${betAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
 
-    // ── PURE WIN (free spin / bonus) — bet=0, win>0 ──
     if (winAmt > 0) {
       const { data, error } = await supabase.rpc("adjust_balance", {
         p_user_id: userCode,
@@ -331,14 +316,32 @@ serve(async (req) => {
         round_id: roundId ?? transactionId,
         raw_payload: body,
       });
-      
-      // User won → positive net, affiliate loses revshare
+
       await trackAffiliateRevShare(supabase, userCode, winAmt);
-      
+
       console.log(`WIN: ${userCode} +${winAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
-...
+
+    const balance = await getBalance(supabase, userCode);
+    console.log(`GENERIC: ${userCode} balance=${balance}`);
+    return json(balanceResponse(balance ?? 0, userCode));
+  } catch (error: any) {
+    console.error("Playfiver callback error:", error);
+    return json({ msg: error.message, status: false }, 500);
+  }
+});
+
+async function getBalance(supabase: any, userId: string): Promise<number | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("balance")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) return null;
+  return Number(data.balance) || 0;
+}
+
 async function recordTx(supabase: any, userId: string, type: string, amount: number, txId: string | null, metadata: any) {
   if (!txId) return;
 
