@@ -243,7 +243,12 @@ serve(async (req) => {
       if (error) throw error;
 
       const newBalance = Number(data);
-      await recordTx(supabase, userCode, "game_refund", refundAmt, transactionId, { type, original_transaction: body.original_transaction_id, round_id: transactionId, raw_payload: body });
+      await recordTx(supabase, userCode, "game_refund", refundAmt, transactionId, {
+        type,
+        original_transaction: body.original_transaction_id,
+        round_id: roundId ?? transactionId,
+        raw_payload: body,
+      });
       
       // Reverse affiliate tracking for refund
       await trackAffiliateRevShare(supabase, userCode, refundAmt);
@@ -262,7 +267,14 @@ serve(async (req) => {
       if (error) throw error;
 
       const newBalance = Number(data);
-      await recordTx(supabase, userCode, "game_win", net, transactionId, { type, game_code: gameCode, round_id: transactionId, bet: betAmt, win: winAmt, raw_payload: body });
+      await recordTx(supabase, userCode, "game_win", net, transactionId, {
+        type,
+        game_code: gameCode,
+        round_id: roundId ?? transactionId,
+        bet: betAmt,
+        win: winAmt,
+        raw_payload: body,
+      });
       
       // Track affiliate: net positive = user won, net negative = user lost
       await trackAffiliateRevShare(supabase, userCode, net);
@@ -290,7 +302,12 @@ serve(async (req) => {
       }
 
       const newBalance = Number(data);
-      await recordTx(supabase, userCode, "game_bet", -betAmt, transactionId, { type, game_code: gameCode, round_id: transactionId, raw_payload: body });
+      await recordTx(supabase, userCode, "game_bet", -betAmt, transactionId, {
+        type,
+        game_code: gameCode,
+        round_id: roundId ?? transactionId,
+        raw_payload: body,
+      });
       
       // User lost → netAmount is negative (house profit)
       await trackAffiliateRevShare(supabase, userCode, -betAmt);
@@ -308,7 +325,12 @@ serve(async (req) => {
       if (error) throw error;
 
       const newBalance = Number(data);
-      await recordTx(supabase, userCode, "game_win", winAmt, transactionId, { type, game_code: gameCode, round_id: transactionId, raw_payload: body });
+      await recordTx(supabase, userCode, "game_win", winAmt, transactionId, {
+        type,
+        game_code: gameCode,
+        round_id: roundId ?? transactionId,
+        raw_payload: body,
+      });
       
       // User won → positive net, affiliate loses revshare
       await trackAffiliateRevShare(supabase, userCode, winAmt);
@@ -316,30 +338,11 @@ serve(async (req) => {
       console.log(`WIN: ${userCode} +${winAmt}, balance=${newBalance}`);
       return json(balanceResponse(newBalance, userCode));
     }
-
-    // ── BALANCE-only or unknown ──
-    const balance = await getBalance(supabase, userCode);
-    console.log(`GENERIC: ${userCode} balance=${balance}`);
-    return json(balanceResponse(balance ?? 0, userCode));
-  } catch (error: any) {
-    console.error("Playfiver callback error:", error);
-    return json({ msg: error.message, status: false }, 500);
-  }
-});
-
-async function getBalance(supabase: any, userId: string): Promise<number | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("balance")
-    .eq("user_id", userId)
-    .single();
-  if (error || !data) return null;
-  return Number(data.balance) || 0;
-}
-
+...
 async function recordTx(supabase: any, userId: string, type: string, amount: number, txId: string | null, metadata: any) {
   if (!txId) return;
-  await supabase.from("transactions").insert({
+
+  const payload = {
     user_id: userId,
     type,
     amount,
@@ -347,5 +350,12 @@ async function recordTx(supabase: any, userId: string, type: string, amount: num
     payment_method: "playfiver",
     external_id: `pf_${txId}`,
     metadata,
-  });
+  };
+
+  const { error } = await supabase.from("transactions").insert(payload);
+
+  if (error) {
+    console.error("Failed to record Playfiver transaction:", JSON.stringify({ payload, error }));
+    throw new Error(`Failed to record Playfiver transaction: ${error.message}`);
+  }
 }
