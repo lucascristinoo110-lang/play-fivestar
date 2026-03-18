@@ -205,7 +205,7 @@ serve(async (req) => {
       payload: body,
     }));
 
-    const { type, userCode, transactionId, betAmt, winAmt, gameCode } = normalizeCallback(body);
+    const { type, userCode, transactionId, roundId, betAmt, winAmt, gameCode } = normalizeCallback(body);
 
     if (!userCode) {
       return json({ msg: "user_code required", status: false }, 400);
