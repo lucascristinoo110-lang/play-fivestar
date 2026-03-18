@@ -100,6 +100,9 @@ function normalizeCallback(body: CallbackPayload) {
       "",
   ).trim();
 
+  const txnId = slot.txn_id ?? slot.round_id ?? body.transaction_id ?? body.round_id ?? body.reference_id ?? body.call_id ?? body.tx_id ?? "";
+  const roundId = slot.round_id ?? body.round_id ?? "";
+
   const detectedType = String(
     body.type ?? body.action ?? body.event ?? body.callback ?? body.action_type ?? "",
   ).trim().toUpperCase();
