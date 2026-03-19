@@ -11,6 +11,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, Edit2, Trash2, Save, Loader2 } from "lucide-react";
+import GamePickerForSection from "./GamePickerForSection";
 
 type HomeSection = {
   id: string;
@@ -93,6 +94,7 @@ function SortableRow({ section, light, onEdit, onDelete, onToggle }: {
 
 export default function AdminSectionsManager({ light }: { light: boolean }) {
   const [sections, setSections] = useState<HomeSection[]>([]);
+  const [allGames, setAllGames] = useState<{ id: string; name: string; image_url: string | null; game_code: string | null; provider: string; category: string; is_active: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -107,10 +109,10 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
 
   async function loadSections() {
     setLoading(true);
-    const { data } = await supabase
-      .from("home_sections")
-      .select("*")
-      .order("sort_order");
+    const [{ data }, { data: gamesData }] = await Promise.all([
+      supabase.from("home_sections").select("*").order("sort_order"),
+      supabase.from("games").select("id, name, image_url, game_code, provider, category, is_active").order("name"),
+    ]);
     setSections((data as any[] || []).map((s: any) => ({
       id: s.id,
       title: s.title,
@@ -124,6 +126,7 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
       is_active: s.is_active ?? true,
       max_games: s.max_games || 12,
     })));
+    setAllGames((gamesData as any[]) || []);
     setLoading(false);
   }
 
@@ -324,18 +327,12 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
 
               {editSection.section_type === "curated" && (
                 <div className="space-y-1">
-                  <Label className="text-xs">Códigos dos jogos (um por linha)</Label>
-                  <textarea
-                    value={(editSection.curated_game_codes || []).join("\n")}
-                    onChange={(e) =>
-                      setEditSection({
-                        ...editSection,
-                        curated_game_codes: e.target.value.split("\n").map((c) => c.trim()).filter(Boolean),
-                      })
-                    }
-                    placeholder={"EVOLIVE_LightningTable01\n1879752\n..."}
-                    rows={6}
-                    className={cn("w-full rounded-md border text-xs font-mono p-2 resize-none", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40 text-foreground")}
+                  <Label className="text-xs">Jogos da seção</Label>
+                  <GamePickerForSection
+                    allGames={allGames}
+                    selectedCodes={editSection.curated_game_codes || []}
+                    onCodesChange={(codes) => setEditSection({ ...editSection, curated_game_codes: codes })}
+                    light={light}
                   />
                 </div>
               )}
