@@ -222,17 +222,17 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
             {/* Body */}
             <div className="px-5 py-4">
               {step === "amount" && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Trust badges */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {[
                       { icon: Clock, text: "Crédito em segundos" },
                       { icon: Shield, text: "100% seguro" },
                       { icon: TrendingUp, text: "Bônus ativo" },
                     ].map(({ icon: Icon, text }) => (
-                      <div key={text} className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-secondary/50 border border-border/20">
-                        <Icon className="h-4 w-4 text-primary" />
-                        <span className="text-[9px] text-muted-foreground font-medium text-center leading-tight">{text}</span>
+                      <div key={text} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-secondary/50 border border-border/20">
+                        <Icon className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-[8px] sm:text-[9px] text-muted-foreground font-medium text-center leading-tight">{text}</span>
                       </div>
                     ))}
                   </div>
