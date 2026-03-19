@@ -26,6 +26,8 @@ export default function AdminEmailPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [newCampaign, setNewCampaign] = useState<{ subject: string; body_html: string; recipient_filter: Record<string, any> }>({ subject: "", body_html: "", recipient_filter: { days_since_signup: 30 } });
   const [sending, setSending] = useState<string | null>(null);
+  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [countingPreview, setCountingPreview] = useState(false);
 
   // Automations
   const [templates, setTemplates] = useState<any[]>([]);
@@ -108,17 +110,40 @@ export default function AdminEmailPage() {
     setTesting(false);
   }
 
+  async function previewRecipients() {
+    setCountingPreview(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ action: "count_recipients", filter: newCampaign.recipient_filter }),
+      });
+      const data = await res.json();
+      setPreviewCount(data.count ?? 0);
+    } catch {
+      setPreviewCount(0);
+    }
+    setCountingPreview(false);
+  }
+
   async function createCampaign() {
     if (!newCampaign.subject || !newCampaign.body_html) return toast({ title: "Preencha todos os campos", variant: "destructive" });
     const { error } = await supabase.from("email_campaigns").insert({
       subject: newCampaign.subject,
       body_html: newCampaign.body_html,
       recipient_filter: newCampaign.recipient_filter,
+      total_recipients: previewCount ?? 0,
     });
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else {
       toast({ title: "Campanha criada!" });
       setNewCampaign({ subject: "", body_html: "", recipient_filter: { days_since_signup: 30 } });
+      setPreviewCount(null);
       loadCampaigns();
     }
   }
@@ -293,7 +318,10 @@ export default function AdminEmailPage() {
                 <Input
                   type="number"
                   value={(newCampaign.recipient_filter as any)?.days_since_signup ?? 30}
-                  onChange={e => setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, days_since_signup: Number(e.target.value) } })}
+                  onChange={e => {
+                    setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, days_since_signup: Number(e.target.value) } });
+                    setPreviewCount(null);
+                  }}
                   className={inputCls}
                 />
               </div>
@@ -302,7 +330,10 @@ export default function AdminEmailPage() {
                   <input
                     type="checkbox"
                     checked={(newCampaign.recipient_filter as any)?.has_deposit === false}
-                    onChange={e => setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, has_deposit: e.target.checked ? false : undefined } })}
+                    onChange={e => {
+                      setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, has_deposit: e.target.checked ? false : undefined } });
+                      setPreviewCount(null);
+                    }}
                     className="rounded accent-primary"
                   />
                   <span className={labelCls}>Apenas sem depósito</span>
@@ -310,7 +341,21 @@ export default function AdminEmailPage() {
               </div>
             </div>
 
-            <Button onClick={createCampaign} size="sm">
+            <div className="flex items-center gap-3">
+              <Button onClick={previewRecipients} variant="outline" size="sm" disabled={countingPreview}>
+                {countingPreview ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+                Contar Destinatários
+              </Button>
+              {previewCount !== null && (
+                <span className={cn("text-xs font-semibold px-3 py-1 rounded-full",
+                  previewCount > 0 ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"
+                )}>
+                  {previewCount} destinatário{previewCount !== 1 ? "s" : ""} encontrado{previewCount !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+
+            <Button onClick={createCampaign} size="sm" disabled={previewCount === 0}>
               <Plus className="h-3 w-3 mr-1" /> Criar Campanha
             </Button>
           </div>

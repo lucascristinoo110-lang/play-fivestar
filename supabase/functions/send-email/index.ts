@@ -49,6 +49,37 @@ serve(async (req) => {
       }
     }
 
+    // Helper to get filtered recipients
+    async function getFilteredRecipients(filter: any) {
+      let query = supabase.from("profiles").select("email, user_id").not("email", "is", null);
+      
+      if (filter?.days_since_signup) {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - Number(filter.days_since_signup));
+        query = query.gte("created_at", daysAgo.toISOString());
+      }
+
+      const { data: profiles } = await query.limit(1000);
+      let recipients = (profiles || []).filter((p: any) => p.email);
+
+      if (filter?.has_deposit === false) {
+        const userIds = recipients.map((r: any) => r.user_id);
+        if (userIds.length > 0) {
+          const { data: depositors } = await supabase.from("transactions").select("user_id").in("user_id", userIds).eq("type", "deposit").eq("status", "completed");
+          const depositorIds = new Set(depositors?.map((d: any) => d.user_id) ?? []);
+          recipients = recipients.filter((r: any) => !depositorIds.has(r.user_id));
+        }
+      }
+
+      return recipients;
+    }
+
+    if (action === "count_recipients") {
+      const { filter } = body;
+      const recipients = await getFilteredRecipients(filter || {});
+      return new Response(JSON.stringify({ count: recipients.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "send_campaign") {
       if (!resendKey) return new Response(JSON.stringify({ error: "Resend não configurado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
@@ -58,31 +89,10 @@ serve(async (req) => {
       const { data: campaign } = await supabase.from("email_campaigns").select("*").eq("id", campaign_id).single();
       if (!campaign) return new Response(JSON.stringify({ error: "Campanha não encontrada" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      // Get recipients based on filter
       const filter = campaign.recipient_filter as any;
-      let query = supabase.from("profiles").select("email, user_id").not("email", "is", null);
-      
-      if (filter?.days_since_signup) {
-        const daysAgo = new Date();
-        daysAgo.setDate(daysAgo.getDate() - Number(filter.days_since_signup));
-        query = query.gte("created_at", daysAgo.toISOString());
-      }
-      if (filter?.has_deposit === false) {
-        // We'll filter after getting profiles
-      }
+      const recipients = await getFilteredRecipients(filter);
 
-      const { data: profiles } = await query.limit(500);
-      if (!profiles?.length) return new Response(JSON.stringify({ error: "Nenhum destinatário encontrado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-      let recipients = profiles.filter(p => p.email);
-
-      // Filter by deposit status if needed
-      if (filter?.has_deposit === false) {
-        const userIds = recipients.map(r => r.user_id);
-        const { data: depositors } = await supabase.from("transactions").select("user_id").in("user_id", userIds).eq("type", "deposit").eq("status", "completed");
-        const depositorIds = new Set(depositors?.map(d => d.user_id) ?? []);
-        recipients = recipients.filter(r => !depositorIds.has(r.user_id));
-      }
+      if (!recipients.length) return new Response(JSON.stringify({ error: "Nenhum destinatário encontrado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
       const fromEmail = settings?.resend_from_email || "noreply@seudominio.com";
       const siteName = settings?.site_name || "Casino";
