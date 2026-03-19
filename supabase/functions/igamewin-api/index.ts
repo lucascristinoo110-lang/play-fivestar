@@ -87,6 +87,9 @@ function chunkArray<T>(items: T[], size: number) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const callbackUrl = `${supabaseUrl}/functions/v1/igamewin-callback`;
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
