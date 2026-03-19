@@ -88,10 +88,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const callbackUrl = `${supabaseUrl}/functions/v1/igamewin-callback`;
+  const getBalanceUrl = `${supabaseUrl}/functions/v1/igamewin-getbalance`;
+  const balanceAdjUrl = `${supabaseUrl}/functions/v1/igamewin-balance-adj`;
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
