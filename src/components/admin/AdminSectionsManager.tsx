@@ -147,7 +147,7 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
       is_active: s.is_active ?? true,
       max_games: s.max_games || 12,
     })));
-    setAllGames((gamesData as any[]) || []);
+    setAllGames(gamesData || []);
     setLoading(false);
   }
 
