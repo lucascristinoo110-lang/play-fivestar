@@ -61,13 +61,13 @@ async function callIgw(apiUrl: string, agentCode: string, agentToken: string, me
   return { res, text, json };
 }
 
-function normalizeGame(rawGame: any): NormalizedGame | null {
+function normalizeGame(rawGame: any, providerCode?: string): NormalizedGame | null {
   const gameCode = String(rawGame?.game_code ?? rawGame?.code ?? rawGame?.id ?? "").trim();
-  const name = String(rawGame?.name ?? rawGame?.title ?? "").trim();
+  const name = String(rawGame?.game_name ?? rawGame?.name ?? rawGame?.title ?? "").trim();
   if (!gameCode || !name) return null;
 
-  const providerName = String(rawGame?.provider?.name ?? rawGame?.provider ?? rawGame?.provider_code ?? rawGame?.vendor ?? "igamewin").trim();
-  const imageUrl = String(rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? rawGame?.thumbnail ?? rawGame?.img ?? "").trim();
+  const providerName = String(providerCode ?? rawGame?.provider?.name ?? rawGame?.provider ?? rawGame?.provider_code ?? rawGame?.vendor ?? "igamewin").trim();
+  const imageUrl = String(rawGame?.banner ?? rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? rawGame?.thumbnail ?? rawGame?.img ?? "").trim();
 
   return {
     name, provider: providerName,
