@@ -11,6 +11,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Plus, Edit2, Trash2, Save, Loader2 } from "lucide-react";
+import GamePickerForSection from "./GamePickerForSection";
 
 type HomeSection = {
   id: string;
