@@ -265,12 +265,11 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                       inputMode="decimal"
                       value={customAmount}
                       onChange={(e) => { setCustomAmount(e.target.value); setAmount(""); }}
-                      placeholder={String(minDeposit)}
+                      placeholder="Informe o valor"
                       min={minDeposit}
                       max={maxDeposit}
-                      className="w-full pl-12 pr-4 h-14 rounded-xl bg-secondary border border-border/40 text-foreground text-lg font-semibold placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                      className="w-full pl-12 pr-4 h-12 rounded-xl bg-secondary border border-border/40 text-foreground text-base font-semibold placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                       onFocus={() => {
-                        // Scroll into view when keyboard opens
                         setTimeout(() => {
                           scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
                         }, 300);
