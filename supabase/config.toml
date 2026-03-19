@@ -1,1 +1,4 @@
 project_id = "mvjcnonkiwhgffmvfvxg"
+
+[functions.igamewin-callback]
+verify_jwt = false
