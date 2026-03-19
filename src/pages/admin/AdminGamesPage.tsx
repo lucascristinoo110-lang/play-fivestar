@@ -326,7 +326,7 @@ export default function AdminGamesPage() {
                   {importingIgamewin ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   Importar iGameWin
                 </Button>
-                <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }} className="bg-primary text-primary-foreground text-xs h-8">
+                <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setSelectedSections([]); setShowForm(true); }} className="bg-primary text-primary-foreground text-xs h-8">
                   <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Jogo
                 </Button>
               </div>
