@@ -498,6 +498,38 @@ export default function AdminGamesPage() {
                 </div>
               </div>
 
+              {/* Seções */}
+              {sections.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Seções da Home</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {sections.map(s => {
+                      const isSelected = selectedSections.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setSelectedSections(prev =>
+                            isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id]
+                          )}
+                          className={cn(
+                            "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : light ? "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100" : "bg-secondary border-border/40 text-muted-foreground hover:bg-secondary/80"
+                          )}
+                        >
+                          {s.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
+                    Clique para adicionar/remover o jogo das seções. Requer código do jogo preenchido.
+                  </p>
+                </div>
+              )}
+
               <Button onClick={saveGame} disabled={loading} className="w-full bg-primary text-primary-foreground text-sm">
                 <Save className="h-3.5 w-3.5 mr-1.5" /> {editGame.id ? "Salvar Alterações" : "Adicionar Jogo"}
               </Button>
