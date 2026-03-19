@@ -73,7 +73,7 @@ export default function AdminDashboardPage() {
       supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed").gte("created_at", todayISO),
       supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", todayISO),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8),
-      supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(15),
+      supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15),
     ]);
 
     const sumAmount = (data: any[] | null) => data?.reduce((s, t) => s + Number(t.amount), 0) || 0;
