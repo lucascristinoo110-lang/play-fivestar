@@ -61,13 +61,13 @@ async function callIgw(apiUrl: string, agentCode: string, agentToken: string, me
   return { res, text, json };
 }
 
-function normalizeGame(rawGame: any): NormalizedGame | null {
+function normalizeGame(rawGame: any, providerCode?: string): NormalizedGame | null {
   const gameCode = String(rawGame?.game_code ?? rawGame?.code ?? rawGame?.id ?? "").trim();
-  const name = String(rawGame?.name ?? rawGame?.title ?? "").trim();
+  const name = String(rawGame?.game_name ?? rawGame?.name ?? rawGame?.title ?? "").trim();
   if (!gameCode || !name) return null;
 
-  const providerName = String(rawGame?.provider?.name ?? rawGame?.provider ?? rawGame?.provider_code ?? rawGame?.vendor ?? "igamewin").trim();
-  const imageUrl = String(rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? rawGame?.thumbnail ?? rawGame?.img ?? "").trim();
+  const providerName = String(providerCode ?? rawGame?.provider?.name ?? rawGame?.provider ?? rawGame?.provider_code ?? rawGame?.vendor ?? "igamewin").trim();
+  const imageUrl = String(rawGame?.banner ?? rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? rawGame?.thumbnail ?? rawGame?.img ?? "").trim();
 
   return {
     name, provider: providerName,
@@ -130,7 +130,7 @@ serve(async (req) => {
         try {
           const { json: gData } = await callIgw(apiUrl, agentCode, agentToken, "game_list", { provider_code: code });
           const raw = Array.isArray(gData?.games) ? gData.games : Array.isArray(gData?.data) ? gData.data : [];
-          all.push(...raw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g)));
+          all.push(...raw.map((g: any) => normalizeGame(g, code)).filter((g): g is NormalizedGame => Boolean(g)));
         } catch (e: any) {
           console.warn(`Skip provider ${code}: ${e.message}`);
         }
