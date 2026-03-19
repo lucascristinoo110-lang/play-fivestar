@@ -145,6 +145,129 @@ export type Database = {
         }
         Relationships: []
       }
+      email_campaigns: {
+        Row: {
+          body_html: string
+          created_at: string | null
+          failed_count: number | null
+          id: string
+          recipient_filter: Json | null
+          sent_at: string | null
+          sent_count: number | null
+          status: string | null
+          subject: string
+          total_recipients: number | null
+        }
+        Insert: {
+          body_html: string
+          created_at?: string | null
+          failed_count?: number | null
+          id?: string
+          recipient_filter?: Json | null
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string | null
+          subject: string
+          total_recipients?: number | null
+        }
+        Update: {
+          body_html?: string
+          created_at?: string | null
+          failed_count?: number | null
+          id?: string
+          recipient_filter?: Json | null
+          sent_at?: string | null
+          sent_count?: number | null
+          status?: string | null
+          subject?: string
+          total_recipients?: number | null
+        }
+        Relationships: []
+      }
+      email_log: {
+        Row: {
+          campaign_id: string | null
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_user_id: string | null
+          sent_at: string | null
+          status: string | null
+          template_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_user_id?: string | null
+          sent_at?: string | null
+          status?: string | null
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates: {
+        Row: {
+          body_html: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          subject: string
+          trigger_delay_hours: number | null
+          trigger_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          body_html: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          subject: string
+          trigger_delay_hours?: number | null
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          body_html?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          subject?: string
+          trigger_delay_hours?: number | null
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       games: {
         Row: {
           category: string
@@ -382,6 +505,9 @@ export type Database = {
           promo_message: string | null
           promo_message_active: boolean | null
           require_kyc_for_withdraw: boolean | null
+          resend_api_key: string | null
+          resend_connected: boolean | null
+          resend_from_email: string | null
           rollover_multiplier: number | null
           secondary_color: string | null
           site_name: string | null
@@ -421,6 +547,9 @@ export type Database = {
           promo_message?: string | null
           promo_message_active?: boolean | null
           require_kyc_for_withdraw?: boolean | null
+          resend_api_key?: string | null
+          resend_connected?: boolean | null
+          resend_from_email?: string | null
           rollover_multiplier?: number | null
           secondary_color?: string | null
           site_name?: string | null
@@ -460,6 +589,9 @@ export type Database = {
           promo_message?: string | null
           promo_message_active?: boolean | null
           require_kyc_for_withdraw?: boolean | null
+          resend_api_key?: string | null
+          resend_connected?: boolean | null
+          resend_from_email?: string | null
           rollover_multiplier?: number | null
           secondary_color?: string | null
           site_name?: string | null
