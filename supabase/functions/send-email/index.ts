@@ -49,6 +49,37 @@ serve(async (req) => {
       }
     }
 
+    // Helper to get filtered recipients
+    async function getFilteredRecipients(filter: any) {
+      let query = supabase.from("profiles").select("email, user_id").not("email", "is", null);
+      
+      if (filter?.days_since_signup) {
+        const daysAgo = new Date();
+        daysAgo.setDate(daysAgo.getDate() - Number(filter.days_since_signup));
+        query = query.gte("created_at", daysAgo.toISOString());
+      }
+
+      const { data: profiles } = await query.limit(1000);
+      let recipients = (profiles || []).filter((p: any) => p.email);
+
+      if (filter?.has_deposit === false) {
+        const userIds = recipients.map((r: any) => r.user_id);
+        if (userIds.length > 0) {
+          const { data: depositors } = await supabase.from("transactions").select("user_id").in("user_id", userIds).eq("type", "deposit").eq("status", "completed");
+          const depositorIds = new Set(depositors?.map((d: any) => d.user_id) ?? []);
+          recipients = recipients.filter((r: any) => !depositorIds.has(r.user_id));
+        }
+      }
+
+      return recipients;
+    }
+
+    if (action === "count_recipients") {
+      const { filter } = body;
+      const recipients = await getFilteredRecipients(filter || {});
+      return new Response(JSON.stringify({ count: recipients.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     if (action === "send_campaign") {
       if (!resendKey) return new Response(JSON.stringify({ error: "Resend não configurado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
