@@ -29,7 +29,7 @@ serve(async (req) => {
     const { action } = body;
 
     // Get Resend settings
-    const { data: settings } = await supabase.from("site_settings").select("resend_api_key, resend_from_email, site_name").limit(1).single();
+    const { data: settings } = await supabase.from("site_settings").select("id, resend_api_key, resend_from_email, site_name").limit(1).single();
     const resendKey = settings?.resend_api_key?.trim();
 
     if (action === "test_connection") {
