@@ -9,7 +9,7 @@ import { X, QrCode, Copy, CheckCircle, Loader2, Zap, Shield, Clock, TrendingUp }
 import { motion, AnimatePresence } from "framer-motion";
 import defaultDepositBanner from "@/assets/deposit-banner.png";
 
-const presets = [30, 50, 100, 200, 500];
+const presets = [50, 150, 200, 300];
 
 type Step = "amount" | "qrcode" | "success";
 
@@ -219,33 +219,32 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
               </div>
             </div>
 
-            {/* Body */}
-            <div className="px-5 py-4">
+            <div className="px-4 sm:px-5 py-3 sm:py-4">
               {step === "amount" && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {/* Trust badges */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {[
                       { icon: Clock, text: "Crédito em segundos" },
                       { icon: Shield, text: "100% seguro" },
                       { icon: TrendingUp, text: "Bônus ativo" },
                     ].map(({ icon: Icon, text }) => (
-                      <div key={text} className="flex flex-col items-center gap-1.5 p-2.5 rounded-xl bg-secondary/50 border border-border/20">
-                        <Icon className="h-4 w-4 text-primary" />
-                        <span className="text-[9px] text-muted-foreground font-medium text-center leading-tight">{text}</span>
+                      <div key={text} className="flex flex-col items-center gap-1 p-2 rounded-lg bg-secondary/50 border border-border/20">
+                        <Icon className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-[8px] sm:text-[9px] text-muted-foreground font-medium text-center leading-tight">{text}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* Preset values */}
                   <div>
-                    <p className="text-xs font-semibold text-foreground mb-2">Escolha o valor:</p>
-                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                    <p className="text-xs font-semibold text-foreground mb-1.5">Escolha o valor:</p>
+                    <div className="grid grid-cols-4 gap-1.5">
                       {presets.map((v) => (
                         <button
                           key={v}
                           onClick={() => { setAmount(v); setCustomAmount(""); }}
-                          className={`shrink-0 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${
+                          className={`px-2 py-2.5 rounded-lg text-xs font-bold transition-all border ${
                             amount === v
                               ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
                               : "bg-secondary text-foreground border-border/40 hover:border-primary/50"
@@ -265,12 +264,11 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                       inputMode="decimal"
                       value={customAmount}
                       onChange={(e) => { setCustomAmount(e.target.value); setAmount(""); }}
-                      placeholder={String(minDeposit)}
+                      placeholder="Informe o valor"
                       min={minDeposit}
                       max={maxDeposit}
-                      className="w-full pl-12 pr-4 h-14 rounded-xl bg-secondary border border-border/40 text-foreground text-lg font-semibold placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                      className="w-full pl-12 pr-4 h-12 rounded-xl bg-secondary border border-border/40 text-foreground text-base font-semibold placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
                       onFocus={() => {
-                        // Scroll into view when keyboard opens
                         setTimeout(() => {
                           scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
                         }, 300);
@@ -290,15 +288,15 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   )}
 
                   {/* CTA message */}
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center">
-                    <p className="text-[11px] text-primary font-semibold">🔥 Jogadores online agora estão ganhando — deposite e comece a jogar!</p>
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 text-center">
+                    <p className="text-[10px] text-primary font-semibold">🔥 Jogadores online agora estão ganhando — deposite e comece a jogar!</p>
                   </div>
 
                   {/* Submit button */}
                   <button
                     onClick={handleGenerateQR}
                     disabled={loading || !canGenerate}
-                    className="relative w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110 shadow-lg shadow-primary/30 active:scale-[0.98]"
+                    className="relative w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110 shadow-lg shadow-primary/30 active:scale-[0.98]"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -310,7 +308,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                     )}
                   </button>
 
-                  <p className="text-[10px] text-muted-foreground text-center pb-2">
+                  <p className="text-[10px] text-muted-foreground text-center pb-1">
                     Mín R$ {minDeposit.toFixed(2)} • Máx R$ {maxDeposit.toFixed(2)} • Confirmação automática
                   </p>
                 </div>
