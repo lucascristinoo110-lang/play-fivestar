@@ -92,6 +92,8 @@ serve(async (req) => {
       const filter = campaign.recipient_filter as any;
       const recipients = await getFilteredRecipients(filter);
 
+      if (!recipients.length) return new Response(JSON.stringify({ error: "Nenhum destinatário encontrado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
       const fromEmail = settings?.resend_from_email || "noreply@seudominio.com";
       const siteName = settings?.site_name || "Casino";
 
