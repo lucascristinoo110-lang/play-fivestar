@@ -19,6 +19,7 @@ const links = [
   { icon: Image, label: "Banners", path: "/rei/banners" },
   { icon: UserCheck, label: "Afiliados", path: "/rei/affiliates" },
   { icon: Megaphone, label: "Anúncios / Pixel", path: "/rei/ads" },
+  { icon: Mail, label: "Email Marketing", path: "/rei/email" },
   { icon: Palette, label: "Aparência", path: "/rei/appearance" },
   { icon: Shield, label: "Gateway BSPAY", path: "/rei/bspay" },
   { icon: Settings, label: "Configurações", path: "/rei/settings" },

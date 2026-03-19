@@ -77,6 +77,7 @@ const App = () => (
               <Route path="bets" element={<AdminBetsPage />} />
               <Route path="affiliates" element={<AdminAffiliatesPage />} />
               <Route path="ads" element={<AdminAdsPage />} />
+              <Route path="email" element={<AdminEmailPage />} />
               <Route path="appearance" element={<AdminAppearancePage />} />
               <Route path="bspay" element={<AdminBspayPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
