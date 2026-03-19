@@ -24,7 +24,7 @@ export default function AdminEmailPage() {
 
   // Campaigns
   const [campaigns, setCampaigns] = useState<any[]>([]);
-  const [newCampaign, setNewCampaign] = useState({ subject: "", body_html: "", recipient_filter: { days_since_signup: 30 } });
+  const [newCampaign, setNewCampaign] = useState<{ subject: string; body_html: string; recipient_filter: Record<string, any> }>({ subject: "", body_html: "", recipient_filter: { days_since_signup: 30 } });
   const [sending, setSending] = useState<string | null>(null);
 
   // Automations
