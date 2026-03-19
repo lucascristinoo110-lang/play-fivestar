@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2, Upload, Search, Image } from "lucide-react";
+import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2, Upload, Search, Image, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type GameRow = {
@@ -60,6 +60,9 @@ export default function AdminGamesPage() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [uploading, setUploading] = useState(false);
+  const [copiedCallback, setCopiedCallback] = useState(false);
+
+  const callbackUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/playfiver-webhook`;
 
   useEffect(() => { loadData(); }, []);
 
@@ -218,6 +221,29 @@ export default function AdminGamesPage() {
             </TabsContent>
           </Tabs>
           {field("URL da API (opcional)", "playfiver_api_url", "https://api.playfivers.com")}
+          <div className="space-y-1">
+            <Label className="text-xs">URL de Callback (copie e cole no painel Playfiver)</Label>
+            <div className="flex gap-2">
+              <Input value={callbackUrl} readOnly className={cn(inputClass, "flex-1 text-[11px] select-all")} />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 px-3 shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(callbackUrl);
+                  setCopiedCallback(true);
+                  setTimeout(() => setCopiedCallback(false), 2000);
+                  toast({ title: "URL copiada!" });
+                }}
+              >
+                {copiedCallback ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+            <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
+              Cole esta URL no campo "Callback URL" do painel da sua conta Playfiver.
+            </p>
+          </div>
         </div>
 
         <div className={cardClass}>
