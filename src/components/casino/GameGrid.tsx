@@ -55,6 +55,7 @@ function normalizeGames(data: any[] | null | undefined): Game[] {
     is_hot: Boolean(game.is_hot),
     is_new: Boolean(game.is_new),
     sort_order: Number(game.sort_order || 0),
+    source: String(game.source || "playfiver"),
   }));
 }
 
