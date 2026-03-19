@@ -24,6 +24,14 @@ type GameRow = {
   sort_order: number;
 };
 
+type SectionRow = {
+  id: string;
+  title: string;
+  section_type: string;
+  curated_game_codes: string[];
+  is_active: boolean;
+};
+
 const CATEGORIES = [
   { value: "slots", label: "Slots" },
   { value: "crash", label: "Crash" },
