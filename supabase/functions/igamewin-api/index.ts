@@ -195,7 +195,7 @@ serve(async (req) => {
 
       // Ensure user exists in iGameWin (ignore DUPLICATED_USER)
       try {
-        await callIgw(apiUrl, agentCode, agentToken, "user_create", { user_code: user_id });
+        await callIgw(apiUrl, agentCode, agentToken, "user_create", { user_code: user_id, callback_url: callbackUrl });
       } catch (e: any) {
         if (!e.message?.includes("DUPLICATED_USER")) console.warn("user_create warning:", e.message);
       }
