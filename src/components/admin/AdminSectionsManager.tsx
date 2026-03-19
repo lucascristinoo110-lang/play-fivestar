@@ -94,6 +94,7 @@ function SortableRow({ section, light, onEdit, onDelete, onToggle }: {
 
 export default function AdminSectionsManager({ light }: { light: boolean }) {
   const [sections, setSections] = useState<HomeSection[]>([]);
+  const [allGames, setAllGames] = useState<{ id: string; name: string; image_url: string | null; game_code: string | null; provider: string; category: string; is_active: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
