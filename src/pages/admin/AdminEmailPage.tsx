@@ -110,17 +110,40 @@ export default function AdminEmailPage() {
     setTesting(false);
   }
 
+  async function previewRecipients() {
+    setCountingPreview(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ action: "count_recipients", filter: newCampaign.recipient_filter }),
+      });
+      const data = await res.json();
+      setPreviewCount(data.count ?? 0);
+    } catch {
+      setPreviewCount(0);
+    }
+    setCountingPreview(false);
+  }
+
   async function createCampaign() {
     if (!newCampaign.subject || !newCampaign.body_html) return toast({ title: "Preencha todos os campos", variant: "destructive" });
     const { error } = await supabase.from("email_campaigns").insert({
       subject: newCampaign.subject,
       body_html: newCampaign.body_html,
       recipient_filter: newCampaign.recipient_filter,
+      total_recipients: previewCount ?? 0,
     });
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else {
       toast({ title: "Campanha criada!" });
       setNewCampaign({ subject: "", body_html: "", recipient_filter: { days_since_signup: 30 } });
+      setPreviewCount(null);
       loadCampaigns();
     }
   }
