@@ -106,69 +106,73 @@ export function WelcomePopup({ onDeposit }: WelcomePopupProps) {
 
       {/* Modal */}
       <div className="relative w-full max-w-md mx-auto sm:mx-4 animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
-        <div className="relative rounded-t-3xl sm:rounded-2xl overflow-hidden border border-border/40 shadow-2xl bg-card">
+        <div className="relative rounded-t-3xl sm:rounded-2xl overflow-hidden border border-border/40 shadow-2xl bg-card max-h-[85vh] sm:max-h-[90vh] flex flex-col">
           {/* Glow effect top */}
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary" />
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary z-10" />
 
           {/* Close button */}
           <button
             onClick={close}
-            className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute top-3 right-3 z-20 p-2 rounded-full bg-secondary/80 hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Fechar"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
 
-          {/* Icon header */}
-          <div className="flex flex-col items-center pt-8 pb-2">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-              <div className="relative h-16 w-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                <Gift className="h-8 w-8 text-primary-foreground" />
+          {/* Scrollable content */}
+          <div className="overflow-y-auto flex-1 overscroll-contain">
+            {/* Icon header */}
+            <div className="flex flex-col items-center pt-6 sm:pt-8 pb-1">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                <div className="relative h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                  <Gift className="h-6 w-6 sm:h-8 sm:w-8 text-primary-foreground" />
+                </div>
               </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-5 sm:px-6 pb-3 text-center space-y-2 sm:space-y-3">
+              <h2 className="text-base sm:text-xl font-extrabold text-foreground leading-tight">
+                {settings.welcome_popup_title}
+              </h2>
+
+              <div className="text-xs sm:text-sm text-muted-foreground space-y-1 leading-relaxed">
+                {bodyLines.map((line, i) => {
+                  if (!line.trim()) return <div key={i} className="h-1.5" />;
+                  const isHighlight =
+                    line.includes("💰") || line.includes("✅") || line.includes("⚠️") || line.includes("👉") || line.includes("⏳");
+                  return (
+                    <p
+                      key={i}
+                      className={
+                        isHighlight
+                          ? "text-foreground font-semibold text-xs sm:text-sm"
+                          : ""
+                      }
+                    >
+                      {line}
+                    </p>
+                  );
+                })}
+              </div>
+
+              {/* Countdown */}
+              {secondsLeft > 0 && (
+                <div className="flex items-center justify-center gap-2 sm:gap-3 py-2 sm:py-3">
+                  <TimerBox value={String(minutes).padStart(2, "0")} label="min" />
+                  <span className="text-lg sm:text-xl font-bold text-accent animate-pulse">:</span>
+                  <TimerBox value={String(seconds).padStart(2, "0")} label="seg" />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Content */}
-          <div className="px-6 pb-4 text-center space-y-3">
-            <h2 className="text-lg sm:text-xl font-extrabold text-foreground leading-tight">
-              {settings.welcome_popup_title}
-            </h2>
-
-            <div className="text-sm text-muted-foreground space-y-1.5 leading-relaxed">
-              {bodyLines.map((line, i) => {
-                if (!line.trim()) return <div key={i} className="h-2" />;
-                const isHighlight =
-                  line.includes("💰") || line.includes("✅") || line.includes("⚠️") || line.includes("👉") || line.includes("⏳");
-                return (
-                  <p
-                    key={i}
-                    className={
-                      isHighlight
-                        ? "text-foreground font-semibold text-sm"
-                        : ""
-                    }
-                  >
-                    {line}
-                  </p>
-                );
-              })}
-            </div>
-
-            {/* Countdown */}
-            {secondsLeft > 0 && (
-              <div className="flex items-center justify-center gap-3 py-3">
-                <TimerBox value={String(minutes).padStart(2, "0")} label="min" />
-                <span className="text-xl font-bold text-accent animate-pulse">:</span>
-                <TimerBox value={String(seconds).padStart(2, "0")} label="seg" />
-              </div>
-            )}
-          </div>
-
-          {/* CTA Button */}
-          <div className="px-6 pb-8">
+          {/* CTA Button - fixed at bottom */}
+          <div className="px-5 sm:px-6 pb-6 sm:pb-8 pt-2 shrink-0">
             <button
               onClick={handleDeposit}
-              className="w-full py-4 rounded-xl font-extrabold text-base sm:text-lg bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              className="w-full py-3 sm:py-4 rounded-xl font-extrabold text-sm sm:text-lg bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
             >
               {settings.welcome_popup_button_text}
             </button>
@@ -182,12 +186,12 @@ export function WelcomePopup({ onDeposit }: WelcomePopupProps) {
 function TimerBox({ value, label }: { value: string; label: string }) {
   return (
     <div className="flex flex-col items-center">
-      <div className="bg-secondary rounded-lg px-4 py-2 min-w-[56px] border border-border/40">
-        <span className="text-2xl font-mono font-bold text-accent tabular-nums">
+      <div className="bg-secondary rounded-lg px-3 py-1.5 sm:px-4 sm:py-2 min-w-[48px] sm:min-w-[56px] border border-border/40">
+        <span className="text-xl sm:text-2xl font-mono font-bold text-accent tabular-nums">
           {value}
         </span>
       </div>
-      <span className="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">
+      <span className="text-[9px] sm:text-[10px] text-muted-foreground mt-0.5 sm:mt-1 uppercase tracking-wider">
         {label}
       </span>
     </div>
