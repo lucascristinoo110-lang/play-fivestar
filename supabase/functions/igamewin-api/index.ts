@@ -207,6 +207,7 @@ serve(async (req) => {
           provider_code: provider || "",
           game_code,
           lang: "pt",
+          callback_url: callbackUrl,
         });
 
         const launchUrl = json?.launch_url || json?.url || json?.game_url || json?.data?.url || json?.data?.launch_url;
