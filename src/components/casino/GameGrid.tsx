@@ -18,6 +18,7 @@ type Game = {
   is_hot: boolean;
   is_new: boolean;
   sort_order: number;
+  source?: string;
 };
 
 type FilterType = "hot" | "new" | "slots" | "live" | "table" | "crash" | "roulette" | null;
