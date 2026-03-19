@@ -239,13 +239,13 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
 
                   {/* Preset values */}
                   <div>
-                    <p className="text-xs font-semibold text-foreground mb-2">Escolha o valor:</p>
-                    <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+                    <p className="text-xs font-semibold text-foreground mb-1.5">Escolha o valor:</p>
+                    <div className="grid grid-cols-4 gap-1.5">
                       {presets.map((v) => (
                         <button
                           key={v}
                           onClick={() => { setAmount(v); setCustomAmount(""); }}
-                          className={`shrink-0 px-4 py-3 rounded-xl text-xs font-bold transition-all border ${
+                          className={`px-2 py-2.5 rounded-lg text-xs font-bold transition-all border ${
                             amount === v
                               ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/25"
                               : "bg-secondary text-foreground border-border/40 hover:border-primary/50"
