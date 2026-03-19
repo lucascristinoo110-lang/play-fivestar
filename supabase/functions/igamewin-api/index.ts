@@ -87,6 +87,9 @@ function chunkArray<T>(items: T[], size: number) {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const callbackUrl = `${supabaseUrl}/functions/v1/igamewin-callback`;
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -192,7 +195,7 @@ serve(async (req) => {
 
       // Ensure user exists in iGameWin (ignore DUPLICATED_USER)
       try {
-        await callIgw(apiUrl, agentCode, agentToken, "user_create", { user_code: user_id });
+        await callIgw(apiUrl, agentCode, agentToken, "user_create", { user_code: user_id, callback_url: callbackUrl });
       } catch (e: any) {
         if (!e.message?.includes("DUPLICATED_USER")) console.warn("user_create warning:", e.message);
       }
@@ -204,6 +207,7 @@ serve(async (req) => {
           provider_code: provider || "",
           game_code,
           lang: "pt",
+          callback_url: callbackUrl,
         });
 
         const launchUrl = json?.launch_url || json?.url || json?.game_url || json?.data?.url || json?.data?.launch_url;
