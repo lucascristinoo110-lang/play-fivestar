@@ -31,13 +31,39 @@ type NormalizedGame = {
   source: string;
 };
 
+/** Parse igamewin_api_key as "agentCode:agentToken" */
+function parseCredentials(raw: string) {
+  const trimmed = raw.trim();
+  const idx = trimmed.indexOf(":");
+  if (idx === -1) return { agentCode: "", agentToken: trimmed };
+  return { agentCode: trimmed.slice(0, idx).trim(), agentToken: trimmed.slice(idx + 1).trim() };
+}
+
+/** Call iGameWin API v1 — single POST endpoint with method field */
+async function callIgamewin(apiUrl: string, agentCode: string, agentToken: string, method: string, params: Record<string, unknown> = {}) {
+  const body = { agent_code: agentCode, agent_token: agentToken, method, ...params };
+  console.log(`iGameWin call: ${method}`, JSON.stringify({ ...body, agent_token: "***" }));
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const rawText = await response.text();
+  const parsed = parseJsonSafe(rawText);
+  console.log(`iGameWin response [${response.status}]:`, rawText.slice(0, 500));
+
+  return { response, rawText, parsed };
+}
+
 function normalizeGame(rawGame: any): NormalizedGame | null {
   const gameCode = String(rawGame?.game_code ?? rawGame?.code ?? rawGame?.id ?? "").trim();
   const name = String(rawGame?.name ?? rawGame?.title ?? "").trim();
   if (!gameCode || !name) return null;
 
-  const providerName = String(rawGame?.provider?.name ?? rawGame?.provider ?? rawGame?.vendor ?? "igamewin").trim();
-  const imageUrl = String(rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? rawGame?.thumbnail ?? "").trim();
+  const providerName = String(rawGame?.provider?.name ?? rawGame?.provider ?? rawGame?.provider_code ?? rawGame?.vendor ?? "igamewin").trim();
+  const imageUrl = String(rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? rawGame?.thumbnail ?? rawGame?.img ?? "").trim();
 
   return {
     name,
@@ -58,51 +84,6 @@ function chunkArray<T>(items: T[], size: number) {
   return chunks;
 }
 
-async function getSettings(supabase: ReturnType<typeof createClient>) {
-  const { data } = await supabase
-    .from("site_settings")
-    .select("igamewin_api_key, igamewin_api_url")
-    .limit(1)
-    .single();
-  return data;
-}
-
-async function fetchIgamewinGames(apiUrl: string, apiKey: string) {
-  let gamesRaw: any[] = [];
-  let lastError = "";
-
-  for (const endpoint of ["/api/games", "/api/v2/games", "/games", "/api/game/list"]) {
-    try {
-      const response = await fetch(`${apiUrl}${endpoint}`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "X-Api-Key": apiKey,
-        },
-      });
-
-      const rawText = await response.text();
-      const parsed = parseJsonSafe(rawText);
-
-      if (response.ok && parsed) {
-        gamesRaw = Array.isArray(parsed?.data) ? parsed.data
-          : Array.isArray(parsed?.games) ? parsed.games
-          : Array.isArray(parsed) ? parsed
-          : [];
-
-        if (gamesRaw.length > 0) break;
-      } else {
-        lastError = `${endpoint} -> [${response.status}] ${rawText.slice(0, 200)}`;
-      }
-    } catch (e: any) {
-      lastError = `${endpoint} -> ${e.message}`;
-    }
-  }
-
-  return { gamesRaw, lastError };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -114,62 +95,95 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const { action, user_id, game_code, provider } = body;
 
-    const settings = await getSettings(supabase);
-    const apiUrl = settings?.igamewin_api_url?.trim();
-    const apiKey = settings?.igamewin_api_key?.trim();
+    const { data: settings } = await supabase
+      .from("site_settings")
+      .select("igamewin_api_key, igamewin_api_url")
+      .limit(1)
+      .single();
 
-    if (!apiUrl || !apiKey) {
+    const apiUrl = settings?.igamewin_api_url?.trim();
+    const rawKey = settings?.igamewin_api_key?.trim();
+
+    if (!apiUrl || !rawKey) {
       return new Response(
-        JSON.stringify({ error: "iGameWin não configurado. Preencha API Key e URL no painel admin." }),
+        JSON.stringify({ error: "iGameWin não configurado. Preencha API Key (agentCode:agentToken) e URL no painel admin." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { agentCode, agentToken } = parseCredentials(rawKey);
+    if (!agentToken) {
+      return new Response(
+        JSON.stringify({ error: "Agent Token da iGameWin não configurado. Use o formato agentCode:agentToken no campo API Key." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // ── LIST GAMES ──
     if (action === "list_games") {
-      const response = await fetch(`${apiUrl}/api/games`, {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${apiKey}`,
-          "X-Api-Key": apiKey,
-        },
-      });
-
-      const rawText = await response.text();
-      const parsed = parseJsonSafe(rawText);
-
-      if (!response.ok) {
-        throw new Error(`iGameWin API error [${response.status}]: ${rawText.slice(0, 500)}`);
-      }
-
-      const gamesRaw = Array.isArray(parsed?.data) ? parsed.data
-        : Array.isArray(parsed?.games) ? parsed.games
-        : Array.isArray(parsed) ? parsed
+      // First get providers, then get games for each
+      const { parsed: providerData } = await callIgamewin(apiUrl, agentCode, agentToken, "providerList");
+      
+      const providers = Array.isArray(providerData?.providers) ? providerData.providers
+        : Array.isArray(providerData?.data) ? providerData.data
         : [];
 
-      const games = gamesRaw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g));
+      const allGames: NormalizedGame[] = [];
+      for (const prov of providers) {
+        const provCode = String(prov?.code ?? prov?.provider_code ?? prov?.name ?? "").trim();
+        if (!provCode) continue;
+        const { parsed: gameData } = await callIgamewin(apiUrl, agentCode, agentToken, "gameList", { provider_code: provCode });
+        const gamesRaw = Array.isArray(gameData?.games) ? gameData.games
+          : Array.isArray(gameData?.data) ? gameData.data
+          : [];
+        const normalized = gamesRaw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g));
+        allGames.push(...normalized);
+      }
 
       return new Response(
-        JSON.stringify({ status: true, games, total: games.length, provider_total: gamesRaw.length }),
+        JSON.stringify({ status: true, games: allGames, total: allGames.length, providers_found: providers.length }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // ── SYNC GAMES ──
     if (action === "sync_games") {
-      const { gamesRaw, lastError } = await fetchIgamewinGames(apiUrl, apiKey);
+      // Get provider list
+      const { parsed: providerData, rawText: provRaw } = await callIgamewin(apiUrl, agentCode, agentToken, "providerList");
+      
+      const providers = Array.isArray(providerData?.providers) ? providerData.providers
+        : Array.isArray(providerData?.data) ? providerData.data
+        : [];
 
-      if (gamesRaw.length === 0) {
+      if (providers.length === 0) {
         return new Response(
-          JSON.stringify({
-            error: `Nenhum jogo encontrado na API iGameWin. Verifique URL e credenciais. Último erro: ${lastError}`,
-          }),
+          JSON.stringify({ error: `Nenhum provedor encontrado na iGameWin. Resposta: ${provRaw?.slice(0, 300)}` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const incomingGames = gamesRaw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g));
+      const allIncoming: NormalizedGame[] = [];
+      for (const prov of providers) {
+        const provCode = String(prov?.code ?? prov?.provider_code ?? prov?.name ?? "").trim();
+        if (!provCode) continue;
+        try {
+          const { parsed: gameData } = await callIgamewin(apiUrl, agentCode, agentToken, "gameList", { provider_code: provCode });
+          const gamesRaw = Array.isArray(gameData?.games) ? gameData.games
+            : Array.isArray(gameData?.data) ? gameData.data
+            : [];
+          const normalized = gamesRaw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g));
+          allIncoming.push(...normalized);
+        } catch (e: any) {
+          console.warn(`Failed to fetch games for provider ${provCode}:`, e.message);
+        }
+      }
+
+      if (allIncoming.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "Nenhum jogo encontrado nos provedores da iGameWin." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       const { data: existingGames } = await supabase
         .from("games")
@@ -185,7 +199,7 @@ serve(async (req) => {
       const toInsert: any[] = [];
       const toUpdate: Array<{ id: string; payload: any }> = [];
 
-      incomingGames.forEach((incoming, index) => {
+      allIncoming.forEach((incoming, index) => {
         const key = `${incoming.game_code}::${incoming.provider}`;
         const existing = existingByCode.get(key);
 
@@ -220,9 +234,10 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           status: true,
-          total_received: incomingGames.length,
+          total_received: allIncoming.length,
           imported: toInsert.length,
           updated: toUpdate.length,
+          providers_found: providers.length,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -237,7 +252,6 @@ serve(async (req) => {
         );
       }
 
-      // Get user balance
       const { data: profile } = await supabase
         .from("profiles")
         .select("balance, user_id")
@@ -251,103 +265,55 @@ serve(async (req) => {
         );
       }
 
-      const userBalance = Number(profile.balance) || 0;
+      // First ensure user exists in iGameWin
+      try {
+        await callIgamewin(apiUrl, agentCode, agentToken, "createUser", {
+          user_code: user_id,
+        });
+      } catch (e) {
+        console.log("createUser may already exist, continuing...");
+      }
 
-      // Try multiple launch endpoints common in iGaming APIs
-      const launchPayloads = [
-        {
-          endpoint: "/api/game/launch",
-          body: {
-            api_key: apiKey,
-            game_code: game_code,
-            player_id: user_id,
-            player_name: user_id,
-            currency: "BRL",
-            balance: userBalance,
-            lang: "pt",
-            provider: provider || "",
-            callback_url: `${supabaseUrl}/functions/v1/playfiver-webhook`,
-          },
-        },
-        {
-          endpoint: "/api/v2/game_launch",
-          body: {
-            api_key: apiKey,
-            game_code: game_code,
-            user_code: user_id,
-            user_balance: userBalance,
-            provider: provider || "",
-            lang: "pt",
-            callback_url: `${supabaseUrl}/functions/v1/playfiver-webhook`,
-          },
-        },
-        {
-          endpoint: "/api/games/launch",
-          body: {
-            token: apiKey,
-            game_code: game_code,
-            player_id: user_id,
-            balance: userBalance,
-            currency: "BRL",
-            language: "pt",
-            provider: provider || "",
-          },
-        },
-      ];
-
-      let lastLaunchError = "";
-      let lastParsed: any = null;
-
-      for (const { endpoint, body: launchBody } of launchPayloads) {
+      // Deposit balance (in centavos) 
+      const balanceCents = Math.floor((Number(profile.balance) || 0) * 100);
+      if (balanceCents > 0) {
         try {
-          console.log(`Trying iGameWin launch: ${apiUrl}${endpoint} for game ${game_code}`);
-          
-          const response = await fetch(`${apiUrl}${endpoint}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              "Authorization": `Bearer ${apiKey}`,
-              "X-Api-Key": apiKey,
-            },
-            body: JSON.stringify(launchBody),
+          await callIgamewin(apiUrl, agentCode, agentToken, "deposit", {
+            user_code: user_id,
+            amount: balanceCents,
           });
-
-          const rawText = await response.text();
-          const parsed = parseJsonSafe(rawText) ?? { raw: rawText };
-          lastParsed = parsed;
-
-          console.log(`iGameWin launch response [${response.status}] from ${endpoint}:`, rawText.slice(0, 500));
-
-          // Check for launch URL in various response formats
-          const launchUrl = parsed?.launch_url || parsed?.url || parsed?.game_url || parsed?.data?.url || parsed?.data?.launch_url;
-
-          if (response.ok && launchUrl) {
-            return new Response(
-              JSON.stringify({
-                launch_url: launchUrl,
-                user_balance: parsed?.user_balance ?? parsed?.balance ?? userBalance,
-                name: parsed?.name ?? game_code,
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
-
-          lastLaunchError = String(parsed?.msg || parsed?.message || parsed?.error || rawText || "Falha ao abrir jogo");
-          
-          // If we got a clear error (not 404), don't try other endpoints
-          if (response.status !== 404 && response.status !== 405) break;
-        } catch (e: any) {
-          lastLaunchError = `${endpoint} -> ${e.message}`;
-          console.error(`iGameWin launch error at ${endpoint}:`, e.message);
+        } catch (e) {
+          console.log("deposit error (may already have funds):", e);
         }
       }
 
+      // Launch game
+      const { parsed, rawText } = await callIgamewin(apiUrl, agentCode, agentToken, "launchGame", {
+        user_code: user_id,
+        provider_code: provider || "",
+        game_code: game_code,
+        lang: "pt",
+      });
+
+      const launchUrl = parsed?.launch_url || parsed?.url || parsed?.game_url || parsed?.data?.url || parsed?.data?.launch_url;
+
+      if (launchUrl) {
+        return new Response(
+          JSON.stringify({
+            launch_url: launchUrl,
+            user_balance: parsed?.user_balance ?? parsed?.balance,
+            name: parsed?.name ?? game_code,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const errorMsg = String(parsed?.msg || parsed?.message || parsed?.error || rawText || "Falha ao abrir jogo");
       return new Response(
         JSON.stringify({
-          error: lastLaunchError || "Falha ao abrir jogo na iGameWin. Verifique suas credenciais e a URL da API.",
-          provider_message: lastLaunchError,
-          details: lastParsed,
+          error: errorMsg,
+          provider_message: errorMsg,
+          details: parsed,
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
