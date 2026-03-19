@@ -28,6 +28,7 @@ import AdminBannersPage from "./pages/admin/AdminBannersPage";
 import AdminBetsPage from "./pages/admin/AdminBetsPage";
 import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 import AdminAdsPage from "./pages/admin/AdminAdsPage";
+import AdminEmailPage from "./pages/admin/AdminEmailPage";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsConditions from "./pages/legal/TermsConditions";
 import PlayerSupport from "./pages/legal/PlayerSupport";
