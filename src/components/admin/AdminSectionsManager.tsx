@@ -327,18 +327,12 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
 
               {editSection.section_type === "curated" && (
                 <div className="space-y-1">
-                  <Label className="text-xs">Códigos dos jogos (um por linha)</Label>
-                  <textarea
-                    value={(editSection.curated_game_codes || []).join("\n")}
-                    onChange={(e) =>
-                      setEditSection({
-                        ...editSection,
-                        curated_game_codes: e.target.value.split("\n").map((c) => c.trim()).filter(Boolean),
-                      })
-                    }
-                    placeholder={"EVOLIVE_LightningTable01\n1879752\n..."}
-                    rows={6}
-                    className={cn("w-full rounded-md border text-xs font-mono p-2 resize-none", light ? "bg-gray-50 border-gray-200" : "bg-secondary border-border/40 text-foreground")}
+                  <Label className="text-xs">Jogos da seção</Label>
+                  <GamePickerForSection
+                    allGames={allGames}
+                    selectedCodes={editSection.curated_game_codes || []}
+                    onCodesChange={(codes) => setEditSection({ ...editSection, curated_game_codes: codes })}
+                    light={light}
                   />
                 </div>
               )}
