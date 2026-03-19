@@ -50,8 +50,9 @@ function normalizeProvider(value: unknown) {
 
 function normalizeCategory(name: string, provider: string) {
   const normalized = `${name} ${provider}`.toLowerCase();
+  if (/(roulette|roleta)/.test(normalized)) return "roulette";
   if (/(aviator|spaceman|mines|jetx|crash|plinko|dice)/.test(normalized)) return "crash";
-  if (/(live|bacará|baccarat|blackjack|roulette|roleta|poker|dragon tiger)/.test(normalized)) return "live";
+  if (/(live|bacará|baccarat|blackjack|poker|dragon tiger)/.test(normalized)) return "live";
   if (/(table|mesa)/.test(normalized)) return "table";
   return "slots";
 }

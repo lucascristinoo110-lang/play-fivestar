@@ -20,7 +20,7 @@ type Game = {
   sort_order: number;
 };
 
-type FilterType = "hot" | "new" | "slots" | "live" | "table" | "crash" | null;
+type FilterType = "hot" | "new" | "slots" | "live" | "table" | "crash" | "roulette" | null;
 
 type GameSection = {
   id: string;
@@ -35,13 +35,11 @@ const GAME_FIELDS = "id,name,provider,category,image_url,game_code,is_hot,is_new
 
 function normalizeImageUrl(url: string | null) {
   if (!url) return null;
-
   const [base, search = ""] = url.split("?");
   if (base.includes("imagensfivers.com") && /\.(png|jpe?g)$/i.test(base)) {
     const webp = base.replace(/\.(png|jpe?g)$/i, ".webp");
     return `${webp}${search ? `?${search}` : ""}`;
   }
-
   return url;
 }
 
@@ -61,20 +59,14 @@ function normalizeGames(data: any[] | null | undefined): Game[] {
 
 function getFilterTitle(filter: FilterType) {
   switch (filter) {
-    case "hot":
-      return "Mais Jogados";
-    case "new":
-      return "Novos Jogos";
-    case "slots":
-      return "Slots em Destaque";
-    case "live":
-      return "Cassino ao Vivo";
-    case "table":
-      return "Jogos de Mesa";
-    case "crash":
-      return "Crash em Alta";
-    default:
-      return "Jogos";
+    case "hot": return "Mais Jogados";
+    case "new": return "Novos Jogos";
+    case "slots": return "Slots em Destaque";
+    case "live": return "Cassino ao Vivo";
+    case "table": return "Jogos de Mesa";
+    case "crash": return "Crash em Alta";
+    case "roulette": return "Roletas";
+    default: return "Jogos";
   }
 }
 
@@ -102,69 +94,59 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       setMode("featured");
       setLoading(true);
 
+      // Load sections from DB
+      const { data: dbSections } = await supabase
+        .from("home_sections")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (cancelled || !dbSections || dbSections.length === 0) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
       const imageFilter = (q: any) => q.not("image_url", "is", null).neq("image_url", "");
 
-      // Top Evolution Live games — curated based on major casino lobbies
-      const CURATED_LIVE_CODES = [
-        "EVOLIVE_LightningTable01",  // Lightning Roulette
-        "EVOLIVE_BacBo00000000001",  // Bac Bo
-        "EVOLIVE_TopCard000000001",  // Football Studio
-        "EVOLIVE_MegaBall00000001",  // Mega Ball
-        "EVOLIVE_LightningBac0001",  // Lightning Baccarat
-        "EVOLIVE_XxxtremeLigh0001",  // XXXtreme Lightning Roulette
-        "EVOLIVE_LightningBacBo01",  // Lightning Bac Bo
-        "EVOLIVE_oytmvb9m1zysmc44",  // Baccarat A
-        "EVOLIVE_mrfykemt5slanyi5",  // Infinite Blackjack
-        "EVOLIVE_SuperSicBo000001",  // Super Sic Bo
-        "EVOLIVE_gwbaccarat000001",  // Golden Wealth Baccarat
-        "EVOLIVE_NoCommBac0000001",  // No Commission Baccarat
-      ];
+      const loadedSections = await Promise.all(
+        dbSections.map(async (section: any) => {
+          let games: Game[] = [];
 
-      // PG Soft — Fortune series & top titles
-      const PG_LATEST_CODES = [
-        "1879752",   // Fortune Snake
-        "1695365",   // Fortune Dragon
-        "1543462",   // Fortune Rabbit
-        "1451122",   // Dragon Hatch 2
-        "1402846",   // Midas Fortune
-        "1799745",   // Mr Treasures Fortune
-        "87",        // Treasures of Aztec
-        "42",        // Ganesha Gold
-        "75",        // Ganesha Fortune
-        "89",        // Lucky Neko
-        "130",       // Lucky Piggy
-        "48",        // Double Fortune
-      ];
+          if (section.section_type === "curated" && section.curated_game_codes?.length) {
+            const { data } = await supabase
+              .from("games")
+              .select(GAME_FIELDS)
+              .eq("is_active", true)
+              .in("game_code", section.curated_game_codes);
 
-      const [hot, curatedLive, pgLatest, slots, crash] = await Promise.all([
-        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("is_hot", true)).order("sort_order").limit(12),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).in("game_code", CURATED_LIVE_CODES),
-        supabase.from("games").select(GAME_FIELDS).eq("is_active", true).in("game_code", PG_LATEST_CODES),
-        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "slots")).order("sort_order").limit(12),
-        imageFilter(supabase.from("games").select(GAME_FIELDS).eq("is_active", true).eq("category", "crash")).order("sort_order").limit(12),
-      ]);
+            const normalized = normalizeGames(data);
+            const codeOrder = new Map((section.curated_game_codes as string[]).map((c: string, i: number) => [c, i]));
+            normalized.sort((a, b) => (codeOrder.get(a.game_code || "") ?? 99) - (codeOrder.get(b.game_code || "") ?? 99));
+            games = normalized;
+          } else {
+            // filter type
+            let query = supabase.from("games").select(GAME_FIELDS).eq("is_active", true);
+            query = imageFilter(query);
+
+            if (section.filter_is_hot) query = query.eq("is_hot", true);
+            if (section.filter_is_new) query = query.eq("is_new", true);
+            if (section.filter_category) query = query.eq("category", section.filter_category);
+
+            const { data } = await query.order("sort_order").limit(section.max_games || 12);
+            games = normalizeGames(data);
+          }
+
+          return {
+            id: section.id,
+            title: section.title,
+            subtitle: section.subtitle || "",
+            games,
+          };
+        })
+      );
 
       if (cancelled) return;
-
-      // Sort curated live games by the order defined above
-      const curatedLiveGames = normalizeGames(curatedLive.data);
-      const codeOrder = new Map(CURATED_LIVE_CODES.map((c, i) => [c, i]));
-      curatedLiveGames.sort((a, b) => (codeOrder.get(a.game_code || "") ?? 99) - (codeOrder.get(b.game_code || "") ?? 99));
-
-      // Sort PG latest by code order
-      const pgLatestGames = normalizeGames(pgLatest.data);
-      const pgOrder = new Map(PG_LATEST_CODES.map((c, i) => [c, i]));
-      pgLatestGames.sort((a, b) => (pgOrder.get(a.game_code || "") ?? 99) - (pgOrder.get(b.game_code || "") ?? 99));
-
-      const sections: GameSection[] = [
-        { id: "hot", title: "Mais Jogados Agora", subtitle: "Jogos com maior tração no cassino", games: normalizeGames(hot.data) },
-        { id: "curated-live", title: "🔴 Cassino ao Vivo", subtitle: "As mesas mais quentes com dealers reais", games: curatedLiveGames },
-        { id: "pg-latest", title: "🐉 Destaques PG Soft", subtitle: "Fortune Snake, Dragon Hatch e os mais jogados da PG", games: pgLatestGames },
-        { id: "slots", title: "Slots Campeões", subtitle: "Títulos que mais convertem em sessão", games: normalizeGames(slots.data) },
-        { id: "crash", title: "Crash e Multiplicadores", subtitle: "Sessão para gatilho de ação rápida", games: normalizeGames(crash.data) },
-      ].filter((section) => section.games.length > 0);
-
-      setFeaturedSections(sections);
+      setFeaturedSections(loadedSections.filter((s) => s.games.length > 0));
       setLoading(false);
     }
 
@@ -210,12 +192,10 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
         loadSearch(trimmedSearch);
         return;
       }
-
       if (forcedFilter) {
         loadByFilter(forcedFilter);
         return;
       }
-
       loadFeatured();
     }, 250);
 
@@ -226,9 +206,11 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
   }, [trimmedSearch, forcedFilter]);
 
   function removeGameFromCatalog(gameId: string) {
-    setFeaturedSections((sections) => sections
-      .map((section) => ({ ...section, games: section.games.filter((item) => item.id !== gameId) }))
-      .filter((section) => section.games.length > 0));
+    setFeaturedSections((sections) =>
+      sections
+        .map((section) => ({ ...section, games: section.games.filter((item) => item.id !== gameId) }))
+        .filter((section) => section.games.length > 0)
+    );
     setFilteredGames((games) => games.filter((item) => item.id !== gameId));
   }
 
@@ -237,7 +219,6 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       toast({ title: "Faça login para jogar", description: "Você precisa estar logado para jogar.", variant: "destructive" });
       return;
     }
-
     if (!game.game_code) {
       toast({ title: "Jogo indisponível", description: "Este jogo não possui código configurado.", variant: "destructive" });
       return;
@@ -246,12 +227,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
     setLaunching(true);
     try {
       const response = await supabase.functions.invoke("playfiver-api", {
-        body: {
-          action: "launch_game",
-          user_id: user.id,
-          game_code: game.game_code,
-          provider: game.provider,
-        },
+        body: { action: "launch_game", user_id: user.id, game_code: game.game_code, provider: game.provider },
       });
 
       const data = response.data;
@@ -276,9 +252,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
               errorMessage = msgMatch || errorMessage;
             }
           }
-        } catch {
-          /* fallback */
-        }
+        } catch { /* fallback */ }
 
         if (gameDeactivated) removeGameFromCatalog(game.id);
         throw new Error(errorMessage);
@@ -315,7 +289,6 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
   return (
     <>
       <div className="space-y-5">
-        {/* Mobile search inline */}
         {isMobile && onSearch && (
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

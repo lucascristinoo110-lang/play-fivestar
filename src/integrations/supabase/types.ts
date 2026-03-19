@@ -190,6 +190,54 @@ export type Database = {
         }
         Relationships: []
       }
+      home_sections: {
+        Row: {
+          created_at: string | null
+          curated_game_codes: string[] | null
+          filter_category: string | null
+          filter_is_hot: boolean | null
+          filter_is_new: boolean | null
+          id: string
+          is_active: boolean | null
+          max_games: number | null
+          section_type: string
+          sort_order: number | null
+          subtitle: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          curated_game_codes?: string[] | null
+          filter_category?: string | null
+          filter_is_hot?: boolean | null
+          filter_is_new?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          max_games?: number | null
+          section_type?: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          curated_game_codes?: string[] | null
+          filter_category?: string | null
+          filter_is_hot?: boolean | null
+          filter_is_new?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          max_games?: number | null
+          section_type?: string
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       kyc_documents: {
         Row: {
           created_at: string | null
