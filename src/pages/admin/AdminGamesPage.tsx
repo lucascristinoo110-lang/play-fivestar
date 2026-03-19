@@ -266,8 +266,11 @@ export default function AdminGamesPage() {
               <h2 className={cn("text-sm font-semibold flex items-center gap-2", light ? "text-gray-900" : "text-foreground")}>
                 <Gamepad2 className="h-4 w-4 text-accent" /> Provedor: iGameWin
               </h2>
-              {field("API Key", "igamewin_api_key", "Sua chave API")}
-              {field("URL da API", "igamewin_api_url", "https://api.igamewin.com")}
+              {field("API Key (agentCode:agentToken)", "igamewin_api_key", "meuAgente:meuToken123")}
+              {field("URL da API", "igamewin_api_url", "https://igamewin.com/api/v1")}
+              <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
+                Use o formato <strong>agentCode:agentToken</strong> no campo API Key. URL padrão: https://igamewin.com/api/v1
+              </p>
             </div>
 
             <Button onClick={saveProviders} disabled={loading} className="bg-primary text-primary-foreground font-semibold">

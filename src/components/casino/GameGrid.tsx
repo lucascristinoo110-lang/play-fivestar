@@ -18,6 +18,7 @@ type Game = {
   is_hot: boolean;
   is_new: boolean;
   sort_order: number;
+  source?: string;
 };
 
 type FilterType = "hot" | "new" | "slots" | "live" | "table" | "crash" | "roulette" | null;
@@ -31,7 +32,7 @@ type GameSection = {
 
 type QueryMode = "featured" | "search" | "filter";
 
-const GAME_FIELDS = "id,name,provider,category,image_url,game_code,is_hot,is_new,sort_order";
+const GAME_FIELDS = "id,name,provider,category,image_url,game_code,is_hot,is_new,sort_order,source";
 
 function normalizeImageUrl(url: string | null) {
   if (!url) return null;
@@ -54,6 +55,7 @@ function normalizeGames(data: any[] | null | undefined): Game[] {
     is_hot: Boolean(game.is_hot),
     is_new: Boolean(game.is_new),
     sort_order: Number(game.sort_order || 0),
+    source: String(game.source || "playfiver"),
   }));
 }
 
@@ -226,7 +228,9 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
 
     setLaunching(true);
     try {
-      const response = await supabase.functions.invoke("playfiver-api", {
+      const isIgamewin = game.source === "igamewin";
+      const functionName = isIgamewin ? "igamewin-api" : "playfiver-api";
+      const response = await supabase.functions.invoke(functionName, {
         body: { action: "launch_game", user_id: user.id, game_code: game.game_code, provider: game.provider },
       });
 
