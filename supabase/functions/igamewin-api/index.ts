@@ -130,7 +130,7 @@ serve(async (req) => {
         try {
           const { json: gData } = await callIgw(apiUrl, agentCode, agentToken, "game_list", { provider_code: code });
           const raw = Array.isArray(gData?.games) ? gData.games : Array.isArray(gData?.data) ? gData.data : [];
-          all.push(...raw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g)));
+          all.push(...raw.map((g: any) => normalizeGame(g, code)).filter((g): g is NormalizedGame => Boolean(g)));
         } catch (e: any) {
           console.warn(`Skip provider ${code}: ${e.message}`);
         }
