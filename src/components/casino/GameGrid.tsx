@@ -32,7 +32,7 @@ type GameSection = {
 
 type QueryMode = "featured" | "search" | "filter";
 
-const GAME_FIELDS = "id,name,provider,category,image_url,game_code,is_hot,is_new,sort_order";
+const GAME_FIELDS = "id,name,provider,category,image_url,game_code,is_hot,is_new,sort_order,source";
 
 function normalizeImageUrl(url: string | null) {
   if (!url) return null;
