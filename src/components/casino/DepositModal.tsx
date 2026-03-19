@@ -289,15 +289,15 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   )}
 
                   {/* CTA message */}
-                  <div className="bg-primary/10 border border-primary/20 rounded-xl p-3 text-center">
-                    <p className="text-[11px] text-primary font-semibold">🔥 Jogadores online agora estão ganhando — deposite e comece a jogar!</p>
+                  <div className="bg-primary/10 border border-primary/20 rounded-lg p-2 text-center">
+                    <p className="text-[10px] text-primary font-semibold">🔥 Jogadores online agora estão ganhando — deposite e comece a jogar!</p>
                   </div>
 
                   {/* Submit button */}
                   <button
                     onClick={handleGenerateQR}
                     disabled={loading || !canGenerate}
-                    className="relative w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110 shadow-lg shadow-primary/30 active:scale-[0.98]"
+                    className="relative w-full py-3.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm disabled:opacity-50 transition-all hover:brightness-110 shadow-lg shadow-primary/30 active:scale-[0.98]"
                   >
                     {loading ? (
                       <Loader2 className="h-5 w-5 animate-spin mx-auto" />
@@ -309,7 +309,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                     )}
                   </button>
 
-                  <p className="text-[10px] text-muted-foreground text-center pb-2">
+                  <p className="text-[10px] text-muted-foreground text-center pb-1">
                     Mín R$ {minDeposit.toFixed(2)} • Máx R$ {maxDeposit.toFixed(2)} • Confirmação automática
                   </p>
                 </div>
