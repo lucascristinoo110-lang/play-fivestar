@@ -28,6 +28,7 @@ type NormalizedGame = {
   is_new: boolean;
   is_hot: boolean;
   is_active: boolean;
+  source: string;
 };
 
 function normalizeGame(rawGame: any): NormalizedGame | null {
@@ -47,6 +48,7 @@ function normalizeGame(rawGame: any): NormalizedGame | null {
     is_new: false,
     is_hot: false,
     is_active: true,
+    source: "igamewin",
   };
 }
 
@@ -54,6 +56,51 @@ function chunkArray<T>(items: T[], size: number) {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
   return chunks;
+}
+
+async function getSettings(supabase: ReturnType<typeof createClient>) {
+  const { data } = await supabase
+    .from("site_settings")
+    .select("igamewin_api_key, igamewin_api_url")
+    .limit(1)
+    .single();
+  return data;
+}
+
+async function fetchIgamewinGames(apiUrl: string, apiKey: string) {
+  let gamesRaw: any[] = [];
+  let lastError = "";
+
+  for (const endpoint of ["/api/games", "/api/v2/games", "/games", "/api/game/list"]) {
+    try {
+      const response = await fetch(`${apiUrl}${endpoint}`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "X-Api-Key": apiKey,
+        },
+      });
+
+      const rawText = await response.text();
+      const parsed = parseJsonSafe(rawText);
+
+      if (response.ok && parsed) {
+        gamesRaw = Array.isArray(parsed?.data) ? parsed.data
+          : Array.isArray(parsed?.games) ? parsed.games
+          : Array.isArray(parsed) ? parsed
+          : [];
+
+        if (gamesRaw.length > 0) break;
+      } else {
+        lastError = `${endpoint} -> [${response.status}] ${rawText.slice(0, 200)}`;
+      }
+    } catch (e: any) {
+      lastError = `${endpoint} -> ${e.message}`;
+    }
+  }
+
+  return { gamesRaw, lastError };
 }
 
 serve(async (req) => {
@@ -65,15 +112,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json().catch(() => ({}));
-    const { action } = body;
+    const { action, user_id, game_code, provider } = body;
 
-    // Get igamewin settings
-    const { data: settings } = await supabase
-      .from("site_settings")
-      .select("igamewin_api_key, igamewin_api_url")
-      .limit(1)
-      .single();
-
+    const settings = await getSettings(supabase);
     const apiUrl = settings?.igamewin_api_url?.trim();
     const apiKey = settings?.igamewin_api_key?.trim();
 
@@ -84,6 +125,7 @@ serve(async (req) => {
       );
     }
 
+    // ── LIST GAMES ──
     if (action === "list_games") {
       const response = await fetch(`${apiUrl}/api/games`, {
         headers: {
@@ -101,7 +143,6 @@ serve(async (req) => {
         throw new Error(`iGameWin API error [${response.status}]: ${rawText.slice(0, 500)}`);
       }
 
-      // Try multiple response formats
       const gamesRaw = Array.isArray(parsed?.data) ? parsed.data
         : Array.isArray(parsed?.games) ? parsed.games
         : Array.isArray(parsed) ? parsed
@@ -115,39 +156,9 @@ serve(async (req) => {
       );
     }
 
+    // ── SYNC GAMES ──
     if (action === "sync_games") {
-      // Try multiple common API endpoints
-      let gamesRaw: any[] = [];
-      let lastError = "";
-
-      for (const endpoint of ["/api/games", "/api/v2/games", "/games", "/api/game/list"]) {
-        try {
-          const response = await fetch(`${apiUrl}${endpoint}`, {
-            headers: {
-              "Content-Type": "application/json",
-              "Accept": "application/json",
-              "Authorization": `Bearer ${apiKey}`,
-              "X-Api-Key": apiKey,
-            },
-          });
-
-          const rawText = await response.text();
-          const parsed = parseJsonSafe(rawText);
-
-          if (response.ok && parsed) {
-            gamesRaw = Array.isArray(parsed?.data) ? parsed.data
-              : Array.isArray(parsed?.games) ? parsed.games
-              : Array.isArray(parsed) ? parsed
-              : [];
-
-            if (gamesRaw.length > 0) break;
-          } else {
-            lastError = `${endpoint} -> [${response.status}] ${rawText.slice(0, 200)}`;
-          }
-        } catch (e: any) {
-          lastError = `${endpoint} -> ${e.message}`;
-        }
-      }
+      const { gamesRaw, lastError } = await fetchIgamewinGames(apiUrl, apiKey);
 
       if (gamesRaw.length === 0) {
         return new Response(
@@ -160,10 +171,9 @@ serve(async (req) => {
 
       const incomingGames = gamesRaw.map(normalizeGame).filter((g): g is NormalizedGame => Boolean(g));
 
-      // Get existing games
       const { data: existingGames } = await supabase
         .from("games")
-        .select("id, name, provider, game_code, image_url, category, is_active");
+        .select("id, name, provider, game_code, image_url, category, is_active, source");
 
       const existingByCode = new Map<string, any>();
       for (const game of existingGames ?? []) {
@@ -183,12 +193,13 @@ serve(async (req) => {
           const needsUpdate =
             existing.name !== incoming.name ||
             (existing.image_url || null) !== incoming.image_url ||
-            existing.is_active !== true;
+            existing.is_active !== true ||
+            existing.source !== "igamewin";
 
           if (needsUpdate) {
             toUpdate.push({
               id: existing.id,
-              payload: { name: incoming.name, image_url: incoming.image_url, category: incoming.category, is_active: true },
+              payload: { name: incoming.name, image_url: incoming.image_url, category: incoming.category, is_active: true, source: "igamewin" },
             });
           }
           return;
@@ -217,8 +228,133 @@ serve(async (req) => {
       );
     }
 
+    // ── LAUNCH GAME ──
+    if (action === "launch_game") {
+      if (!user_id || !game_code) {
+        return new Response(
+          JSON.stringify({ error: "user_id e game_code são obrigatórios" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Get user balance
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("balance, user_id")
+        .eq("user_id", user_id)
+        .single();
+
+      if (!profile) {
+        return new Response(
+          JSON.stringify({ error: "Usuário não encontrado" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const userBalance = Number(profile.balance) || 0;
+
+      // Try multiple launch endpoints common in iGaming APIs
+      const launchPayloads = [
+        {
+          endpoint: "/api/game/launch",
+          body: {
+            api_key: apiKey,
+            game_code: game_code,
+            player_id: user_id,
+            player_name: user_id,
+            currency: "BRL",
+            balance: userBalance,
+            lang: "pt",
+            provider: provider || "",
+            callback_url: `${supabaseUrl}/functions/v1/playfiver-webhook`,
+          },
+        },
+        {
+          endpoint: "/api/v2/game_launch",
+          body: {
+            api_key: apiKey,
+            game_code: game_code,
+            user_code: user_id,
+            user_balance: userBalance,
+            provider: provider || "",
+            lang: "pt",
+            callback_url: `${supabaseUrl}/functions/v1/playfiver-webhook`,
+          },
+        },
+        {
+          endpoint: "/api/games/launch",
+          body: {
+            token: apiKey,
+            game_code: game_code,
+            player_id: user_id,
+            balance: userBalance,
+            currency: "BRL",
+            language: "pt",
+            provider: provider || "",
+          },
+        },
+      ];
+
+      let lastLaunchError = "";
+      let lastParsed: any = null;
+
+      for (const { endpoint, body: launchBody } of launchPayloads) {
+        try {
+          console.log(`Trying iGameWin launch: ${apiUrl}${endpoint} for game ${game_code}`);
+          
+          const response = await fetch(`${apiUrl}${endpoint}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              "Authorization": `Bearer ${apiKey}`,
+              "X-Api-Key": apiKey,
+            },
+            body: JSON.stringify(launchBody),
+          });
+
+          const rawText = await response.text();
+          const parsed = parseJsonSafe(rawText) ?? { raw: rawText };
+          lastParsed = parsed;
+
+          console.log(`iGameWin launch response [${response.status}] from ${endpoint}:`, rawText.slice(0, 500));
+
+          // Check for launch URL in various response formats
+          const launchUrl = parsed?.launch_url || parsed?.url || parsed?.game_url || parsed?.data?.url || parsed?.data?.launch_url;
+
+          if (response.ok && launchUrl) {
+            return new Response(
+              JSON.stringify({
+                launch_url: launchUrl,
+                user_balance: parsed?.user_balance ?? parsed?.balance ?? userBalance,
+                name: parsed?.name ?? game_code,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          lastLaunchError = String(parsed?.msg || parsed?.message || parsed?.error || rawText || "Falha ao abrir jogo");
+          
+          // If we got a clear error (not 404), don't try other endpoints
+          if (response.status !== 404 && response.status !== 405) break;
+        } catch (e: any) {
+          lastLaunchError = `${endpoint} -> ${e.message}`;
+          console.error(`iGameWin launch error at ${endpoint}:`, e.message);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          error: lastLaunchError || "Falha ao abrir jogo na iGameWin. Verifique suas credenciais e a URL da API.",
+          provider_message: lastLaunchError,
+          details: lastParsed,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
-      JSON.stringify({ error: "Ação inválida. Use: list_games, sync_games" }),
+      JSON.stringify({ error: "Ação inválida. Use: list_games, sync_games, launch_game" }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
