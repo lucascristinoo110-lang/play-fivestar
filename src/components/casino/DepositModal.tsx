@@ -219,8 +219,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
               </div>
             </div>
 
-            {/* Body */}
-            <div className="px-5 py-4">
+            <div className="px-4 sm:px-5 py-3 sm:py-4">
               {step === "amount" && (
                 <div className="space-y-3">
                   {/* Trust badges */}
