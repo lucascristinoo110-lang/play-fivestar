@@ -109,10 +109,10 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
 
   async function loadSections() {
     setLoading(true);
-    const { data } = await supabase
-      .from("home_sections")
-      .select("*")
-      .order("sort_order");
+    const [{ data }, { data: gamesData }] = await Promise.all([
+      supabase.from("home_sections").select("*").order("sort_order"),
+      supabase.from("games").select("id, name, image_url, game_code, provider, category, is_active").order("name"),
+    ]);
     setSections((data as any[] || []).map((s: any) => ({
       id: s.id,
       title: s.title,
@@ -126,6 +126,7 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
       is_active: s.is_active ?? true,
       max_games: s.max_games || 12,
     })));
+    setAllGames((gamesData as any[]) || []);
     setLoading(false);
   }
 
