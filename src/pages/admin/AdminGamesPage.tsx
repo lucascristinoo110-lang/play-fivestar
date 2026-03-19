@@ -507,9 +507,9 @@ export default function AdminGamesPage() {
               {/* Seções */}
               {sections.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs">Seções da Home</Label>
+                  <Label className="text-xs">Seções da Home (curadoria)</Label>
                   <div className="flex flex-wrap gap-2">
-                    {sections.map(s => {
+                    {sections.filter(s => s.section_type === "curated").map(s => {
                       const isSelected = selectedSections.includes(s.id);
                       return (
                         <button
@@ -529,9 +529,19 @@ export default function AdminGamesPage() {
                         </button>
                       );
                     })}
+                    {sections.filter(s => s.section_type === "curated").length === 0 && (
+                      <p className={cn("text-[10px] italic", light ? "text-gray-400" : "text-muted-foreground")}>
+                        Nenhuma seção do tipo curadoria criada. Crie uma na aba "Seções".
+                      </p>
+                    )}
                   </div>
+                  {sections.some(s => s.section_type === "filter") && (
+                    <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
+                      💡 Seções automáticas (filtro) organizam jogos pela categoria, hot ou novo — não precisam de seleção manual.
+                    </p>
+                  )}
                   <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
-                    Clique para adicionar/remover o jogo das seções. Requer código do jogo preenchido.
+                    Clique para adicionar/remover o jogo das seções curadas. Requer código do jogo preenchido.
                   </p>
                 </div>
               )}
