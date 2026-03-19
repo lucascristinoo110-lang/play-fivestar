@@ -63,7 +63,7 @@ function normalizeGame(rawGame: any): NormalizedGame | null {
   if (!gameCode || !name) return null;
   const provider = normalizeProvider(rawGame?.provider?.name ?? rawGame?.provider);
   const imageUrl = String(rawGame?.image_url ?? rawGame?.cover ?? rawGame?.image ?? "").trim();
-  return { name, provider, category: normalizeCategory(name, provider), image_url: imageUrl || null, game_code: gameCode, is_new: false, is_hot: false, is_active: true };
+  return { name, provider, category: normalizeCategory(name, provider), image_url: imageUrl || null, game_code: gameCode, is_new: false, is_hot: false, is_active: true, source: "playfiver" };
 }
 
 async function fetchPlayfiverGames() {
