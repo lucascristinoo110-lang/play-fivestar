@@ -73,7 +73,7 @@ export default function AdminDashboardPage() {
       supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed").gte("created_at", todayISO),
       supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", todayISO),
       supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8),
-      supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(15),
+      supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15),
     ]);
 
     const sumAmount = (data: any[] | null) => data?.reduce((s, t) => s + Number(t.amount), 0) || 0;
@@ -97,13 +97,13 @@ export default function AdminDashboardPage() {
       d.setDate(d.getDate() - i);
       days.push({ date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), depositos: 0, saques: 0 });
     }
-    const { data: chartTx } = await supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+    const { data: chartTx } = await supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").in("type", ["deposit", "withdraw"]).gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
     (chartTx || []).forEach(tx => {
       const txDate = new Date(tx.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
       const day = days.find(d => d.date === txDate);
       if (day) {
         if (tx.type === "deposit") day.depositos += Number(tx.amount);
-        else day.saques += Number(tx.amount);
+        else if (tx.type === "withdraw") day.saques += Math.abs(Number(tx.amount));
       }
     });
     setDailyData(days);
