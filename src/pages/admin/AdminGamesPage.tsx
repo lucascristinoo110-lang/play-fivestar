@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { Switch } from "@/components/ui/switch";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Save, Gamepad2, Plus, Trash2, Edit2, Download, Loader2, Upload, Search, Image, Copy, Check, LayoutGrid } from "lucide-react";
@@ -393,9 +394,14 @@ export default function AdminGamesPage() {
                         </span>
                       </td>
                       <td className="p-2.5">
-                        <span className={cn("text-[10px] font-semibold", g.is_active ? "text-primary" : "text-destructive")}>
-                          {g.is_active ? "Ativo" : "Inativo"}
-                        </span>
+                        <Switch
+                          checked={g.is_active}
+                          onCheckedChange={async (checked) => {
+                            setGames(prev => prev.map(game => game.id === g.id ? { ...game, is_active: checked } : game));
+                            await supabase.from("games").update({ is_active: checked }).eq("id", g.id);
+                            toast({ title: checked ? "Jogo ativado" : "Jogo desativado" });
+                          }}
+                        />
                       </td>
                       <td className="p-2.5 flex gap-1">
                         <button onClick={() => {
