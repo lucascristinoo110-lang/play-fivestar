@@ -379,7 +379,12 @@ export default function AdminGamesPage() {
                         </span>
                       </td>
                       <td className="p-2.5 flex gap-1">
-                        <button onClick={() => { setEditGame(g); setShowForm(true); }} className={cn("p-1.5 rounded", light ? "hover:bg-gray-100" : "hover:bg-secondary")}>
+                        <button onClick={() => {
+                          setEditGame(g);
+                          const gameSections = sections.filter(s => s.curated_game_codes?.includes(g.game_code || "")).map(s => s.id);
+                          setSelectedSections(gameSections);
+                          setShowForm(true);
+                        }} className={cn("p-1.5 rounded", light ? "hover:bg-gray-100" : "hover:bg-secondary")}>
                           <Edit2 className="h-3 w-3 text-muted-foreground" />
                         </button>
                         <button onClick={() => deleteGame(g.id)} className="p-1.5 rounded hover:bg-destructive/10">
