@@ -89,31 +89,8 @@ serve(async (req) => {
       const { data: campaign } = await supabase.from("email_campaigns").select("*").eq("id", campaign_id).single();
       if (!campaign) return new Response(JSON.stringify({ error: "Campanha não encontrada" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-      // Get recipients based on filter
       const filter = campaign.recipient_filter as any;
-      let query = supabase.from("profiles").select("email, user_id").not("email", "is", null);
-      
-      if (filter?.days_since_signup) {
-        const daysAgo = new Date();
-        daysAgo.setDate(daysAgo.getDate() - Number(filter.days_since_signup));
-        query = query.gte("created_at", daysAgo.toISOString());
-      }
-      if (filter?.has_deposit === false) {
-        // We'll filter after getting profiles
-      }
-
-      const { data: profiles } = await query.limit(500);
-      if (!profiles?.length) return new Response(JSON.stringify({ error: "Nenhum destinatário encontrado" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-      let recipients = profiles.filter(p => p.email);
-
-      // Filter by deposit status if needed
-      if (filter?.has_deposit === false) {
-        const userIds = recipients.map(r => r.user_id);
-        const { data: depositors } = await supabase.from("transactions").select("user_id").in("user_id", userIds).eq("type", "deposit").eq("status", "completed");
-        const depositorIds = new Set(depositors?.map(d => d.user_id) ?? []);
-        recipients = recipients.filter(r => !depositorIds.has(r.user_id));
-      }
+      const recipients = await getFilteredRecipients(filter);
 
       const fromEmail = settings?.resend_from_email || "noreply@seudominio.com";
       const siteName = settings?.site_name || "Casino";
