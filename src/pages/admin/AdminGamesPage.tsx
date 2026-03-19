@@ -78,12 +78,14 @@ export default function AdminGamesPage() {
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const [{ data: s }, { data: g }] = await Promise.all([
+    const [{ data: s }, { data: g }, { data: sec }] = await Promise.all([
       supabase.from("site_settings").select("*").limit(1).single(),
       supabase.from("games").select("*").order("sort_order"),
+      supabase.from("home_sections").select("id, title, section_type, curated_game_codes, is_active").order("sort_order"),
     ]);
     setSettings(s);
     setGames((g as GameRow[]) || []);
+    setSections((sec as SectionRow[]) || []);
     const parsed = splitPlayfiverCredential(s?.playfiver_api_key);
     setPlayfiverToken(parsed.token);
     setPlayfiverSecret(parsed.secret);
