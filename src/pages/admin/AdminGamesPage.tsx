@@ -156,8 +156,27 @@ export default function AdminGamesPage() {
       const { error } = await supabase.from("games").insert(payload);
       if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); setLoading(false); return; }
     }
+
+    // Sync sections: add/remove game_code from curated_game_codes
+    const gameCode = editGame.game_code;
+    if (gameCode) {
+      const updates = sections.map(section => {
+        const codes = section.curated_game_codes || [];
+        const isSelected = selectedSections.includes(section.id);
+        const alreadyIn = codes.includes(gameCode);
+        if (isSelected && !alreadyIn) {
+          return supabase.from("home_sections").update({ curated_game_codes: [...codes, gameCode] }).eq("id", section.id);
+        } else if (!isSelected && alreadyIn) {
+          return supabase.from("home_sections").update({ curated_game_codes: codes.filter(c => c !== gameCode) }).eq("id", section.id);
+        }
+        return null;
+      }).filter(Boolean);
+      await Promise.all(updates as any[]);
+    }
+
     setLoading(false);
     setEditGame(null);
+    setSelectedSections([]);
     setShowForm(false);
     toast({ title: "Jogo salvo!" });
     loadData();
