@@ -2,3 +2,9 @@ project_id = "mvjcnonkiwhgffmvfvxg"
 
 [functions.igamewin-callback]
 verify_jwt = false
+
+[functions.igamewin-getbalance]
+verify_jwt = false
+
+[functions.igamewin-balance-adj]
+verify_jwt = false

@@ -88,10 +88,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const callbackUrl = `${supabaseUrl}/functions/v1/igamewin-callback`;
+  const getBalanceUrl = `${supabaseUrl}/functions/v1/igamewin-getbalance`;
+  const balanceAdjUrl = `${supabaseUrl}/functions/v1/igamewin-balance-adj`;
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -195,7 +195,7 @@ serve(async (req) => {
 
       // Ensure user exists in iGameWin (ignore DUPLICATED_USER)
       try {
-        await callIgw(apiUrl, agentCode, agentToken, "user_create", { user_code: user_id, callback_url: callbackUrl });
+        await callIgw(apiUrl, agentCode, agentToken, "user_create", { user_code: user_id });
       } catch (e: any) {
         if (!e.message?.includes("DUPLICATED_USER")) console.warn("user_create warning:", e.message);
       }
@@ -207,7 +207,6 @@ serve(async (req) => {
           provider_code: provider || "",
           game_code,
           lang: "pt",
-          callback_url: callbackUrl,
         });
 
         const launchUrl = json?.launch_url || json?.url || json?.game_url || json?.data?.url || json?.data?.launch_url;
@@ -217,6 +216,17 @@ serve(async (req) => {
 
         return fail(json?.msg || json?.message || "Nenhuma URL de jogo retornada pela iGameWin");
       } catch (e: any) {
+        if (e.message === "ERROR_GET_BALANCE_END_POINT") {
+          return fail("A conta iGameWin está em modo seamless wallet e ainda não tem os endpoints de carteira cadastrados no provedor.", 400, {
+            provider_message: e.message,
+            requires_provider_setup: true,
+            wallet_endpoints: {
+              getbalance: getBalanceUrl,
+              balance_adj: balanceAdjUrl,
+            },
+          });
+        }
+
         return fail(e.message || "Erro ao lançar jogo na iGameWin", 400, { provider_message: e.message });
       }
     }
