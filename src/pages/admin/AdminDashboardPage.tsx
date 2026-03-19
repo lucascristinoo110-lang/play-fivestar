@@ -97,13 +97,13 @@ export default function AdminDashboardPage() {
       d.setDate(d.getDate() - i);
       days.push({ date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), depositos: 0, saques: 0 });
     }
-    const { data: chartTx } = await supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+    const { data: chartTx } = await supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").in("type", ["deposit", "withdraw"]).gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
     (chartTx || []).forEach(tx => {
       const txDate = new Date(tx.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
       const day = days.find(d => d.date === txDate);
       if (day) {
         if (tx.type === "deposit") day.depositos += Number(tx.amount);
-        else day.saques += Number(tx.amount);
+        else if (tx.type === "withdraw") day.saques += Math.abs(Number(tx.amount));
       }
     });
     setDailyData(days);
