@@ -24,6 +24,14 @@ type GameRow = {
   sort_order: number;
 };
 
+type SectionRow = {
+  id: string;
+  title: string;
+  section_type: string;
+  curated_game_codes: string[];
+  is_active: boolean;
+};
+
 const CATEGORIES = [
   { value: "slots", label: "Slots" },
   { value: "crash", label: "Crash" },
@@ -55,6 +63,8 @@ export default function AdminGamesPage() {
   const [importingIgamewin, setImportingIgamewin] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editGame, setEditGame] = useState<Partial<GameRow> | null>(null);
+  const [sections, setSections] = useState<SectionRow[]>([]);
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [playfiverToken, setPlayfiverToken] = useState("");
   const [playfiverSecret, setPlayfiverSecret] = useState("");
   const [search, setSearch] = useState("");
@@ -68,12 +78,14 @@ export default function AdminGamesPage() {
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
-    const [{ data: s }, { data: g }] = await Promise.all([
+    const [{ data: s }, { data: g }, { data: sec }] = await Promise.all([
       supabase.from("site_settings").select("*").limit(1).single(),
       supabase.from("games").select("*").order("sort_order"),
+      supabase.from("home_sections").select("id, title, section_type, curated_game_codes, is_active").order("sort_order"),
     ]);
     setSettings(s);
     setGames((g as GameRow[]) || []);
+    setSections((sec as SectionRow[]) || []);
     const parsed = splitPlayfiverCredential(s?.playfiver_api_key);
     setPlayfiverToken(parsed.token);
     setPlayfiverSecret(parsed.secret);
@@ -144,8 +156,27 @@ export default function AdminGamesPage() {
       const { error } = await supabase.from("games").insert(payload);
       if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); setLoading(false); return; }
     }
+
+    // Sync sections: add/remove game_code from curated_game_codes
+    const gameCode = editGame.game_code;
+    if (gameCode) {
+      const updates = sections.map(section => {
+        const codes = section.curated_game_codes || [];
+        const isSelected = selectedSections.includes(section.id);
+        const alreadyIn = codes.includes(gameCode);
+        if (isSelected && !alreadyIn) {
+          return supabase.from("home_sections").update({ curated_game_codes: [...codes, gameCode] }).eq("id", section.id);
+        } else if (!isSelected && alreadyIn) {
+          return supabase.from("home_sections").update({ curated_game_codes: codes.filter(c => c !== gameCode) }).eq("id", section.id);
+        }
+        return null;
+      }).filter(Boolean);
+      await Promise.all(updates as any[]);
+    }
+
     setLoading(false);
     setEditGame(null);
+    setSelectedSections([]);
     setShowForm(false);
     toast({ title: "Jogo salvo!" });
     loadData();
@@ -295,7 +326,7 @@ export default function AdminGamesPage() {
                   {importingIgamewin ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
                   Importar iGameWin
                 </Button>
-                <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setShowForm(true); }} className="bg-primary text-primary-foreground text-xs h-8">
+                <Button size="sm" onClick={() => { setEditGame({ provider: "playfiver", category: "slots", is_active: true }); setSelectedSections([]); setShowForm(true); }} className="bg-primary text-primary-foreground text-xs h-8">
                   <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Jogo
                 </Button>
               </div>
@@ -367,7 +398,12 @@ export default function AdminGamesPage() {
                         </span>
                       </td>
                       <td className="p-2.5 flex gap-1">
-                        <button onClick={() => { setEditGame(g); setShowForm(true); }} className={cn("p-1.5 rounded", light ? "hover:bg-gray-100" : "hover:bg-secondary")}>
+                        <button onClick={() => {
+                          setEditGame(g);
+                          const gameSections = sections.filter(s => s.curated_game_codes?.includes(g.game_code || "")).map(s => s.id);
+                          setSelectedSections(gameSections);
+                          setShowForm(true);
+                        }} className={cn("p-1.5 rounded", light ? "hover:bg-gray-100" : "hover:bg-secondary")}>
                           <Edit2 className="h-3 w-3 text-muted-foreground" />
                         </button>
                         <button onClick={() => deleteGame(g.id)} className="p-1.5 rounded hover:bg-destructive/10">
@@ -461,6 +497,38 @@ export default function AdminGamesPage() {
                   </label>
                 </div>
               </div>
+
+              {/* Seções */}
+              {sections.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Seções da Home</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {sections.map(s => {
+                      const isSelected = selectedSections.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setSelectedSections(prev =>
+                            isSelected ? prev.filter(id => id !== s.id) : [...prev, s.id]
+                          )}
+                          className={cn(
+                            "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors",
+                            isSelected
+                              ? "bg-primary text-primary-foreground border-primary"
+                              : light ? "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100" : "bg-secondary border-border/40 text-muted-foreground hover:bg-secondary/80"
+                          )}
+                        >
+                          {s.title}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
+                    Clique para adicionar/remover o jogo das seções. Requer código do jogo preenchido.
+                  </p>
+                </div>
+              )}
 
               <Button onClick={saveGame} disabled={loading} className="w-full bg-primary text-primary-foreground text-sm">
                 <Save className="h-3.5 w-3.5 mr-1.5" /> {editGame.id ? "Salvar Alterações" : "Adicionar Jogo"}
