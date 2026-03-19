@@ -318,7 +318,10 @@ export default function AdminEmailPage() {
                 <Input
                   type="number"
                   value={(newCampaign.recipient_filter as any)?.days_since_signup ?? 30}
-                  onChange={e => setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, days_since_signup: Number(e.target.value) } })}
+                  onChange={e => {
+                    setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, days_since_signup: Number(e.target.value) } });
+                    setPreviewCount(null);
+                  }}
                   className={inputCls}
                 />
               </div>
@@ -327,7 +330,10 @@ export default function AdminEmailPage() {
                   <input
                     type="checkbox"
                     checked={(newCampaign.recipient_filter as any)?.has_deposit === false}
-                    onChange={e => setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, has_deposit: e.target.checked ? false : undefined } })}
+                    onChange={e => {
+                      setNewCampaign({ ...newCampaign, recipient_filter: { ...newCampaign.recipient_filter, has_deposit: e.target.checked ? false : undefined } });
+                      setPreviewCount(null);
+                    }}
                     className="rounded accent-primary"
                   />
                   <span className={labelCls}>Apenas sem depósito</span>
@@ -335,7 +341,21 @@ export default function AdminEmailPage() {
               </div>
             </div>
 
-            <Button onClick={createCampaign} size="sm">
+            <div className="flex items-center gap-3">
+              <Button onClick={previewRecipients} variant="outline" size="sm" disabled={countingPreview}>
+                {countingPreview ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Users className="h-3 w-3 mr-1" />}
+                Contar Destinatários
+              </Button>
+              {previewCount !== null && (
+                <span className={cn("text-xs font-semibold px-3 py-1 rounded-full",
+                  previewCount > 0 ? "bg-emerald-500/15 text-emerald-500" : "bg-amber-500/15 text-amber-500"
+                )}>
+                  {previewCount} destinatário{previewCount !== 1 ? "s" : ""} encontrado{previewCount !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
+
+            <Button onClick={createCampaign} size="sm" disabled={previewCount === 0}>
               <Plus className="h-3 w-3 mr-1" /> Criar Campanha
             </Button>
           </div>
