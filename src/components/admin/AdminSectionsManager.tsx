@@ -166,7 +166,7 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
       filter_category: editSection.section_type === "filter" ? (editSection.filter_category || null) : null,
       filter_is_hot: editSection.section_type === "filter" ? (editSection.filter_is_hot || false) : false,
       filter_is_new: editSection.section_type === "filter" ? (editSection.filter_is_new || false) : false,
-      curated_game_codes: editSection.section_type === "curated" ? (editSection.curated_game_codes || []) : [],
+      curated_game_codes: editSection.curated_game_codes || [],
       max_games: editSection.max_games || 12,
       is_active: editSection.is_active ?? true,
     };
@@ -325,17 +325,17 @@ export default function AdminSectionsManager({ light }: { light: boolean }) {
                 </div>
               )}
 
-              {editSection.section_type === "curated" && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Jogos da seção</Label>
-                  <GamePickerForSection
-                    allGames={allGames}
-                    selectedCodes={editSection.curated_game_codes || []}
-                    onCodesChange={(codes) => setEditSection({ ...editSection, curated_game_codes: codes })}
-                    light={light}
-                  />
-                </div>
-              )}
+              <div className="space-y-1">
+                <Label className="text-xs">
+                  {editSection.section_type === "curated" ? "Jogos da seção" : "Jogos adicionais (além do filtro automático)"}
+                </Label>
+                <GamePickerForSection
+                  allGames={allGames}
+                  selectedCodes={editSection.curated_game_codes || []}
+                  onCodesChange={(codes) => setEditSection({ ...editSection, curated_game_codes: codes })}
+                  light={light}
+                />
+              </div>
 
               <div className="flex items-center gap-2">
                 <Switch
