@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { useOutletContext } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2, Upload, Search, Image } from "lucide-react";
+import { Save, Gamepad2, Plus, Trash2, Edit2, X, Download, Loader2, Upload, Search, Image, Copy, Check } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type GameRow = {
