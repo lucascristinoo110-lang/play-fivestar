@@ -60,6 +60,9 @@ export default function AdminGamesPage() {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [uploading, setUploading] = useState(false);
+  const [copiedCallback, setCopiedCallback] = useState(false);
+
+  const callbackUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/playfiver-webhook`;
 
   useEffect(() => { loadData(); }, []);
 
