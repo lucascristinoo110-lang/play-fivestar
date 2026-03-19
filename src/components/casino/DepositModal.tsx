@@ -9,7 +9,7 @@ import { X, QrCode, Copy, CheckCircle, Loader2, Zap, Shield, Clock, TrendingUp }
 import { motion, AnimatePresence } from "framer-motion";
 import defaultDepositBanner from "@/assets/deposit-banner.png";
 
-const presets = [30, 50, 100, 200, 500];
+const presets = [50, 150, 200, 300];
 
 type Step = "amount" | "qrcode" | "success";
 
