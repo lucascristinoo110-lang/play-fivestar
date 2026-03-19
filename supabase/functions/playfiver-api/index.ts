@@ -30,6 +30,7 @@ type NormalizedGame = {
   is_new: boolean;
   is_hot: boolean;
   is_active: boolean;
+  source: string;
 };
 
 function parseJsonSafe(raw: string) {
