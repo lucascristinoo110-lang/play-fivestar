@@ -63,6 +63,8 @@ export default function AdminGamesPage() {
   const [importingIgamewin, setImportingIgamewin] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editGame, setEditGame] = useState<Partial<GameRow> | null>(null);
+  const [sections, setSections] = useState<SectionRow[]>([]);
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [playfiverToken, setPlayfiverToken] = useState("");
   const [playfiverSecret, setPlayfiverSecret] = useState("");
   const [search, setSearch] = useState("");
