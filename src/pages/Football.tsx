@@ -11,6 +11,7 @@ import { generate1x2 } from "@/lib/sports-odds";
 import { BetSlipProvider } from "@/contexts/BetSlipContext";
 import { MatchCard, type Match } from "@/components/sports/MatchCard";
 import { BetSlip } from "@/components/sports/BetSlip";
+import { supabase } from "@/integrations/supabase/client";
 
 type League = { id: string; name: string; country: string; apiId: string };
 
@@ -25,30 +26,7 @@ const LEAGUES: League[] = [
   { id: "seriea", name: "Serie A (Itália)", country: "🇮🇹", apiId: "4332" },
   { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", apiId: "4331" },
   { id: "ligue1", name: "Ligue 1", country: "🇫🇷", apiId: "4334" },
-  { id: "champions", name: "Champions League", country: "🇪🇺", apiId: "4480" },
-  { id: "europa", name: "Europa League", country: "🇪🇺", apiId: "4481" },
 ];
-
-function getBrazilianFallbackMatches(league: League): Match[] {
-  const teams: Record<string, string[][]> = {
-    "4351": [["Flamengo","Palmeiras"],["Corinthians","São Paulo"],["Atlético-MG","Cruzeiro"],["Grêmio","Internacional"],["Botafogo","Fluminense"],["Santos","Bahia"],["Fortaleza","Vasco da Gama"],["Athletico-PR","Coritiba"]],
-    "4404": [["Sport","Ceará"],["Guarani","Ponte Preta"],["Vila Nova","Goiás"],["Avaí","Chapecoense"],["Operário-PR","CRB"],["Novorizontino","Mirassol"]],
-    "4405": [["Flamengo","Cruzeiro"],["Palmeiras","Grêmio"],["São Paulo","Atlético-MG"],["Corinthians","Internacional"],["Botafogo","Fortaleza"],["Santos","Bahia"]],
-    "4480": [["Flamengo","River Plate"],["Palmeiras","Boca Juniors"],["Atlético-MG","Peñarol"],["São Paulo","Nacional"],["Grêmio","Cerro Porteño"],["Internacional","Olimpia"]],
-    "4481": [["Fortaleza","Independiente"],["Athletico-PR","LDU Quito"],["Cruzeiro","Racing"],["Vasco","Defensa y Justicia"],["Bahia","Talleres"],["Santos","Colón"]],
-  };
-  const leagueTeams = teams[league.apiId] || teams["4351"];
-  const now = Date.now();
-  return leagueTeams.map(([home, away], i) => ({
-    id: `fb-${league.apiId}-${i}`,
-    league: league.name, leagueId: league.apiId,
-    home, away,
-    homeBadge: getTeamBadge(home), awayBadge: getTeamBadge(away),
-    kickoff: new Date(now + (i + 1) * 86400000 + i * 7200000).toISOString(),
-    status: "upcoming", venue: "", city: "",
-    odds: generate1x2(home, away),
-  }));
-}
 
 function FootballContent() {
   const { settings } = useSiteSettings();
@@ -63,29 +41,30 @@ function FootballContent() {
   const loadMatches = useCallback(async (leagueId: string) => {
     setLoading(true);
     const league = LEAGUES.find(l => l.id === leagueId);
-    if (!league) return;
-    try {
-      const [nextRes, pastRes] = await Promise.allSettled([
-        fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${league.apiId}`),
-        fetch(`https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${league.apiId}`),
-      ]);
-      const nextData = nextRes.status === "fulfilled" && nextRes.value.ok ? await nextRes.value.json() : null;
-      const pastData = pastRes.status === "fulfilled" && pastRes.value.ok ? await pastRes.value.json() : null;
-      const allEvents = [...(Array.isArray(nextData?.events) ? nextData.events : []), ...(Array.isArray(pastData?.events) ? pastData.events : [])];
-      const correctEvents = allEvents.filter((e: any) => e?.strHomeTeam && e?.strAwayTeam && String(e?.idLeague) === league.apiId);
-      const seen = new Set<string>();
-      const unique = correctEvents.filter((e: any) => { const id = String(e?.idEvent || ""); if (!id || seen.has(id)) return false; seen.add(id); return true; });
-      const mapped: Match[] = unique.map((e: any) => ({
-        id: String(e.idEvent), league: e.strLeague || league.name, leagueId: String(e.idLeague),
-        home: e.strHomeTeam, away: e.strAwayTeam,
-        homeBadge: e.strHomeTeamBadge || getTeamBadge(e.strHomeTeam),
-        awayBadge: e.strAwayTeamBadge || getTeamBadge(e.strAwayTeam),
-        kickoff: e.strTimestamp || e.dateEvent,
-        homeScore: e.intHomeScore != null ? Number(e.intHomeScore) : undefined,
-        awayScore: e.intAwayScore != null ? Number(e.intAwayScore) : undefined,
-        status: e.intHomeScore != null ? "finished" : "upcoming",
-        venue: e.strVenue || "", city: e.strCity || "",
-        odds: generate1x2(e.strHomeTeam, e.strAwayTeam),
+    if (!league) { setLoading(false); return; }
+
+    const { data } = await supabase
+      .from("sports_matches")
+      .select("*")
+      .eq("league_api_id", league.apiId)
+      .order("kickoff", { ascending: true });
+
+    if (data && data.length > 0) {
+      const mapped: Match[] = data.map((e: any) => ({
+        id: e.id,
+        league: e.league_name,
+        leagueId: e.league_api_id,
+        home: e.home_team,
+        away: e.away_team,
+        homeBadge: e.home_badge || getTeamBadge(e.home_team),
+        awayBadge: e.away_badge || getTeamBadge(e.away_team),
+        kickoff: e.kickoff,
+        homeScore: e.home_score,
+        awayScore: e.away_score,
+        status: e.status || "upcoming",
+        venue: e.venue || "",
+        city: e.city || "",
+        odds: generate1x2(e.home_team, e.away_team),
       }));
       mapped.sort((a, b) => {
         if (a.status === "upcoming" && b.status === "finished") return -1;
@@ -93,15 +72,14 @@ function FootballContent() {
         if (a.status === "upcoming") return new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime();
         return new Date(b.kickoff).getTime() - new Date(a.kickoff).getTime();
       });
-      setMatches(mapped.length === 0 ? getBrazilianFallbackMatches(league) : mapped);
-    } catch {
-      setMatches(getBrazilianFallbackMatches(LEAGUES.find(l => l.id === leagueId)!));
+      setMatches(mapped);
+    } else {
+      setMatches([]);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { loadMatches(activeLeague); }, [activeLeague, loadMatches]);
-  useEffect(() => { const iv = setInterval(() => loadMatches(activeLeague), 60000); return () => clearInterval(iv); }, [activeLeague, loadMatches]);
 
   const upcomingMatches = matches.filter(m => m.status === "upcoming");
   const finishedMatches = matches.filter(m => m.status === "finished");
@@ -124,7 +102,6 @@ function FootballContent() {
         <div className="max-w-4xl mx-auto p-3 sm:p-6 space-y-4">
           <SportsHeroBanner />
 
-          {/* League tabs */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-3 px-3">
             {LEAGUES.map(l => (
               <button key={l.id} onClick={() => setActiveLeague(l.id)}
@@ -135,7 +112,6 @@ function FootballContent() {
             ))}
           </div>
 
-          {/* View tabs */}
           <div className="flex gap-2">
             <button onClick={() => setViewTab("proximos")}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -149,12 +125,13 @@ function FootballContent() {
             >🏁 Encerrados ({finishedMatches.length})</button>
           </div>
 
-          {/* Matches */}
           {loading ? (
             <div className="space-y-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-32 rounded-xl shimmer" />)}</div>
           ) : displayedMatches.length === 0 ? (
             <div className="text-center py-20 text-muted-foreground text-sm">
-              {viewTab === "proximos" ? "Nenhum jogo próximo encontrado para esta liga." : "Nenhum jogo encerrado encontrado para esta liga."}
+              {viewTab === "proximos"
+                ? "Nenhum jogo próximo. O admin precisa recarregar os jogos no painel."
+                : "Nenhum jogo encerrado encontrado para esta liga."}
             </div>
           ) : (
             <div className="space-y-3">
