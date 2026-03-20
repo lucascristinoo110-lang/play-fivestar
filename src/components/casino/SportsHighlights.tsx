@@ -64,14 +64,17 @@ export function SportsHighlights() {
     return () => clearInterval(iv);
   }, [matches.length]);
 
-  if (matches.length === 0) return null;
-
   const m = matches[activeIndex] || matches[0];
-  const hyp = useMemo(() => ({
-    home: (100 * m.odds.home).toFixed(2),
-    draw: (100 * m.odds.draw).toFixed(2),
-    away: (100 * m.odds.away).toFixed(2),
-  }), [m]);
+  const hyp = useMemo(() => {
+    if (!m) return { home: "0", draw: "0", away: "0" };
+    return {
+      home: (100 * m.odds.home).toFixed(2),
+      draw: (100 * m.odds.draw).toFixed(2),
+      away: (100 * m.odds.away).toFixed(2),
+    };
+  }, [m]);
+
+  if (matches.length === 0) return null;
 
   return (
     <section id="futebol" className="space-y-3">
