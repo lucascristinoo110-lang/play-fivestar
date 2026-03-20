@@ -44,11 +44,15 @@ function FootballContent() {
     const league = LEAGUES.find(l => l.id === leagueId);
     if (!league) { setLoading(false); return; }
 
-    const { data } = await supabase
+    let query = supabase
       .from("sports_matches")
-      .select("*")
-      .eq("league_api_id", league.apiId)
-      .order("kickoff", { ascending: true });
+      .select("*");
+
+    if (league.dbFilter) {
+      query = query.ilike("league_name", `%${league.dbFilter}%`);
+    }
+
+    const { data } = await query.order("kickoff", { ascending: true });
 
     if (data && data.length > 0) {
       const mapped: Match[] = data.map((e: any) => ({
