@@ -5,39 +5,61 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Leagues we want to track (by SofaScore tournament category + name)
 const TRACKED_LEAGUES: Record<string, string[]> = {
-  "Brazil": [
-    "Brasileirão Betano",
-    "Brasileirão Série B",
-    "Copa do Brasil",
-    "Copa do Brasil U20",
-  ],
-  "South America": [
-    "Copa Libertadores",
-    "Copa Sudamericana",
-  ],
-  "England": ["Premier League"],
-  "Spain": ["LaLiga"],
-  "Italy": ["Serie A"],
-  "Germany": ["Bundesliga"],
-  "France": ["Ligue 1"],
-  "Europe": ["UEFA Champions League", "UEFA Europa League"],
+  Brazil: ["Brasileirão Betano", "Brasileirão Série B", "Copa do Brasil"],
+  "South America": ["Copa Libertadores", "Copa Sudamericana"],
+  England: ["Premier League"],
+  Spain: ["LaLiga"],
+  Italy: ["Serie A"],
+  Germany: ["Bundesliga"],
+  France: ["Ligue 1"],
+  Europe: ["UEFA Champions League", "UEFA Europa League"],
 };
 
-function isTrackedLeague(category: string, tournament: string): boolean {
-  for (const [cat, tournaments] of Object.entries(TRACKED_LEAGUES)) {
-    if (category === cat || (cat === "South America" && (category === "South America" || category === "World"))) {
-      if (tournaments.some(t => tournament.includes(t) || t.includes(tournament))) {
-        return true;
-      }
-    }
-  }
-  return false;
+function isTrackedLeague(category: string, tournament: string) {
+  return Object.entries(TRACKED_LEAGUES).some(([allowedCategory, allowedTournaments]) => {
+    const categoryMatches =
+      category === allowedCategory ||
+      (allowedCategory === "South America" && (category === "South America" || category === "World"));
+
+    if (!categoryMatches) return false;
+
+    return allowedTournaments.some(
+      (label) => tournament.includes(label) || label.includes(tournament),
+    );
+  });
 }
 
-function formatDate(date: Date): string {
+function formatDate(date: Date) {
   return date.toISOString().split("T")[0];
+}
+
+function parseProxyJson(text: string) {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    throw new Error("Could not extract JSON from proxy response");
+  }
+
+  return JSON.parse(text.slice(start, end + 1));
+}
+
+async function fetchSofascoreDate(date: string) {
+  const proxyUrl = `https://r.jina.ai/http://https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`;
+  const res = await fetch(proxyUrl, {
+    headers: {
+      Accept: "text/plain, application/json",
+      "X-Return-Format": "text",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Proxy fetch failed for ${date} [${res.status}]`);
+  }
+
+  const text = await res.text();
+  return parseProxyJson(text);
 }
 
 Deno.serve(async (req) => {
@@ -47,234 +69,138 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    const supabase = createClient(
+    const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Verify admin
     const token = authHeader?.replace("Bearer ", "");
     if (!token) throw new Error("No token");
-    const { data: { user }, error: authErr } = await createClient(
+
+    const authClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!
-    ).auth.getUser(token);
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+    );
+
+    const {
+      data: { user },
+      error: authErr,
+    } = await authClient.auth.getUser(token);
+
     if (authErr || !user) throw new Error("Unauthorized");
 
-    const { data: roleData } = await supabase
+    const { data: roleData } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .eq("role", "admin")
       .maybeSingle();
+
     if (!roleData) throw new Error("Not admin");
 
-    console.log("Admin verified, starting to fetch matches...");
+    console.log("Admin verified, starting sports reload via proxy...");
 
-    // Fetch next 7 days of events from SofaScore
-    const today = new Date();
+    const baseDate = new Date();
     const dates: string[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() + i);
+    for (let offset = -2; offset <= 7; offset++) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + offset);
       dates.push(formatDate(d));
     }
 
-    let totalProcessed = 0;
-    let totalErrors = 0;
-    const seenIds = new Set<string>();
+    let processed = 0;
+    let errors = 0;
+    const seenExternalIds = new Set<string>();
 
     for (const date of dates) {
       try {
         console.log(`Fetching events for ${date}...`);
-        const res = await fetch(
-          `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
-          {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              "Accept": "application/json",
-            },
-          }
-        );
+        const payload = await fetchSofascoreDate(date);
+        const events = Array.isArray(payload?.events) ? payload.events : [];
+        console.log(`Fetched ${events.length} events for ${date}`);
 
-        if (!res.ok) {
-          console.log(`Failed to fetch ${date}: ${res.status}`);
-          continue;
-        }
-
-        const data = await res.json();
-        const events = data?.events || [];
-        console.log(`Got ${events.length} total events for ${date}`);
-
-        for (const e of events) {
-          const category = e?.tournament?.category?.name || "";
-          const tournament = e?.tournament?.name || "";
+        for (const event of events) {
+          const category = event?.tournament?.category?.name || "";
+          const tournament = event?.tournament?.name || "";
 
           if (!isTrackedLeague(category, tournament)) continue;
 
-          const externalId = `sofascore-${e.id}`;
-          if (seenIds.has(externalId)) continue;
-          seenIds.add(externalId);
+          const eventId = event?.id;
+          const homeTeam = event?.homeTeam?.name || "";
+          const awayTeam = event?.awayTeam?.name || "";
+          const startTimestamp = event?.startTimestamp;
 
-          const homeTeam = e?.homeTeam?.name || "";
-          const awayTeam = e?.awayTeam?.name || "";
-          if (!homeTeam || !awayTeam) continue;
+          if (!eventId || !homeTeam || !awayTeam || !startTimestamp) continue;
 
-          const startTimestamp = e?.startTimestamp;
-          if (!startTimestamp) continue;
+          const externalId = `sofascore-${eventId}`;
+          if (seenExternalIds.has(externalId)) continue;
+          seenExternalIds.add(externalId);
 
-          const kickoff = new Date(startTimestamp * 1000).toISOString();
-
-          // Determine status
-          const statusCode = e?.status?.type || "notstarted";
-          let status = "upcoming";
-          let homeScore: number | null = null;
-          let awayScore: number | null = null;
-
-          if (statusCode === "finished") {
-            status = "finished";
-            homeScore = e?.homeScore?.current ?? null;
-            awayScore = e?.awayScore?.current ?? null;
-          } else if (statusCode === "inprogress") {
-            status = "live";
-            homeScore = e?.homeScore?.current ?? null;
-            awayScore = e?.awayScore?.current ?? null;
-          }
-
-          // Build league display name
-          let leagueName = tournament;
-          if (category === "Brazil" && !tournament.includes("Brasil")) {
-            leagueName = tournament;
-          }
-
-          const row = {
-            external_id: externalId,
-            league_name: leagueName,
-            league_api_id: String(e?.tournament?.uniqueTournament?.id || e?.tournament?.id || "0"),
-            home_team: homeTeam,
-            away_team: awayTeam,
-            home_badge: e?.homeTeam?.id
-              ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image`
-              : null,
-            away_badge: e?.awayTeam?.id
-              ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image`
-              : null,
-            kickoff,
-            home_score: homeScore,
-            away_score: awayScore,
-            status,
-            venue: e?.venue?.stadium?.name || null,
-            city: e?.venue?.city?.name || null,
-            updated_at: new Date().toISOString(),
-          };
-
-          const { error } = await supabase
-            .from("sports_matches")
-            .upsert(row, { onConflict: "external_id" });
-
-          if (error) {
-            console.log(`Error upserting ${externalId}: ${error.message}`);
-            totalErrors++;
-          } else {
-            totalProcessed++;
-          }
-        }
-
-        // Small delay between date requests to avoid rate limiting
-        await new Promise(r => setTimeout(r, 500));
-      } catch (err: any) {
-        console.log(`Error fetching date ${date}: ${err.message}`);
-      }
-    }
-
-    // Also fetch past 3 days for recently finished matches
-    for (let i = 1; i <= 3; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const date = formatDate(d);
-
-      try {
-        console.log(`Fetching past events for ${date}...`);
-        const res = await fetch(
-          `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
-          {
-            headers: {
-              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-              "Accept": "application/json",
-            },
-          }
-        );
-
-        if (!res.ok) continue;
-        const data = await res.json();
-        const events = data?.events || [];
-
-        for (const e of events) {
-          const category = e?.tournament?.category?.name || "";
-          const tournament = e?.tournament?.name || "";
-          if (!isTrackedLeague(category, tournament)) continue;
-
-          const externalId = `sofascore-${e.id}`;
-          if (seenIds.has(externalId)) continue;
-          seenIds.add(externalId);
-
-          const homeTeam = e?.homeTeam?.name || "";
-          const awayTeam = e?.awayTeam?.name || "";
-          if (!homeTeam || !awayTeam) continue;
-
-          const startTimestamp = e?.startTimestamp;
-          if (!startTimestamp) continue;
+          const statusType = event?.status?.type || "notstarted";
+          const status = statusType === "finished"
+            ? "finished"
+            : statusType === "inprogress"
+              ? "live"
+              : "upcoming";
 
           const row = {
             external_id: externalId,
             league_name: tournament,
-            league_api_id: String(e?.tournament?.uniqueTournament?.id || e?.tournament?.id || "0"),
+            league_api_id: String(event?.tournament?.uniqueTournament?.id || event?.tournament?.id || "0"),
             home_team: homeTeam,
             away_team: awayTeam,
-            home_badge: e?.homeTeam?.id
-              ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image`
+            home_badge: event?.homeTeam?.id
+              ? `https://api.sofascore.app/api/v1/team/${event.homeTeam.id}/image`
               : null,
-            away_badge: e?.awayTeam?.id
-              ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image`
+            away_badge: event?.awayTeam?.id
+              ? `https://api.sofascore.app/api/v1/team/${event.awayTeam.id}/image`
               : null,
             kickoff: new Date(startTimestamp * 1000).toISOString(),
-            home_score: e?.homeScore?.current ?? null,
-            away_score: e?.awayScore?.current ?? null,
-            status: (e?.status?.type === "finished") ? "finished" : "upcoming",
-            venue: e?.venue?.stadium?.name || null,
-            city: e?.venue?.city?.name || null,
+            home_score: event?.homeScore?.current ?? null,
+            away_score: event?.awayScore?.current ?? null,
+            status,
+            venue: event?.venue?.stadium?.name || null,
+            city: event?.venue?.city?.name || null,
             updated_at: new Date().toISOString(),
           };
 
-          const { error } = await supabase
+          const { error } = await adminClient
             .from("sports_matches")
             .upsert(row, { onConflict: "external_id" });
-          if (!error) totalProcessed++;
-        }
 
-        await new Promise(r => setTimeout(r, 500));
-      } catch { /* skip */ }
+          if (error) {
+            errors += 1;
+            console.log(`Upsert failed for ${externalId}: ${error.message}`);
+            continue;
+          }
+
+          processed += 1;
+        }
+      } catch (error) {
+        errors += 1;
+        console.log(`Date ${date} failed: ${error instanceof Error ? error.message : "unknown error"}`);
+      }
     }
 
-    // Clean very old finished matches (> 14 days)
     const cutoff = new Date(Date.now() - 14 * 86400000).toISOString();
-    await supabase
+    await adminClient
       .from("sports_matches")
       .delete()
       .eq("status", "finished")
       .lt("kickoff", cutoff);
 
-    console.log(`Done! Processed: ${totalProcessed}, Errors: ${totalErrors}`);
+    console.log(`Done! Processed: ${processed}, Errors: ${errors}`);
 
-    return new Response(
-      JSON.stringify({ success: true, matches_processed: totalProcessed, errors: totalErrors }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (err: any) {
-    console.error("Fatal error:", err.message);
-    return new Response(
-      JSON.stringify({ error: err.message }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, matches_processed: processed, errors }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Fatal reload-sports error:", message);
+
+    return new Response(JSON.stringify({ error: message }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
