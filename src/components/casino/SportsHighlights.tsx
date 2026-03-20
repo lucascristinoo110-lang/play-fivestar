@@ -21,8 +21,8 @@ function getFallbackMatches(): SportsMatch[] {
     id: `fallback-${i}`,
     league,
     home, away,
-    homeBadge: getLocalBadge(home),
-    awayBadge: getLocalBadge(away),
+    homeBadge: getTeamBadge(home),
+    awayBadge: getTeamBadge(away),
     kickoff: new Date(base + d * 86400000 + 72000000).toISOString(),
     odds: generate1x2(home, away),
   }));
