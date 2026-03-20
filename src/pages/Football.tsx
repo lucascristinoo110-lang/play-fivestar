@@ -13,19 +13,20 @@ import { MatchCard, type Match } from "@/components/sports/MatchCard";
 import { BetSlip } from "@/components/sports/BetSlip";
 import { supabase } from "@/integrations/supabase/client";
 
-type League = { id: string; name: string; country: string; apiId: string };
+type League = { id: string; name: string; country: string; dbFilter: string };
 
 const LEAGUES: League[] = [
-  { id: "brasileirao", name: "Brasileirão Série A", country: "🇧🇷", apiId: "4351" },
-  { id: "brasileirao-b", name: "Brasileirão Série B", country: "🇧🇷", apiId: "4404" },
-  { id: "copa-brasil", name: "Copa do Brasil", country: "🇧🇷", apiId: "4405" },
-  { id: "libertadores", name: "Copa Libertadores", country: "🌎", apiId: "4480" },
-  { id: "sulamericana", name: "Copa Sul-Americana", country: "🌎", apiId: "4481" },
-  { id: "premier", name: "Premier League", country: "🏴", apiId: "4328" },
-  { id: "laliga", name: "La Liga", country: "🇪🇸", apiId: "4335" },
-  { id: "seriea", name: "Serie A (Itália)", country: "🇮🇹", apiId: "4332" },
-  { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", apiId: "4331" },
-  { id: "ligue1", name: "Ligue 1", country: "🇫🇷", apiId: "4334" },
+  { id: "brasileirao", name: "Brasileirão", country: "🇧🇷", dbFilter: "Brasileirão Betano" },
+  { id: "brasileirao-b", name: "Série B", country: "🇧🇷", dbFilter: "Brasileirão Série B" },
+  { id: "copa-brasil", name: "Copa do Brasil", country: "🇧🇷", dbFilter: "Copa do Brasil" },
+  { id: "libertadores", name: "Libertadores", country: "🌎", dbFilter: "Copa Libertadores" },
+  { id: "sulamericana", name: "Sul-Americana", country: "🌎", dbFilter: "Copa Sudamericana" },
+  { id: "premier", name: "Premier League", country: "🏴", dbFilter: "Premier League" },
+  { id: "laliga", name: "LaLiga", country: "🇪🇸", dbFilter: "LaLiga" },
+  { id: "seriea", name: "Serie A", country: "🇮🇹", dbFilter: "Serie A" },
+  { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", dbFilter: "Bundesliga" },
+  { id: "ligue1", name: "Ligue 1", country: "🇫🇷", dbFilter: "Ligue 1" },
+  { id: "todos", name: "Todos", country: "⚽", dbFilter: "" },
 ];
 
 function FootballContent() {
