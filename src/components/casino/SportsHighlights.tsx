@@ -3,7 +3,32 @@ import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronRight, Trophy } from "lucide-react";
 import { getTeamBadge } from "@/lib/team-badges";
 import { generate1x2 } from "@/lib/sports-odds";
+import { generate1x2 } from "@/lib/sports-odds";
 import { supabase } from "@/integrations/supabase/client";
+import { getTeamBadge as getLocalBadge } from "@/lib/team-badges";
+
+// Fallback matches shown when DB is empty (before admin reloads)
+function getFallbackMatches(): SportsMatch[] {
+  const now = new Date();
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const pairs: [string, string, string, number][] = [
+    ["Flamengo", "Palmeiras", "Brasileirão", 1],
+    ["Corinthians", "São Paulo", "Brasileirão", 2],
+    ["Atlético-MG", "Cruzeiro", "Brasileirão", 3],
+    ["Grêmio", "Internacional", "Brasileirão", 4],
+    ["Botafogo", "Fluminense", "Brasileirão", 5],
+    ["Santos", "Bahia", "Brasileirão", 6],
+  ];
+  return pairs.map(([home, away, league, d], i) => ({
+    id: `fallback-${i}`,
+    league,
+    home, away,
+    homeBadge: getLocalBadge(home),
+    awayBadge: getLocalBadge(away),
+    kickoff: new Date(base + d * 86400000 + 72000000).toISOString(),
+    odds: generate1x2(home, away),
+  }));
+}
 
 type SportsMatch = {
   id: string;
