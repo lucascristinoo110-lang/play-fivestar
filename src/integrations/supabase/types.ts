@@ -607,6 +607,63 @@ export type Database = {
         }
         Relationships: []
       }
+      sports_matches: {
+        Row: {
+          away_badge: string | null
+          away_score: number | null
+          away_team: string
+          city: string | null
+          created_at: string | null
+          external_id: string | null
+          home_badge: string | null
+          home_score: number | null
+          home_team: string
+          id: string
+          kickoff: string
+          league_api_id: string
+          league_name: string
+          status: string
+          updated_at: string | null
+          venue: string | null
+        }
+        Insert: {
+          away_badge?: string | null
+          away_score?: number | null
+          away_team: string
+          city?: string | null
+          created_at?: string | null
+          external_id?: string | null
+          home_badge?: string | null
+          home_score?: number | null
+          home_team: string
+          id?: string
+          kickoff: string
+          league_api_id: string
+          league_name: string
+          status?: string
+          updated_at?: string | null
+          venue?: string | null
+        }
+        Update: {
+          away_badge?: string | null
+          away_score?: number | null
+          away_team?: string
+          city?: string | null
+          created_at?: string | null
+          external_id?: string | null
+          home_badge?: string | null
+          home_score?: number | null
+          home_team?: string
+          id?: string
+          kickoff?: string
+          league_api_id?: string
+          league_name?: string
+          status?: string
+          updated_at?: string | null
+          venue?: string | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
