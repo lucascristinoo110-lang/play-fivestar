@@ -5,18 +5,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LEAGUES = [
-  { apiId: "4351", name: "Brasileirão Série A" },
-  { apiId: "4404", name: "Brasileirão Série B" },
-  { apiId: "4405", name: "Copa do Brasil" },
-  { apiId: "4480", name: "Copa Libertadores" },
-  { apiId: "4481", name: "Copa Sul-Americana" },
-  { apiId: "4328", name: "Premier League" },
-  { apiId: "4335", name: "La Liga" },
-  { apiId: "4332", name: "Serie A (Itália)" },
-  { apiId: "4331", name: "Bundesliga" },
-  { apiId: "4334", name: "Ligue 1" },
-];
+// Leagues we want to track (by SofaScore tournament category + name)
+const TRACKED_LEAGUES: Record<string, string[]> = {
+  "Brazil": [
+    "Brasileirão Betano",
+    "Brasileirão Série B",
+    "Copa do Brasil",
+    "Copa do Brasil U20",
+  ],
+  "South America": [
+    "Copa Libertadores",
+    "Copa Sudamericana",
+  ],
+  "England": ["Premier League"],
+  "Spain": ["LaLiga"],
+  "Italy": ["Serie A"],
+  "Germany": ["Bundesliga"],
+  "France": ["Ligue 1"],
+  "Europe": ["UEFA Champions League", "UEFA Europa League"],
+};
+
+function isTrackedLeague(category: string, tournament: string): boolean {
+  for (const [cat, tournaments] of Object.entries(TRACKED_LEAGUES)) {
+    if (category === cat || (cat === "South America" && (category === "South America" || category === "World"))) {
+      if (tournaments.some(t => tournament.includes(t) || t.includes(tournament))) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function formatDate(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -47,47 +69,102 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (!roleData) throw new Error("Not admin");
 
-    let totalInserted = 0;
-    let totalUpdated = 0;
+    console.log("Admin verified, starting to fetch matches...");
 
-    for (const league of LEAGUES) {
+    // Fetch next 7 days of events from SofaScore
+    const today = new Date();
+    const dates: string[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() + i);
+      dates.push(formatDate(d));
+    }
+
+    let totalProcessed = 0;
+    let totalErrors = 0;
+    const seenIds = new Set<string>();
+
+    for (const date of dates) {
       try {
-        const [nextRes, pastRes] = await Promise.allSettled([
-          fetch(`https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=${league.apiId}`),
-          fetch(`https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=${league.apiId}`),
-        ]);
+        console.log(`Fetching events for ${date}...`);
+        const res = await fetch(
+          `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
+          {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "Accept": "application/json",
+            },
+          }
+        );
 
-        const nextData = nextRes.status === "fulfilled" && nextRes.value.ok
-          ? await nextRes.value.json().catch(() => null)
-          : null;
-        const pastData = pastRes.status === "fulfilled" && pastRes.value.ok
-          ? await pastRes.value.json().catch(() => null)
-          : null;
+        if (!res.ok) {
+          console.log(`Failed to fetch ${date}: ${res.status}`);
+          continue;
+        }
 
-        const events = [
-          ...(Array.isArray(nextData?.events) ? nextData.events : []),
-          ...(Array.isArray(pastData?.events) ? pastData.events : []),
-        ].filter((e: any) => e?.strHomeTeam && e?.strAwayTeam && String(e?.idLeague) === league.apiId);
+        const data = await res.json();
+        const events = data?.events || [];
+        console.log(`Got ${events.length} total events for ${date}`);
 
         for (const e of events) {
-          const externalId = String(e.idEvent);
-          const kickoff = e.strTimestamp || e.dateEvent;
-          if (!kickoff) continue;
+          const category = e?.tournament?.category?.name || "";
+          const tournament = e?.tournament?.name || "";
+
+          if (!isTrackedLeague(category, tournament)) continue;
+
+          const externalId = `sofascore-${e.id}`;
+          if (seenIds.has(externalId)) continue;
+          seenIds.add(externalId);
+
+          const homeTeam = e?.homeTeam?.name || "";
+          const awayTeam = e?.awayTeam?.name || "";
+          if (!homeTeam || !awayTeam) continue;
+
+          const startTimestamp = e?.startTimestamp;
+          if (!startTimestamp) continue;
+
+          const kickoff = new Date(startTimestamp * 1000).toISOString();
+
+          // Determine status
+          const statusCode = e?.status?.type || "notstarted";
+          let status = "upcoming";
+          let homeScore: number | null = null;
+          let awayScore: number | null = null;
+
+          if (statusCode === "finished") {
+            status = "finished";
+            homeScore = e?.homeScore?.current ?? null;
+            awayScore = e?.awayScore?.current ?? null;
+          } else if (statusCode === "inprogress") {
+            status = "live";
+            homeScore = e?.homeScore?.current ?? null;
+            awayScore = e?.awayScore?.current ?? null;
+          }
+
+          // Build league display name
+          let leagueName = tournament;
+          if (category === "Brazil" && !tournament.includes("Brasil")) {
+            leagueName = tournament;
+          }
 
           const row = {
             external_id: externalId,
-            league_name: league.name,
-            league_api_id: league.apiId,
-            home_team: e.strHomeTeam,
-            away_team: e.strAwayTeam,
-            home_badge: e.strHomeTeamBadge || null,
-            away_badge: e.strAwayTeamBadge || null,
+            league_name: leagueName,
+            league_api_id: String(e?.tournament?.uniqueTournament?.id || e?.tournament?.id || "0"),
+            home_team: homeTeam,
+            away_team: awayTeam,
+            home_badge: e?.homeTeam?.id
+              ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image`
+              : null,
+            away_badge: e?.awayTeam?.id
+              ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image`
+              : null,
             kickoff,
-            home_score: e.intHomeScore != null ? Number(e.intHomeScore) : null,
-            away_score: e.intAwayScore != null ? Number(e.intAwayScore) : null,
-            status: e.intHomeScore != null ? "finished" : "upcoming",
-            venue: e.strVenue || null,
-            city: e.strCity || null,
+            home_score: homeScore,
+            away_score: awayScore,
+            status,
+            venue: e?.venue?.stadium?.name || null,
+            city: e?.venue?.city?.name || null,
             updated_at: new Date().toISOString(),
           };
 
@@ -95,28 +172,106 @@ Deno.serve(async (req) => {
             .from("sports_matches")
             .upsert(row, { onConflict: "external_id" });
 
-          if (!error) {
-            totalInserted++;
+          if (error) {
+            console.log(`Error upserting ${externalId}: ${error.message}`);
+            totalErrors++;
+          } else {
+            totalProcessed++;
           }
         }
-      } catch {
-        // skip league on error
+
+        // Small delay between date requests to avoid rate limiting
+        await new Promise(r => setTimeout(r, 500));
+      } catch (err: any) {
+        console.log(`Error fetching date ${date}: ${err.message}`);
       }
     }
 
-    // Clean old matches (older than 30 days and finished)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+    // Also fetch past 3 days for recently finished matches
+    for (let i = 1; i <= 3; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const date = formatDate(d);
+
+      try {
+        console.log(`Fetching past events for ${date}...`);
+        const res = await fetch(
+          `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
+          {
+            headers: {
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+              "Accept": "application/json",
+            },
+          }
+        );
+
+        if (!res.ok) continue;
+        const data = await res.json();
+        const events = data?.events || [];
+
+        for (const e of events) {
+          const category = e?.tournament?.category?.name || "";
+          const tournament = e?.tournament?.name || "";
+          if (!isTrackedLeague(category, tournament)) continue;
+
+          const externalId = `sofascore-${e.id}`;
+          if (seenIds.has(externalId)) continue;
+          seenIds.add(externalId);
+
+          const homeTeam = e?.homeTeam?.name || "";
+          const awayTeam = e?.awayTeam?.name || "";
+          if (!homeTeam || !awayTeam) continue;
+
+          const startTimestamp = e?.startTimestamp;
+          if (!startTimestamp) continue;
+
+          const row = {
+            external_id: externalId,
+            league_name: tournament,
+            league_api_id: String(e?.tournament?.uniqueTournament?.id || e?.tournament?.id || "0"),
+            home_team: homeTeam,
+            away_team: awayTeam,
+            home_badge: e?.homeTeam?.id
+              ? `https://api.sofascore.app/api/v1/team/${e.homeTeam.id}/image`
+              : null,
+            away_badge: e?.awayTeam?.id
+              ? `https://api.sofascore.app/api/v1/team/${e.awayTeam.id}/image`
+              : null,
+            kickoff: new Date(startTimestamp * 1000).toISOString(),
+            home_score: e?.homeScore?.current ?? null,
+            away_score: e?.awayScore?.current ?? null,
+            status: (e?.status?.type === "finished") ? "finished" : "upcoming",
+            venue: e?.venue?.stadium?.name || null,
+            city: e?.venue?.city?.name || null,
+            updated_at: new Date().toISOString(),
+          };
+
+          const { error } = await supabase
+            .from("sports_matches")
+            .upsert(row, { onConflict: "external_id" });
+          if (!error) totalProcessed++;
+        }
+
+        await new Promise(r => setTimeout(r, 500));
+      } catch { /* skip */ }
+    }
+
+    // Clean very old finished matches (> 14 days)
+    const cutoff = new Date(Date.now() - 14 * 86400000).toISOString();
     await supabase
       .from("sports_matches")
       .delete()
       .eq("status", "finished")
-      .lt("kickoff", thirtyDaysAgo);
+      .lt("kickoff", cutoff);
+
+    console.log(`Done! Processed: ${totalProcessed}, Errors: ${totalErrors}`);
 
     return new Response(
-      JSON.stringify({ success: true, matches_processed: totalInserted }),
+      JSON.stringify({ success: true, matches_processed: totalProcessed, errors: totalErrors }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {
+    console.error("Fatal error:", err.message);
     return new Response(
       JSON.stringify({ error: err.message }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
