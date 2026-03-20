@@ -3,9 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { CalendarClock, ChevronRight, Trophy } from "lucide-react";
 import { getTeamBadge } from "@/lib/team-badges";
 import { generate1x2 } from "@/lib/sports-odds";
-import { generate1x2 } from "@/lib/sports-odds";
 import { supabase } from "@/integrations/supabase/client";
-import { getTeamBadge as getLocalBadge } from "@/lib/team-badges";
 
 // Fallback matches shown when DB is empty (before admin reloads)
 function getFallbackMatches(): SportsMatch[] {
