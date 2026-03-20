@@ -53,7 +53,7 @@ function TeamBadge({ src, name }: { src: string; name: string }) {
 
 export function SportsHighlights() {
   const navigate = useNavigate();
-  const [matches, setMatches] = useState<SportsMatch[]>([]);
+  const [matches, setMatches] = useState<SportsMatch[]>(getFallbackMatches());
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
