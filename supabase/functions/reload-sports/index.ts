@@ -74,29 +74,39 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const token = authHeader?.replace("Bearer ", "");
-    if (!token) throw new Error("No token");
+    // Allow cron calls (anon key or no meaningful user) by checking body
+    let isCron = false;
+    let bodyJson: any = {};
+    try {
+      bodyJson = await req.clone().json();
+      isCron = bodyJson?.source === "cron";
+    } catch { /* no body */ }
 
-    const authClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-    );
+    if (!isCron) {
+      const token = authHeader?.replace("Bearer ", "");
+      if (!token) throw new Error("No token");
 
-    const {
-      data: { user },
-      error: authErr,
-    } = await authClient.auth.getUser(token);
+      const authClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+      );
 
-    if (authErr || !user) throw new Error("Unauthorized");
+      const {
+        data: { user },
+        error: authErr,
+      } = await authClient.auth.getUser(token);
 
-    const { data: roleData } = await adminClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      if (authErr || !user) throw new Error("Unauthorized");
 
-    if (!roleData) throw new Error("Not admin");
+      const { data: roleData } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!roleData) throw new Error("Not admin");
+    }
 
     console.log("Admin verified, starting sports reload via proxy...");
 

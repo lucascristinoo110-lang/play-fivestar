@@ -5,7 +5,6 @@ import { getTeamBadge } from "@/lib/team-badges";
 import { generate1x2 } from "@/lib/sports-odds";
 import { supabase } from "@/integrations/supabase/client";
 
-// Fallback matches shown when DB is empty (before admin reloads)
 function getFallbackMatches(): SportsMatch[] {
   const now = new Date();
   const base = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
@@ -19,8 +18,7 @@ function getFallbackMatches(): SportsMatch[] {
   ];
   return pairs.map(([home, away, league, d], i) => ({
     id: `fallback-${i}`,
-    league,
-    home, away,
+    league, home, away,
     homeBadge: getTeamBadge(home),
     awayBadge: getTeamBadge(away),
     kickoff: new Date(base + d * 86400000 + 72000000).toISOString(),
@@ -58,12 +56,25 @@ export function SportsHighlights() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
+      // First try featured_home matches
+      let { data } = await supabase
         .from("sports_matches")
         .select("*")
         .eq("status", "upcoming")
+        .eq("featured_home", true)
         .order("kickoff", { ascending: true })
         .limit(16);
+
+      // Fallback to any upcoming if none featured
+      if (!data || data.length === 0) {
+        const res = await supabase
+          .from("sports_matches")
+          .select("*")
+          .eq("status", "upcoming")
+          .order("kickoff", { ascending: true })
+          .limit(16);
+        data = res.data;
+      }
 
       if (data && data.length > 0) {
         setMatches(data.map((e: any) => ({
@@ -74,7 +85,9 @@ export function SportsHighlights() {
           homeBadge: e.home_badge || getTeamBadge(e.home_team),
           awayBadge: e.away_badge || getTeamBadge(e.away_team),
           kickoff: e.kickoff,
-          odds: generate1x2(e.home_team, e.away_team),
+          odds: e.custom_odds_home != null
+            ? { home: Number(e.custom_odds_home), draw: Number(e.custom_odds_draw), away: Number(e.custom_odds_away) }
+            : generate1x2(e.home_team, e.away_team),
         })));
       }
     }
@@ -113,7 +126,6 @@ export function SportsHighlights() {
 
       <button onClick={() => navigate("/football")} className="w-full text-left rounded-xl border border-border/40 bg-card card-shadow p-4 hover:bg-surface-hover transition-colors">
         <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{m.league}</p>
-
         <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <TeamBadge src={m.homeBadge} name={m.home} />
@@ -153,11 +165,7 @@ export function SportsHighlights() {
 
       <div className="flex justify-center gap-1.5">
         {matches.slice(0, 10).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setActiveIndex(i)}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeIndex ? "bg-primary w-4" : "bg-foreground/20"}`}
-          />
+          <button key={i} onClick={() => setActiveIndex(i)} className={`w-1.5 h-1.5 rounded-full transition-all ${i === activeIndex ? "bg-primary w-4" : "bg-foreground/20"}`} />
         ))}
       </div>
     </section>
