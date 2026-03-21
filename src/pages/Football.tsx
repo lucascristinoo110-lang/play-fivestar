@@ -75,6 +75,10 @@ function FootballContent() {
         featuredSports: e.featured_sports || false,
       }));
       mapped.sort((a, b) => {
+        // Featured sports first
+        const fa = (a as any).featuredSports ? 1 : 0;
+        const fb = (b as any).featuredSports ? 1 : 0;
+        if (fb !== fa) return fb - fa;
         if (a.status === "upcoming" && b.status === "finished") return -1;
         if (a.status === "finished" && b.status === "upcoming") return 1;
         if (a.status === "upcoming") return new Date(a.kickoff).getTime() - new Date(b.kickoff).getTime();
