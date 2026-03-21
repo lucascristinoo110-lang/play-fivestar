@@ -69,7 +69,10 @@ function FootballContent() {
         status: e.status || "upcoming",
         venue: e.venue || "",
         city: e.city || "",
-        odds: generate1x2(e.home_team, e.away_team),
+        odds: e.custom_odds_home != null
+          ? { home: Number(e.custom_odds_home), draw: Number(e.custom_odds_draw), away: Number(e.custom_odds_away) }
+          : generate1x2(e.home_team, e.away_team),
+        featuredSports: e.featured_sports || false,
       }));
       mapped.sort((a, b) => {
         if (a.status === "upcoming" && b.status === "finished") return -1;
