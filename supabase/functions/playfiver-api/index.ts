@@ -283,7 +283,8 @@ serve(async (req) => {
     });
 
     if (!launchResult.ok) {
-      const gameDeactivated = launchResult.ipDenied
+      const shouldDeactivate = launchResult.ipDenied || isMaintenanceMessage(launchResult.providerMessage);
+      const gameDeactivated = shouldDeactivate
         ? await deactivateBlockedGame(supabase, game_code, normalizedProvider)
         : false;
 
