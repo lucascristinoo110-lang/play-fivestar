@@ -614,7 +614,12 @@ export type Database = {
           away_team: string
           city: string | null
           created_at: string | null
+          custom_odds_away: number | null
+          custom_odds_draw: number | null
+          custom_odds_home: number | null
           external_id: string | null
+          featured_home: boolean
+          featured_sports: boolean
           home_badge: string | null
           home_score: number | null
           home_team: string
@@ -632,7 +637,12 @@ export type Database = {
           away_team: string
           city?: string | null
           created_at?: string | null
+          custom_odds_away?: number | null
+          custom_odds_draw?: number | null
+          custom_odds_home?: number | null
           external_id?: string | null
+          featured_home?: boolean
+          featured_sports?: boolean
           home_badge?: string | null
           home_score?: number | null
           home_team: string
@@ -650,7 +660,12 @@ export type Database = {
           away_team?: string
           city?: string | null
           created_at?: string | null
+          custom_odds_away?: number | null
+          custom_odds_draw?: number | null
+          custom_odds_home?: number | null
           external_id?: string | null
+          featured_home?: boolean
+          featured_sports?: boolean
           home_badge?: string | null
           home_score?: number | null
           home_team?: string
