@@ -84,12 +84,17 @@ function isIpDeniedMessage(message: string) {
   return lower.includes("ip não permitido") || lower.includes("ip nao permitido");
 }
 
+function isMaintenanceMessage(message: string) {
+  const lower = message.toLowerCase();
+  return lower.includes("manutenção") || lower.includes("manutencao") || lower.includes("maintenance");
+}
+
 function normalizeLaunchError(message: string, gameDeactivated = false) {
   const lower = message.toLowerCase();
-  if (isIpDeniedMessage(message)) {
+  if (isIpDeniedMessage(message) || isMaintenanceMessage(message)) {
     return gameDeactivated
-      ? "Este jogo foi bloqueado pelo provedor e removido temporariamente do catálogo. Tente outro jogo."
-      : "IP do backend não permitido na Playfiver. Libere o IP do servidor no painel da Playfiver e tente novamente.";
+      ? "Este jogo está temporariamente indisponível e foi removido do catálogo. Tente outro jogo."
+      : "Este jogo está em manutenção no provedor. Tente novamente mais tarde.";
   }
   if (lower.includes("não autorizado") || lower.includes("nao autorizado") || lower.includes("unauthorized") || lower.includes("token") || lower.includes("secret")) return "Credenciais da Playfiver inválidas. Revise Agent Token e Secret Key no admin.";
   return message;
@@ -278,7 +283,8 @@ serve(async (req) => {
     });
 
     if (!launchResult.ok) {
-      const gameDeactivated = launchResult.ipDenied
+      const shouldDeactivate = launchResult.ipDenied || isMaintenanceMessage(launchResult.providerMessage);
+      const gameDeactivated = shouldDeactivate
         ? await deactivateBlockedGame(supabase, game_code, normalizedProvider)
         : false;
 
