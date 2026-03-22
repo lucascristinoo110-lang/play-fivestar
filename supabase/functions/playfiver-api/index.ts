@@ -248,16 +248,10 @@ serve(async (req) => {
     });
 
     if (!launchResult.ok) {
-      const shouldDeactivate = launchResult.ipDenied || isMaintenanceMessage(launchResult.providerMessage);
-      const gameDeactivated = shouldDeactivate
-        ? await deactivateBlockedGame(supabase, game_code, normalizedProvider)
-        : false;
-
       return new Response(JSON.stringify({
-        error: normalizeLaunchError(launchResult.providerMessage, gameDeactivated),
+        error: normalizeLaunchError(launchResult.providerMessage),
         provider_message: launchResult.providerMessage,
         details: launchResult.parsed,
-        game_deactivated: gameDeactivated,
       }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
