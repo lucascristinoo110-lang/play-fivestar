@@ -79,23 +79,8 @@ async function fetchPlayfiverGames() {
   return { games, raw: parsed, rawTotal: gamesRaw.length };
 }
 
-function isIpDeniedMessage(message: string) {
+function normalizeLaunchError(message: string) {
   const lower = message.toLowerCase();
-  return lower.includes("ip não permitido") || lower.includes("ip nao permitido");
-}
-
-function isMaintenanceMessage(message: string) {
-  const lower = message.toLowerCase();
-  return lower.includes("manutenção") || lower.includes("manutencao") || lower.includes("maintenance");
-}
-
-function normalizeLaunchError(message: string, gameDeactivated = false) {
-  const lower = message.toLowerCase();
-  if (isIpDeniedMessage(message) || isMaintenanceMessage(message)) {
-    return gameDeactivated
-      ? "Este jogo está temporariamente indisponível e foi removido do catálogo. Tente outro jogo."
-      : "Este jogo está em manutenção no provedor. Tente novamente mais tarde.";
-  }
   if (lower.includes("não autorizado") || lower.includes("nao autorizado") || lower.includes("unauthorized") || lower.includes("token") || lower.includes("secret")) return "Credenciais da Playfiver inválidas. Revise Agent Token e Secret Key no admin.";
   return message;
 }
