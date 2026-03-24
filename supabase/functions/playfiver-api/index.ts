@@ -158,7 +158,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const body = await req.json().catch(() => ({}));
-    const { action, user_id, game_code, provider } = body;
+    const { action, user_id, game_code, provider, category } = body;
 
     if (!SUPPORTED_ACTIONS.includes(action)) {
       return new Response(JSON.stringify({ error: `Ação inválida. Use: ${SUPPORTED_ACTIONS.join(", ")}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
