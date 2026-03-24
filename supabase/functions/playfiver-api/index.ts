@@ -122,7 +122,7 @@ async function launchGameWithRetry({
         user_code: userCode,
         game_code: gameCode,
         provider,
-        game_original: false,
+        game_original: isLive,
         user_balance: userBalance,
         lang: "pt",
         callback_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/playfiver-webhook`,
