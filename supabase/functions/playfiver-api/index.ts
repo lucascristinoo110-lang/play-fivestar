@@ -102,6 +102,7 @@ async function launchGameWithRetry({
   gameCode,
   provider,
   userBalance,
+  isLive,
 }: {
   token: string;
   secretKey: string;
@@ -109,6 +110,7 @@ async function launchGameWithRetry({
   gameCode: string;
   provider: string;
   userBalance: number;
+  isLive: boolean;
 }) {
   let lastResult: { parsed: any; providerMessage: string; ipDenied: boolean } | null = null;
 
