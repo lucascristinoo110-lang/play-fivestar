@@ -231,7 +231,7 @@ export function GameGrid({ searchQuery, forcedFilter, onSearch }: { searchQuery:
       const isIgamewin = game.source === "igamewin";
       const functionName = isIgamewin ? "igamewin-api" : "playfiver-api";
       const response = await supabase.functions.invoke(functionName, {
-        body: { action: "launch_game", user_id: user.id, game_code: game.game_code, provider: game.provider },
+        body: { action: "launch_game", user_id: user.id, game_code: game.game_code, provider: game.provider, category: game.category },
       });
 
       const data = response.data;
