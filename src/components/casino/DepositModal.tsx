@@ -210,12 +210,17 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-foreground">Depositar via PIX</h3>
-                    <p className="text-[10px] text-primary font-medium">Crédito instantâneo • 24h</p>
+                    <p className="text-[10px] text-primary font-medium">Santiago.bet é regulamentada Portaria N° 178.909</p>
                   </div>
                 </div>
-                <button onClick={onClose} className="p-2 rounded-xl hover:bg-secondary text-muted-foreground">
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button onClick={onClose} className="p-2 rounded-xl hover:bg-secondary text-muted-foreground">
+                    <X className="h-4 w-4" />
+                  </button>
+                  <span className="shrink-0 px-2.5 py-1 rounded-lg bg-primary/15 border border-primary/30 text-primary text-[10px] font-bold whitespace-nowrap">
+                    Mín R$ {minDeposit.toFixed(2)}
+                  </span>
+                </div>
               </div>
             </div>
 
