@@ -56,12 +56,15 @@ export function SportsHighlights() {
 
   useEffect(() => {
     async function load() {
+      const upcomingCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
       // First try featured_home matches
       let { data } = await supabase
         .from("sports_matches")
         .select("*")
         .eq("status", "upcoming")
         .eq("featured_home", true)
+        .gte("kickoff", upcomingCutoff)
         .order("kickoff", { ascending: true })
         .limit(16);
 
@@ -71,6 +74,7 @@ export function SportsHighlights() {
           .from("sports_matches")
           .select("*")
           .eq("status", "upcoming")
+          .gte("kickoff", upcomingCutoff)
           .order("kickoff", { ascending: true })
           .limit(16);
         data = res.data;
