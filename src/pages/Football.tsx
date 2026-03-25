@@ -34,6 +34,7 @@ function FootballContent() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const staleUpcomingCutoff = Date.now() - 2 * 60 * 60 * 1000;
   const [activeLeague, setActiveLeague] = useState("brasileirao");
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,8 +94,14 @@ function FootballContent() {
 
   useEffect(() => { loadMatches(activeLeague); }, [activeLeague, loadMatches]);
 
-  const upcomingMatches = matches.filter(m => m.status === "upcoming");
-  const finishedMatches = matches.filter(m => m.status === "finished");
+  const upcomingMatches = matches.filter(
+    (m) => m.status === "upcoming" && new Date(m.kickoff).getTime() >= staleUpcomingCutoff,
+  );
+  const finishedMatches = matches.filter(
+    (m) =>
+      m.status === "finished" ||
+      ((m.status === "upcoming" || m.status === "live") && new Date(m.kickoff).getTime() < staleUpcomingCutoff),
+  );
   const displayedMatches = viewTab === "proximos" ? upcomingMatches : finishedMatches;
 
   return (

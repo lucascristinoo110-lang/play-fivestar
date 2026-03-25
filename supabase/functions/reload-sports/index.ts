@@ -16,6 +16,11 @@ const TRACKED_LEAGUES: Record<string, string[]> = {
   Europe: ["UEFA Champions League", "UEFA Europa League"],
 };
 
+const LOOKBACK_DAYS = 1;
+const LOOKAHEAD_DAYS = 7;
+const STALE_MATCH_GRACE_HOURS = 6;
+const FINISHED_RETENTION_DAYS = 14;
+
 function isTrackedLeague(category: string, tournament: string) {
   return Object.entries(TRACKED_LEAGUES).some(([allowedCategory, allowedTournaments]) => {
     const categoryMatches =
@@ -45,21 +50,61 @@ function parseProxyJson(text: string) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
-async function fetchSofascoreDate(date: string) {
-  const proxyUrl = `https://r.jina.ai/http://https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`;
-  const res = await fetch(proxyUrl, {
-    headers: {
-      Accept: "text/plain, application/json",
-      "X-Return-Format": "text",
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Proxy fetch failed for ${date} [${res.status}]`);
+function parseJsonResponse(text: string) {
+  const trimmed = text.trim();
+  if (trimmed.startsWith("{")) {
+    return JSON.parse(trimmed);
   }
 
-  const text = await res.text();
   return parseProxyJson(text);
+}
+
+async function sleep(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchSofascoreDate(date: string) {
+  const sources = [
+    {
+      label: "direct",
+      url: `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (compatible; LovableSportsSync/1.0)",
+      },
+    },
+    {
+      label: "proxy",
+      url: `https://r.jina.ai/http://https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
+      headers: {
+        Accept: "text/plain, application/json",
+        "X-Return-Format": "text",
+      },
+    },
+  ];
+
+  const failures: string[] = [];
+
+  for (const source of sources) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const res = await fetch(source.url, { headers: source.headers });
+
+      if (res.ok) {
+        const text = await res.text();
+        return parseJsonResponse(text);
+      }
+
+      failures.push(`${source.label} [${res.status}]`);
+
+      if (res.status !== 429 || attempt === 2) {
+        break;
+      }
+
+      await sleep(250 * attempt);
+    }
+  }
+
+  throw new Error(`Fetch failed for ${date}: ${failures.join(", ")}`);
 }
 
 Deno.serve(async (req) => {
@@ -108,11 +153,11 @@ Deno.serve(async (req) => {
       if (!roleData) throw new Error("Not admin");
     }
 
-    console.log("Admin verified, starting sports reload via proxy...");
+    console.log("Admin verified, starting sports reload...");
 
     const baseDate = new Date();
     const dates: string[] = [];
-    for (let offset = -2; offset <= 7; offset++) {
+    for (let offset = -LOOKBACK_DAYS; offset <= LOOKAHEAD_DAYS; offset++) {
       const d = new Date(baseDate);
       d.setDate(d.getDate() + offset);
       dates.push(formatDate(d));
@@ -192,12 +237,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    const cutoff = new Date(Date.now() - 14 * 86400000).toISOString();
-    await adminClient
+    const staleMatchCutoff = new Date(Date.now() - STALE_MATCH_GRACE_HOURS * 3600000).toISOString();
+    const oldFinishedCutoff = new Date(Date.now() - FINISHED_RETENTION_DAYS * 86400000).toISOString();
+
+    const { error: staleCleanupError } = await adminClient
+      .from("sports_matches")
+      .delete()
+      .in("status", ["upcoming", "live"])
+      .lt("kickoff", staleMatchCutoff);
+
+    if (staleCleanupError) {
+      errors += 1;
+      console.log(`Stale match cleanup failed: ${staleCleanupError.message}`);
+    }
+
+    const { error: finishedCleanupError } = await adminClient
       .from("sports_matches")
       .delete()
       .eq("status", "finished")
-      .lt("kickoff", cutoff);
+      .lt("kickoff", oldFinishedCutoff);
+
+    if (finishedCleanupError) {
+      errors += 1;
+      console.log(`Finished match cleanup failed: ${finishedCleanupError.message}`);
+    }
 
     console.log(`Done! Processed: ${processed}, Errors: ${errors}`);
 
