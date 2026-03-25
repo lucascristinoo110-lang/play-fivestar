@@ -221,6 +221,7 @@ export function DepositModal({ open, onClose }: { open: boolean; onClose: () => 
                     Mín R$ {minDeposit.toFixed(2)}
                   </span>
                 </div>
+              </div>
             </div>
 
             <div className="px-4 sm:px-5 py-3 sm:py-4">
