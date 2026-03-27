@@ -11,8 +11,16 @@ export default function AdminKycPage() {
   useEffect(() => { fetchDocs(); }, []);
 
   async function fetchDocs() {
-    const { data } = await supabase.from("kyc_documents").select("*, profiles!inner(display_name, email)").order("created_at", { ascending: false });
-    setDocs(data || []);
+    const { data } = await supabase.from("kyc_documents").select("*").order("created_at", { ascending: false });
+    const docs = data || [];
+    // Fetch profiles separately since there's no FK
+    if (docs.length > 0) {
+      const userIds = [...new Set(docs.map(d => d.user_id))];
+      const { data: profiles } = await supabase.from("profiles").select("user_id, display_name, email").in("user_id", userIds);
+      const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
+      docs.forEach((d: any) => { d.profiles = profileMap[d.user_id] || null; });
+    }
+    setDocs(docs);
     // Generate signed URLs for each document
     if (data && data.length > 0) {
       const urls: Record<string, string> = {};
