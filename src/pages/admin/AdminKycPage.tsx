@@ -6,12 +6,28 @@ import { CheckCircle, XCircle, ExternalLink } from "lucide-react";
 
 export default function AdminKycPage() {
   const [docs, setDocs] = useState<any[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
 
   useEffect(() => { fetchDocs(); }, []);
 
   async function fetchDocs() {
     const { data } = await supabase.from("kyc_documents").select("*, profiles!inner(display_name, email)").order("created_at", { ascending: false });
     setDocs(data || []);
+    // Generate signed URLs for each document
+    if (data && data.length > 0) {
+      const urls: Record<string, string> = {};
+      for (const doc of data) {
+        const path = doc.file_url;
+        // If it's already a full URL, use as-is; otherwise create signed URL
+        if (path.startsWith("http")) {
+          urls[doc.id] = path;
+        } else {
+          const { data: signedData } = await supabase.storage.from("kyc-documents").createSignedUrl(path, 3600);
+          if (signedData?.signedUrl) urls[doc.id] = signedData.signedUrl;
+        }
+      }
+      setSignedUrls(urls);
+    }
   }
 
   async function updateDoc(id: string, status: string, userId?: string) {
