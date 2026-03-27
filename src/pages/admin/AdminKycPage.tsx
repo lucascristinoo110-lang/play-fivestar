@@ -65,8 +65,8 @@ export default function AdminKycPage() {
                 </td>
                 <td className="p-3 text-muted-foreground">{new Date(d.created_at).toLocaleString("pt-BR")}</td>
                 <td className="p-3 flex gap-1">
-                  <a href={d.file_url} target="_blank" rel="noopener noreferrer">
-                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0"><ExternalLink className="h-3 w-3" /></Button>
+                  <a href={signedUrls[d.id] || "#"} target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" disabled={!signedUrls[d.id]}><ExternalLink className="h-3 w-3" /></Button>
                   </a>
                   {d.status === "pending" && (
                     <>
