@@ -74,7 +74,7 @@ export default function Profile() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     setUploading(true);
-    const ext = file.name.split(".").pop();
+    const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
     const path = `${user.id}/${docType}-${Date.now()}.${ext}`;
     const { error: uploadError } = await supabase.storage.from("kyc-documents").upload(path, file);
     if (uploadError) {
@@ -344,7 +344,7 @@ export default function Profile() {
                   </button>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Input type="file" accept="image/*,.pdf" onChange={handleUploadDoc} className="bg-secondary border-border/40 text-sm" />
+                  <Input type="file" onChange={handleUploadDoc} className="bg-secondary border-border/40 text-sm" />
                   {uploading && <span className="text-xs text-accent animate-pulse">Enviando...</span>}
                 </div>
               </div>
