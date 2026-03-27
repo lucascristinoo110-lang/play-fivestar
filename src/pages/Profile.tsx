@@ -82,11 +82,12 @@ export default function Profile() {
       setUploading(false);
       return;
     }
-    const { data: { publicUrl } } = supabase.storage.from("kyc-documents").getPublicUrl(path);
+    // Store the storage path (not a public URL since bucket is private)
+    const storagePath = path;
     const { error } = await supabase.from("kyc_documents").insert({
       user_id: user.id,
       document_type: docType === "rg" ? "RG" : "CNH",
-      file_url: publicUrl,
+      file_url: storagePath,
     });
     setUploading(false);
     if (error) {
