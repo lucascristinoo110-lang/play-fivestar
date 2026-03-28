@@ -41,7 +41,7 @@ export function HeroBanner() {
   if (!loaded) {
     return (
       <div className="relative rounded-xl overflow-hidden card-shadow">
-        <div className="w-full aspect-[5/2] bg-card shimmer" />
+        <div className="w-full aspect-[3/1] bg-card shimmer" />
       </div>
     );
   }
@@ -58,12 +58,12 @@ export function HeroBanner() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.4 }}
-        className="relative w-full aspect-[5/2]"
+        className="relative w-full"
       >
         <img
           src={b.image_url}
           alt={b.title}
-          className="w-full h-full object-cover"
+          className="w-full h-auto object-contain"
           loading="eager"
           decoding="async"
         />
