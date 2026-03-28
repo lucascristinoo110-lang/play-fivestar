@@ -33,18 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const profileChannelRef = useRef<any | null>(null);
 
   useEffect(() => {
+    let mounted = true;
+
+    async function initUser(userId: string) {
+      await Promise.all([fetchProfile(userId), checkAdmin(userId)]);
+      if (mounted) setLoading(false);
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        setTimeout(() => {
-          fetchProfile(session.user.id);
-          checkAdmin(session.user.id);
-        }, 0);
+        initUser(session.user.id);
       } else {
         setProfile(null);
         setIsAdmin(false);
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     });
 
@@ -52,14 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
-        checkAdmin(session.user.id);
+        initUser(session.user.id);
       } else {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -101,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function fetchProfile(userId: string) {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
     setProfile(data);
-    setLoading(false);
   }
 
   async function refreshProfile() {
