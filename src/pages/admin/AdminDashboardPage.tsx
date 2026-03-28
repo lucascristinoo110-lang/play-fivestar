@@ -169,7 +169,8 @@ export default function AdminDashboardPage() {
 
   const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   const ggr = stats.totalDeposits - stats.totalWithdrawals;
-  const ggrToday = stats.todayDeposits - stats.todayWithdrawals;
+
+  const filterLabel = dateFilter === "today" ? "Hoje" : dateFilter === "7d" ? "7 dias" : dateFilter === "30d" ? "30 dias" : dateFilter === "custom" ? "Período" : "Total";
 
   const cardBg = light
     ? "bg-white border-slate-200/60 shadow-sm shadow-slate-200/50"
@@ -195,14 +196,11 @@ export default function AdminDashboardPage() {
   };
 
   const cards = [
-    { label: "Total Usuários", value: String(stats.totalUsers), icon: Users, gradient: "from-blue-500 to-blue-600", bg: light ? "bg-blue-50" : "bg-blue-500/10" },
-    { label: "Cadastros Hoje", value: String(stats.todaySignups), icon: UserPlus, gradient: "from-cyan-500 to-cyan-600", bg: light ? "bg-cyan-50" : "bg-cyan-500/10" },
-    { label: "Depósitos Total", value: fmt(stats.totalDeposits), icon: ArrowDownToLine, gradient: "from-emerald-500 to-emerald-600", bg: light ? "bg-emerald-50" : "bg-emerald-500/10" },
-    { label: "Depósitos Hoje", value: fmt(stats.todayDeposits), icon: Zap, gradient: "from-teal-500 to-teal-600", bg: light ? "bg-teal-50" : "bg-teal-500/10" },
-    { label: "Saques Total", value: fmt(stats.totalWithdrawals), icon: ArrowUpFromLine, gradient: "from-orange-500 to-orange-600", bg: light ? "bg-orange-50" : "bg-orange-500/10" },
-    { label: "Saques Hoje", value: fmt(stats.todayWithdrawals), icon: ArrowUpFromLine, gradient: "from-amber-500 to-amber-600", bg: light ? "bg-amber-50" : "bg-amber-500/10" },
-    { label: "GGR Total", value: fmt(ggr), icon: DollarSign, gradient: ggr >= 0 ? "from-purple-500 to-purple-600" : "from-red-500 to-red-600", bg: ggr >= 0 ? (light ? "bg-purple-50" : "bg-purple-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
-    { label: "GGR Hoje", value: fmt(ggrToday), icon: TrendingUp, gradient: ggrToday >= 0 ? "from-indigo-500 to-indigo-600" : "from-red-500 to-red-600", bg: ggrToday >= 0 ? (light ? "bg-indigo-50" : "bg-indigo-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
+    { label: "Usuários", value: String(stats.totalUsers), icon: Users, gradient: "from-blue-500 to-blue-600", bg: light ? "bg-blue-50" : "bg-blue-500/10" },
+    { label: "Cadastros", value: String(stats.todaySignups), icon: UserPlus, gradient: "from-cyan-500 to-cyan-600", bg: light ? "bg-cyan-50" : "bg-cyan-500/10" },
+    { label: "Depósitos", value: fmt(stats.totalDeposits), icon: ArrowDownToLine, gradient: "from-emerald-500 to-emerald-600", bg: light ? "bg-emerald-50" : "bg-emerald-500/10" },
+    { label: "Saques", value: fmt(stats.totalWithdrawals), icon: ArrowUpFromLine, gradient: "from-orange-500 to-orange-600", bg: light ? "bg-orange-50" : "bg-orange-500/10" },
+    { label: "GGR", value: fmt(ggr), icon: DollarSign, gradient: ggr >= 0 ? "from-purple-500 to-purple-600" : "from-red-500 to-red-600", bg: ggr >= 0 ? (light ? "bg-purple-50" : "bg-purple-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
     { label: "Saques Pendentes", value: String(stats.pendingWithdrawals), icon: Clock, gradient: "from-rose-500 to-rose-600", bg: light ? "bg-rose-50" : "bg-rose-500/10" },
     { label: "KYC Pendentes", value: String(stats.pendingKyc), icon: Activity, gradient: "from-yellow-500 to-yellow-600", bg: light ? "bg-yellow-50" : "bg-yellow-500/10" },
   ];
