@@ -340,7 +340,7 @@ export default function AdminDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className={cn("col-span-1 lg:col-span-2 rounded-2xl border p-5", sectionBg)}>
-          <h3 className={cn("text-sm font-bold mb-4", light ? "text-slate-700" : "text-slate-200")}>Depósitos vs Saques — Últimos 7 dias</h3>
+          <h3 className={cn("text-sm font-bold mb-4", light ? "text-slate-700" : "text-slate-200")}>Depósitos vs Saques — {filterLabel}</h3>
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={dailyData}>
               <defs>
