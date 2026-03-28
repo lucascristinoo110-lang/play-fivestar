@@ -75,28 +75,34 @@ export default function AdminDashboardPage() {
     }
   }, [dateFilter, customFrom, customTo]);
 
+  const [dailyData, setDailyData] = useState<any[]>([]);
+
+  const loadAll = useCallback(async () => {
+    const { from, to } = getFilterRange();
+
+    // Helper to apply date range to a query builder
+    const applyRange = (q: any) => {
+      if (from) q = q.gte("created_at", from);
+      if (to) q = q.lte("created_at", to);
+      return q;
+    };
+
     const [
       { count: users },
       { data: allDeps },
       { data: allWds },
       { data: pendWds },
       { count: pendKyc },
-      { data: todayDeps },
-      { data: todayWds },
-      { count: todayUsers },
       { data: latestUsers },
       { data: latestTx },
     ] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed"),
-      supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed"),
+      applyRange(supabase.from("profiles").select("*", { count: "exact", head: true })),
+      applyRange(supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed")),
+      applyRange(supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed")),
       supabase.from("transactions").select("id").eq("type", "withdraw").eq("status", "pending"),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed").gte("created_at", todayISO),
-      supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed").gte("created_at", todayISO),
-      supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", todayISO),
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8),
-      supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15),
+      applyRange(supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8)),
+      applyRange(supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15)),
     ]);
 
     const sumAmount = (data: any[] | null) => data?.reduce((s, t) => s + Number(t.amount), 0) || 0;
@@ -107,20 +113,32 @@ export default function AdminDashboardPage() {
       totalWithdrawals: sumAmount(allWds),
       pendingWithdrawals: pendWds?.length || 0,
       pendingKyc: pendKyc || 0,
-      todayDeposits: sumAmount(todayDeps),
-      todayWithdrawals: sumAmount(todayWds),
-      todaySignups: todayUsers || 0,
+      todayDeposits: sumAmount(allDeps),
+      todayWithdrawals: sumAmount(allWds),
+      todaySignups: users || 0,
     });
     setRecentUsers((latestUsers as RecentUser[]) || []);
     setRecentTx((latestTx as RecentTx[]) || []);
 
+    // Chart: determine how many days to show based on filter
+    const chartDays = dateFilter === "30d" ? 30 : dateFilter === "7d" ? 7 : dateFilter === "today" ? 1 : dateFilter === "custom" && customFrom && customTo ? Math.max(1, Math.ceil((customTo.getTime() - customFrom.getTime()) / 86400000) + 1) : 7;
+    const chartFrom = from || new Date(Date.now() - chartDays * 86400000).toISOString();
+
     const days: any[] = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = Math.min(chartDays, 60) - 1; i >= 0; i--) {
       const d = new Date();
-      d.setDate(d.getDate() - i);
+      if (from) {
+        d.setTime(new Date(chartFrom).getTime() + (Math.min(chartDays, 60) - 1 - i) * 86400000);
+      } else {
+        d.setDate(d.getDate() - i);
+      }
       days.push({ date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), depositos: 0, saques: 0 });
     }
-    const { data: chartTx } = await supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").in("type", ["deposit", "withdraw"]).gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+
+    let chartQuery = supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").in("type", ["deposit", "withdraw"]).gte("created_at", chartFrom);
+    if (to) chartQuery = chartQuery.lte("created_at", to);
+    const { data: chartTx } = await chartQuery;
+
     (chartTx || []).forEach(tx => {
       const txDate = new Date(tx.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
       const day = days.find(d => d.date === txDate);
@@ -131,7 +149,7 @@ export default function AdminDashboardPage() {
     });
     setDailyData(days);
     setLastUpdate(new Date());
-  }, []);
+  }, [getFilterRange, dateFilter, customFrom, customTo]);
 
   useEffect(() => {
     loadAll();
