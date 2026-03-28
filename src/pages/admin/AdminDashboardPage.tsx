@@ -49,14 +49,31 @@ export default function AdminDashboardPage() {
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [recentTx, setRecentTx] = useState<RecentTx[]>([]);
-  const [dailyData, setDailyData] = useState<any[]>([]);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("today");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
-  const loadAll = useCallback(async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+  const getFilterRange = useCallback((): { from: string | null; to: string | null } => {
+    const now = new Date();
+    switch (dateFilter) {
+      case "today": {
+        const d = new Date(); d.setHours(0, 0, 0, 0);
+        return { from: d.toISOString(), to: null };
+      }
+      case "7d": return { from: new Date(Date.now() - 7 * 86400000).toISOString(), to: null };
+      case "30d": return { from: new Date(Date.now() - 30 * 86400000).toISOString(), to: null };
+      case "custom": {
+        const f = customFrom ? new Date(customFrom) : null;
+        if (f) f.setHours(0, 0, 0, 0);
+        const t = customTo ? new Date(customTo) : null;
+        if (t) t.setHours(23, 59, 59, 999);
+        return { from: f?.toISOString() || null, to: t?.toISOString() || null };
+      }
+      case "all": return { from: null, to: null };
+    }
+  }, [dateFilter, customFrom, customTo]);
 
     const [
       { count: users },
