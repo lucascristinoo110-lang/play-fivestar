@@ -241,6 +241,83 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
+      {/* Date Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([
+          { key: "today" as DateFilter, label: "Hoje" },
+          { key: "7d" as DateFilter, label: "7 dias" },
+          { key: "30d" as DateFilter, label: "30 dias" },
+          { key: "all" as DateFilter, label: "Total" },
+        ]).map(f => (
+          <button
+            key={f.key}
+            onClick={() => setDateFilter(f.key)}
+            className={cn(
+              "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all border",
+              dateFilter === f.key
+                ? light
+                  ? "bg-blue-500 text-white border-blue-500 shadow-sm"
+                  : "bg-blue-500 text-white border-blue-500/50"
+                : light
+                  ? "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                  : "bg-white/[0.04] border-white/[0.08] text-slate-400 hover:bg-white/[0.08]"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+
+        {/* Custom date picker */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              onClick={() => setDateFilter("custom")}
+              className={cn(
+                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all border",
+                dateFilter === "custom"
+                  ? light
+                    ? "bg-blue-500 text-white border-blue-500 shadow-sm"
+                    : "bg-blue-500 text-white border-blue-500/50"
+                  : light
+                    ? "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                    : "bg-white/[0.04] border-white/[0.08] text-slate-400 hover:bg-white/[0.08]"
+              )}
+            >
+              <CalendarIcon className="h-3 w-3" />
+              {dateFilter === "custom" && customFrom && customTo
+                ? `${format(customFrom, "dd/MM")} - ${format(customTo, "dd/MM")}`
+                : "Personalizado"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span>De:</span>
+                <span className="font-mono">{customFrom ? format(customFrom, "dd/MM/yyyy") : "--"}</span>
+                <span className="mx-1">→</span>
+                <span>Até:</span>
+                <span className="font-mono">{customTo ? format(customTo, "dd/MM/yyyy") : "--"}</span>
+              </div>
+              <Calendar
+                mode="range"
+                selected={{ from: customFrom, to: customTo }}
+                onSelect={(range: any) => {
+                  setCustomFrom(range?.from);
+                  setCustomTo(range?.to);
+                  if (range?.from) setDateFilter("custom");
+                }}
+                numberOfMonths={2}
+                className="p-3 pointer-events-auto"
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <span className={cn("ml-auto text-[11px] font-medium", light ? "text-slate-400" : "text-slate-500")}>
+          Filtro: {filterLabel}
+        </span>
+      </div>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {cards.map((c, i) => (
