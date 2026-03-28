@@ -2,9 +2,15 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { useOutletContext } from "react-router-dom";
-import { DollarSign, Users, ArrowDownToLine, ArrowUpFromLine, Activity, TrendingUp, Clock, UserPlus, RefreshCw, Zap } from "lucide-react";
+import { DollarSign, Users, ArrowDownToLine, ArrowUpFromLine, Activity, TrendingUp, Clock, UserPlus, RefreshCw, Zap, CalendarIcon } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+
+type DateFilter = "today" | "7d" | "30d" | "all" | "custom";
 
 type Stats = {
   totalUsers: number;
@@ -43,14 +49,43 @@ export default function AdminDashboardPage() {
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [recentTx, setRecentTx] = useState<RecentTx[]>([]);
-  const [dailyData, setDailyData] = useState<any[]>([]);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("today");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
+  const getFilterRange = useCallback((): { from: string | null; to: string | null } => {
+    const now = new Date();
+    switch (dateFilter) {
+      case "today": {
+        const d = new Date(); d.setHours(0, 0, 0, 0);
+        return { from: d.toISOString(), to: null };
+      }
+      case "7d": return { from: new Date(Date.now() - 7 * 86400000).toISOString(), to: null };
+      case "30d": return { from: new Date(Date.now() - 30 * 86400000).toISOString(), to: null };
+      case "custom": {
+        const f = customFrom ? new Date(customFrom) : null;
+        if (f) f.setHours(0, 0, 0, 0);
+        const t = customTo ? new Date(customTo) : null;
+        if (t) t.setHours(23, 59, 59, 999);
+        return { from: f?.toISOString() || null, to: t?.toISOString() || null };
+      }
+      case "all": return { from: null, to: null };
+    }
+  }, [dateFilter, customFrom, customTo]);
+
+  const [dailyData, setDailyData] = useState<any[]>([]);
+
   const loadAll = useCallback(async () => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
+    const { from, to } = getFilterRange();
+
+    // Helper to apply date range to a query builder
+    const applyRange = (q: any) => {
+      if (from) q = q.gte("created_at", from);
+      if (to) q = q.lte("created_at", to);
+      return q;
+    };
 
     const [
       { count: users },
@@ -58,22 +93,16 @@ export default function AdminDashboardPage() {
       { data: allWds },
       { data: pendWds },
       { count: pendKyc },
-      { data: todayDeps },
-      { data: todayWds },
-      { count: todayUsers },
       { data: latestUsers },
       { data: latestTx },
     ] = await Promise.all([
-      supabase.from("profiles").select("*", { count: "exact", head: true }),
-      supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed"),
-      supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed"),
+      applyRange(supabase.from("profiles").select("*", { count: "exact", head: true })),
+      applyRange(supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed")),
+      applyRange(supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed")),
       supabase.from("transactions").select("id").eq("type", "withdraw").eq("status", "pending"),
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
-      supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed").gte("created_at", todayISO),
-      supabase.from("transactions").select("amount").eq("type", "withdraw").eq("status", "completed").gte("created_at", todayISO),
-      supabase.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", todayISO),
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8),
-      supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15),
+      applyRange(supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8)),
+      applyRange(supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15)),
     ]);
 
     const sumAmount = (data: any[] | null) => data?.reduce((s, t) => s + Number(t.amount), 0) || 0;
@@ -84,20 +113,32 @@ export default function AdminDashboardPage() {
       totalWithdrawals: sumAmount(allWds),
       pendingWithdrawals: pendWds?.length || 0,
       pendingKyc: pendKyc || 0,
-      todayDeposits: sumAmount(todayDeps),
-      todayWithdrawals: sumAmount(todayWds),
-      todaySignups: todayUsers || 0,
+      todayDeposits: sumAmount(allDeps),
+      todayWithdrawals: sumAmount(allWds),
+      todaySignups: users || 0,
     });
     setRecentUsers((latestUsers as RecentUser[]) || []);
     setRecentTx((latestTx as RecentTx[]) || []);
 
+    // Chart: determine how many days to show based on filter
+    const chartDays = dateFilter === "30d" ? 30 : dateFilter === "7d" ? 7 : dateFilter === "today" ? 1 : dateFilter === "custom" && customFrom && customTo ? Math.max(1, Math.ceil((customTo.getTime() - customFrom.getTime()) / 86400000) + 1) : 7;
+    const chartFrom = from || new Date(Date.now() - chartDays * 86400000).toISOString();
+
     const days: any[] = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = Math.min(chartDays, 60) - 1; i >= 0; i--) {
       const d = new Date();
-      d.setDate(d.getDate() - i);
+      if (from) {
+        d.setTime(new Date(chartFrom).getTime() + (Math.min(chartDays, 60) - 1 - i) * 86400000);
+      } else {
+        d.setDate(d.getDate() - i);
+      }
       days.push({ date: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), depositos: 0, saques: 0 });
     }
-    const { data: chartTx } = await supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").in("type", ["deposit", "withdraw"]).gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString());
+
+    let chartQuery = supabase.from("transactions").select("amount, type, status, created_at").eq("status", "completed").in("type", ["deposit", "withdraw"]).gte("created_at", chartFrom);
+    if (to) chartQuery = chartQuery.lte("created_at", to);
+    const { data: chartTx } = await chartQuery;
+
     (chartTx || []).forEach(tx => {
       const txDate = new Date(tx.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
       const day = days.find(d => d.date === txDate);
@@ -108,7 +149,7 @@ export default function AdminDashboardPage() {
     });
     setDailyData(days);
     setLastUpdate(new Date());
-  }, []);
+  }, [getFilterRange, dateFilter, customFrom, customTo]);
 
   useEffect(() => {
     loadAll();
@@ -128,7 +169,8 @@ export default function AdminDashboardPage() {
 
   const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
   const ggr = stats.totalDeposits - stats.totalWithdrawals;
-  const ggrToday = stats.todayDeposits - stats.todayWithdrawals;
+
+  const filterLabel = dateFilter === "today" ? "Hoje" : dateFilter === "7d" ? "7 dias" : dateFilter === "30d" ? "30 dias" : dateFilter === "custom" ? "Período" : "Total";
 
   const cardBg = light
     ? "bg-white border-slate-200/60 shadow-sm shadow-slate-200/50"
@@ -154,14 +196,11 @@ export default function AdminDashboardPage() {
   };
 
   const cards = [
-    { label: "Total Usuários", value: String(stats.totalUsers), icon: Users, gradient: "from-blue-500 to-blue-600", bg: light ? "bg-blue-50" : "bg-blue-500/10" },
-    { label: "Cadastros Hoje", value: String(stats.todaySignups), icon: UserPlus, gradient: "from-cyan-500 to-cyan-600", bg: light ? "bg-cyan-50" : "bg-cyan-500/10" },
-    { label: "Depósitos Total", value: fmt(stats.totalDeposits), icon: ArrowDownToLine, gradient: "from-emerald-500 to-emerald-600", bg: light ? "bg-emerald-50" : "bg-emerald-500/10" },
-    { label: "Depósitos Hoje", value: fmt(stats.todayDeposits), icon: Zap, gradient: "from-teal-500 to-teal-600", bg: light ? "bg-teal-50" : "bg-teal-500/10" },
-    { label: "Saques Total", value: fmt(stats.totalWithdrawals), icon: ArrowUpFromLine, gradient: "from-orange-500 to-orange-600", bg: light ? "bg-orange-50" : "bg-orange-500/10" },
-    { label: "Saques Hoje", value: fmt(stats.todayWithdrawals), icon: ArrowUpFromLine, gradient: "from-amber-500 to-amber-600", bg: light ? "bg-amber-50" : "bg-amber-500/10" },
-    { label: "GGR Total", value: fmt(ggr), icon: DollarSign, gradient: ggr >= 0 ? "from-purple-500 to-purple-600" : "from-red-500 to-red-600", bg: ggr >= 0 ? (light ? "bg-purple-50" : "bg-purple-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
-    { label: "GGR Hoje", value: fmt(ggrToday), icon: TrendingUp, gradient: ggrToday >= 0 ? "from-indigo-500 to-indigo-600" : "from-red-500 to-red-600", bg: ggrToday >= 0 ? (light ? "bg-indigo-50" : "bg-indigo-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
+    { label: "Usuários", value: String(stats.totalUsers), icon: Users, gradient: "from-blue-500 to-blue-600", bg: light ? "bg-blue-50" : "bg-blue-500/10" },
+    { label: "Cadastros", value: String(stats.todaySignups), icon: UserPlus, gradient: "from-cyan-500 to-cyan-600", bg: light ? "bg-cyan-50" : "bg-cyan-500/10" },
+    { label: "Depósitos", value: fmt(stats.totalDeposits), icon: ArrowDownToLine, gradient: "from-emerald-500 to-emerald-600", bg: light ? "bg-emerald-50" : "bg-emerald-500/10" },
+    { label: "Saques", value: fmt(stats.totalWithdrawals), icon: ArrowUpFromLine, gradient: "from-orange-500 to-orange-600", bg: light ? "bg-orange-50" : "bg-orange-500/10" },
+    { label: "GGR", value: fmt(ggr), icon: DollarSign, gradient: ggr >= 0 ? "from-purple-500 to-purple-600" : "from-red-500 to-red-600", bg: ggr >= 0 ? (light ? "bg-purple-50" : "bg-purple-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
     { label: "Saques Pendentes", value: String(stats.pendingWithdrawals), icon: Clock, gradient: "from-rose-500 to-rose-600", bg: light ? "bg-rose-50" : "bg-rose-500/10" },
     { label: "KYC Pendentes", value: String(stats.pendingKyc), icon: Activity, gradient: "from-yellow-500 to-yellow-600", bg: light ? "bg-yellow-50" : "bg-yellow-500/10" },
   ];
@@ -202,8 +241,85 @@ export default function AdminDashboardPage() {
         </button>
       </div>
 
+      {/* Date Filter Bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        {([
+          { key: "today" as DateFilter, label: "Hoje" },
+          { key: "7d" as DateFilter, label: "7 dias" },
+          { key: "30d" as DateFilter, label: "30 dias" },
+          { key: "all" as DateFilter, label: "Total" },
+        ]).map(f => (
+          <button
+            key={f.key}
+            onClick={() => setDateFilter(f.key)}
+            className={cn(
+              "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all border",
+              dateFilter === f.key
+                ? light
+                  ? "bg-blue-500 text-white border-blue-500 shadow-sm"
+                  : "bg-blue-500 text-white border-blue-500/50"
+                : light
+                  ? "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                  : "bg-white/[0.04] border-white/[0.08] text-slate-400 hover:bg-white/[0.08]"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+
+        {/* Custom date picker */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              onClick={() => setDateFilter("custom")}
+              className={cn(
+                "flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all border",
+                dateFilter === "custom"
+                  ? light
+                    ? "bg-blue-500 text-white border-blue-500 shadow-sm"
+                    : "bg-blue-500 text-white border-blue-500/50"
+                  : light
+                    ? "bg-white border-slate-200 text-slate-500 hover:bg-slate-50"
+                    : "bg-white/[0.04] border-white/[0.08] text-slate-400 hover:bg-white/[0.08]"
+              )}
+            >
+              <CalendarIcon className="h-3 w-3" />
+              {dateFilter === "custom" && customFrom && customTo
+                ? `${format(customFrom, "dd/MM")} - ${format(customTo, "dd/MM")}`
+                : "Personalizado"}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-3 space-y-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span>De:</span>
+                <span className="font-mono">{customFrom ? format(customFrom, "dd/MM/yyyy") : "--"}</span>
+                <span className="mx-1">→</span>
+                <span>Até:</span>
+                <span className="font-mono">{customTo ? format(customTo, "dd/MM/yyyy") : "--"}</span>
+              </div>
+              <Calendar
+                mode="range"
+                selected={{ from: customFrom, to: customTo }}
+                onSelect={(range: any) => {
+                  setCustomFrom(range?.from);
+                  setCustomTo(range?.to);
+                  if (range?.from) setDateFilter("custom");
+                }}
+                numberOfMonths={2}
+                className="p-3 pointer-events-auto"
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        <span className={cn("ml-auto text-[11px] font-medium", light ? "text-slate-400" : "text-slate-500")}>
+          Filtro: {filterLabel}
+        </span>
+      </div>
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {cards.map((c, i) => (
           <motion.div
             key={c.label}
@@ -224,7 +340,7 @@ export default function AdminDashboardPage() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className={cn("col-span-1 lg:col-span-2 rounded-2xl border p-5", sectionBg)}>
-          <h3 className={cn("text-sm font-bold mb-4", light ? "text-slate-700" : "text-slate-200")}>Depósitos vs Saques — Últimos 7 dias</h3>
+          <h3 className={cn("text-sm font-bold mb-4", light ? "text-slate-700" : "text-slate-200")}>Depósitos vs Saques — {filterLabel}</h3>
           <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={dailyData}>
               <defs>
