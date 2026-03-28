@@ -107,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function fetchProfile(userId: string) {
     const { data } = await supabase.from("profiles").select("*").eq("user_id", userId).single();
     setProfile(data);
-    setLoading(false);
   }
 
   async function refreshProfile() {
