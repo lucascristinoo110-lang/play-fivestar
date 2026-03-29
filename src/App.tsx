@@ -30,6 +30,7 @@ import AdminAffiliatesPage from "./pages/admin/AdminAffiliatesPage";
 import AdminAdsPage from "./pages/admin/AdminAdsPage";
 import AdminEmailPage from "./pages/admin/AdminEmailPage";
 import AdminSportsPage from "./pages/admin/AdminSportsPage";
+import AdminAdministratorsPage from "./pages/admin/AdminAdministratorsPage";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsConditions from "./pages/legal/TermsConditions";
 import PlayerSupport from "./pages/legal/PlayerSupport";
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="sports" element={<AdminSportsPage />} />
               <Route path="appearance" element={<AdminAppearancePage />} />
               <Route path="bspay" element={<AdminBspayPage />} />
+              <Route path="administrators" element={<AdminAdministratorsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
