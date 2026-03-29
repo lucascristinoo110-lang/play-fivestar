@@ -3,7 +3,7 @@ import { Navigate, Outlet, Link, useLocation } from "react-router-dom";
 import {
   BarChart3, Users, Settings, Shield, ArrowDownToLine,
   ArrowUpFromLine, FileCheck, Palette, Gamepad2, LogOut, Home, Sun, Moon,
-  Image, UserCheck, ChevronRight, Ticket, Menu, X, Megaphone, Mail, Trophy
+  Image, UserCheck, ChevronRight, Ticket, Menu, X, Megaphone, Mail, Trophy, Users2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -22,12 +22,13 @@ const links = [
   { icon: Mail, label: "Email Marketing", path: "/rei/email" },
   { icon: Trophy, label: "Esportes", path: "/rei/sports" },
   { icon: Palette, label: "Aparência", path: "/rei/appearance" },
-  { icon: Shield, label: "Gateway BSPAY", path: "/rei/bspay" },
+  { icon: Shield, label: "Gateway BSPAY", path: "/rei/bspay", adminOnly: true },
+  { icon: Users2, label: "Administradores", path: "/rei/administrators", adminOnly: true },
   { icon: Settings, label: "Configurações", path: "/rei/settings" },
 ];
 
 export default function AdminLayout() {
-  const { isAdmin, loading, signOut } = useAuth();
+  const { isAdmin, isViewer, loading, signOut } = useAuth();
   const location = useLocation();
   const [light, setLight] = useState(() => localStorage.getItem("admin-theme") === "light");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -41,9 +42,12 @@ export default function AdminLayout() {
   }, [location.pathname]);
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Carregando...</div>;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin && !isViewer) return <Navigate to="/" replace />;
 
-  const currentLabel = links.find(l => l.path === location.pathname)?.label || "Dashboard";
+  const readOnly = isViewer && !isAdmin;
+  const visibleLinks = readOnly ? links.filter(l => !(l as any).adminOnly) : links;
+
+  const currentLabel = visibleLinks.find(l => l.path === location.pathname)?.label || "Dashboard";
 
   const sidebarContent = (
     <>
@@ -74,7 +78,7 @@ export default function AdminLayout() {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-1">
         <p className={cn("text-[10px] font-bold uppercase tracking-[0.15em] px-3 mb-3", light ? "text-slate-400" : "text-slate-600")}>Navegação</p>
-        {links.map(({ icon: Icon, label, path }) => {
+        {visibleLinks.map(({ icon: Icon, label, path }) => {
           const active = location.pathname === path;
           return (
             <Link
@@ -156,7 +160,7 @@ export default function AdminLayout() {
           </div>
         </header>
         <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto", light ? "bg-slate-50" : "bg-[#111827]")}>
-          <Outlet context={{ light }} />
+          <Outlet context={{ light, readOnly }} />
         </main>
       </div>
     </div>
