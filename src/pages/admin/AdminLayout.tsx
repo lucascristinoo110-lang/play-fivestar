@@ -158,8 +158,24 @@ export default function AdminLayout() {
               <h1 className={cn("text-base font-bold tracking-tight", light ? "text-slate-800" : "text-white")}>{currentLabel}</h1>
             </div>
           </div>
+          {readOnly && (
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/25">
+              👁 Modo Visualização
+            </span>
+          )}
         </header>
-        <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto", light ? "bg-slate-50" : "bg-[#111827]")}>
+        <main className={cn("flex-1 p-4 lg:p-8 overflow-y-auto relative", light ? "bg-slate-50" : "bg-[#111827]")}>
+          {readOnly && (
+            <div className="pointer-events-auto absolute inset-0 z-20" style={{ pointerEvents: 'none' }}>
+              <style>{`
+                .pointer-events-auto button, .pointer-events-auto input, .pointer-events-auto textarea, .pointer-events-auto select, .pointer-events-auto [role="switch"], .pointer-events-auto [contenteditable] {
+                  pointer-events: none !important;
+                  opacity: 0.6 !important;
+                  cursor: not-allowed !important;
+                }
+              `}</style>
+            </div>
+          )}
           <Outlet context={{ light, readOnly }} />
         </main>
       </div>
