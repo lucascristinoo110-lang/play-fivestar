@@ -7,6 +7,7 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
+  isViewer: boolean;
   profile: any | null;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   isAdmin: false,
+  isViewer: false,
   profile: null,
   signOut: async () => {},
   refreshProfile: async () => {},
@@ -29,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isViewer, setIsViewer] = useState(false);
   const [profile, setProfile] = useState<any | null>(null);
   const profileChannelRef = useRef<any | null>(null);
 
@@ -116,8 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function checkAdmin(userId: string) {
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin");
-    setIsAdmin(!!data && data.length > 0);
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
+    const roles = (data || []).map((r: any) => r.role);
+    setIsAdmin(roles.includes("admin"));
+    setIsViewer(roles.includes("viewer"));
   }
 
   async function signOut() {
@@ -130,10 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setIsAdmin(false);
+    setIsViewer(false);
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, profile, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, isViewer, profile, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

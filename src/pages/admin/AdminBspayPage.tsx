@@ -5,14 +5,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Save, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
 export default function AdminBspayPage() {
+  const { isAdmin, isViewer } = useAuth();
   const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from("site_settings").select("*").limit(1).single().then(({ data }) => setSettings(data));
-  }, []);
+    if (isAdmin) {
+      supabase.from("site_settings").select("*").limit(1).single().then(({ data }) => setSettings(data));
+    }
+  }, [isAdmin]);
+
+  if (isViewer && !isAdmin) return <Navigate to="/rei" replace />;
 
   async function save() {
     if (!settings) return;
