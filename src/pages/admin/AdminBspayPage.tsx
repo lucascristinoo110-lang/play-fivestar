@@ -7,8 +7,6 @@ import { toast } from "@/hooks/use-toast";
 import { Save, Shield } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Navigate } from "react-router-dom";
-import { toast } from "@/hooks/use-toast";
-import { Save, Shield } from "lucide-react";
 
 export default function AdminBspayPage() {
   const { isAdmin, isViewer } = useAuth();
@@ -22,8 +20,6 @@ export default function AdminBspayPage() {
   }, [isAdmin]);
 
   if (isViewer && !isAdmin) return <Navigate to="/rei" replace />;
-
-  useEffect(() => {}, []);
 
   async function save() {
     if (!settings) return;
