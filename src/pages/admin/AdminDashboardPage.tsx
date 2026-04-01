@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
   const { light } = useOutletContext<{ light: boolean }>();
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0, totalDeposits: 0, totalWithdrawals: 0,
-    pendingWithdrawals: 0, pendingKyc: 0, todayDeposits: 0, todayWithdrawals: 0, todaySignups: 0
+    pendingWithdrawals: 0, pendingKyc: 0, todayDeposits: 0, todayWithdrawals: 0, todaySignups: 0, pageViews: 0
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [recentTx, setRecentTx] = useState<RecentTx[]>([]);
