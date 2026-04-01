@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { useOutletContext } from "react-router-dom";
-import { DollarSign, Users, ArrowDownToLine, ArrowUpFromLine, Activity, TrendingUp, Clock, UserPlus, RefreshCw, Zap, CalendarIcon } from "lucide-react";
+import { DollarSign, Users, ArrowDownToLine, ArrowUpFromLine, Activity, TrendingUp, Clock, UserPlus, RefreshCw, Zap, CalendarIcon, Eye } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -21,6 +21,7 @@ type Stats = {
   todayDeposits: number;
   todayWithdrawals: number;
   todaySignups: number;
+  pageViews: number;
 };
 
 type RecentUser = {
@@ -45,7 +46,7 @@ export default function AdminDashboardPage() {
   const { light } = useOutletContext<{ light: boolean }>();
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0, totalDeposits: 0, totalWithdrawals: 0,
-    pendingWithdrawals: 0, pendingKyc: 0, todayDeposits: 0, todayWithdrawals: 0, todaySignups: 0
+    pendingWithdrawals: 0, pendingKyc: 0, todayDeposits: 0, todayWithdrawals: 0, todaySignups: 0, pageViews: 0
   });
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [recentTx, setRecentTx] = useState<RecentTx[]>([]);
@@ -95,6 +96,7 @@ export default function AdminDashboardPage() {
       { count: pendKyc },
       { data: latestUsers },
       { data: latestTx },
+      { count: viewsCount },
     ] = await Promise.all([
       applyRange(supabase.from("profiles").select("*", { count: "exact", head: true })),
       applyRange(supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed")),
@@ -103,6 +105,7 @@ export default function AdminDashboardPage() {
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
       applyRange(supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8)),
       applyRange(supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15)),
+      applyRange(supabase.from("page_views" as any).select("*", { count: "exact", head: true })),
     ]);
 
     const sumAmount = (data: any[] | null) => data?.reduce((s, t) => s + Number(t.amount), 0) || 0;
@@ -116,6 +119,7 @@ export default function AdminDashboardPage() {
       todayDeposits: sumAmount(allDeps),
       todayWithdrawals: sumAmount(allWds),
       todaySignups: users || 0,
+      pageViews: viewsCount || 0,
     });
     setRecentUsers((latestUsers as RecentUser[]) || []);
     setRecentTx((latestTx as RecentTx[]) || []);
@@ -203,6 +207,7 @@ export default function AdminDashboardPage() {
     { label: "GGR", value: fmt(ggr), icon: DollarSign, gradient: ggr >= 0 ? "from-purple-500 to-purple-600" : "from-red-500 to-red-600", bg: ggr >= 0 ? (light ? "bg-purple-50" : "bg-purple-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
     { label: "Saques Pendentes", value: String(stats.pendingWithdrawals), icon: Clock, gradient: "from-rose-500 to-rose-600", bg: light ? "bg-rose-50" : "bg-rose-500/10" },
     { label: "KYC Pendentes", value: String(stats.pendingKyc), icon: Activity, gradient: "from-yellow-500 to-yellow-600", bg: light ? "bg-yellow-50" : "bg-yellow-500/10" },
+    { label: "Visualizações", value: String(stats.pageViews), icon: Eye, gradient: "from-indigo-500 to-indigo-600", bg: light ? "bg-indigo-50" : "bg-indigo-500/10" },
   ];
 
   const pieData = [
@@ -319,7 +324,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {cards.map((c, i) => (
           <motion.div
             key={c.label}
