@@ -207,6 +207,7 @@ export default function AdminDashboardPage() {
     { label: "GGR", value: fmt(ggr), icon: DollarSign, gradient: ggr >= 0 ? "from-purple-500 to-purple-600" : "from-red-500 to-red-600", bg: ggr >= 0 ? (light ? "bg-purple-50" : "bg-purple-500/10") : (light ? "bg-red-50" : "bg-red-500/10") },
     { label: "Saques Pendentes", value: String(stats.pendingWithdrawals), icon: Clock, gradient: "from-rose-500 to-rose-600", bg: light ? "bg-rose-50" : "bg-rose-500/10" },
     { label: "KYC Pendentes", value: String(stats.pendingKyc), icon: Activity, gradient: "from-yellow-500 to-yellow-600", bg: light ? "bg-yellow-50" : "bg-yellow-500/10" },
+    { label: "Visualizações", value: String(stats.pageViews), icon: Eye, gradient: "from-indigo-500 to-indigo-600", bg: light ? "bg-indigo-50" : "bg-indigo-500/10" },
   ];
 
   const pieData = [
