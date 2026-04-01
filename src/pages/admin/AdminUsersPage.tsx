@@ -71,6 +71,8 @@ export default function AdminUsersPage() {
     } finally {
       setBulkLoading(false);
     }
+  }
+
   const filtered = users.filter(u =>
     (u.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
