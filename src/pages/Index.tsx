@@ -14,8 +14,10 @@ import { WelcomePopup } from "@/components/casino/WelcomePopup";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSearchParams } from "react-router-dom";
+import { usePageView } from "@/hooks/usePageView";
 
 const Index = () => {
+  usePageView("/");
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [depositOpen, setDepositOpen] = useState(false);
