@@ -91,11 +91,36 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por nome, e-mail ou CPF..." value={search} onChange={e => setSearch(e.target.value)} className={cn("pl-10", light ? "bg-white border-slate-200" : "bg-secondary border-border/40")} />
         </div>
+        <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-2">
+              <Users className="h-4 w-4" />
+              Saldo em massa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className={cn("border", light ? "bg-white border-slate-200" : "bg-card border-border/40")}>
+            <DialogHeader>
+              <DialogTitle className={light ? "text-slate-800" : "text-foreground"}>Adicionar saldo para TODOS os usuários</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className={cn("text-sm", light ? "text-slate-500" : "text-muted-foreground")}>
+                O valor será adicionado ao saldo real de <strong>{users.length}</strong> usuários.
+              </p>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="10.00" className={light ? "bg-slate-50 border-slate-200" : "bg-secondary border-border/40"} />
+              </div>
+              <Button onClick={addBalanceToAll} className="w-full" disabled={bulkLoading}>
+                {bulkLoading ? "Processando..." : `Adicionar para ${users.length} usuários`}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <span className={cn("text-xs font-medium", light ? "text-slate-400" : "text-slate-500")}>
           {filtered.length} usuário{filtered.length !== 1 ? "s" : ""}
         </span>
