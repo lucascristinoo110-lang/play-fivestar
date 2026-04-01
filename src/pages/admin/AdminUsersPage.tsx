@@ -47,6 +47,30 @@ export default function AdminUsersPage() {
     fetchUsers();
   }
 
+  async function addBalanceToAll() {
+    const amount = parseFloat(bulkAmount);
+    if (isNaN(amount) || amount <= 0) { toast({ title: "Valor inválido", variant: "destructive" }); return; }
+    setBulkLoading(true);
+    try {
+      // Use RPC adjust_balance for each user to keep it atomic
+      const promises = users.map(u =>
+        supabase.rpc("adjust_balance", { p_user_id: u.user_id, p_amount: amount })
+      );
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        toast({ title: `${users.length - errors.length} atualizados, ${errors.length} erros`, variant: "destructive" });
+      } else {
+        toast({ title: `R$ ${amount.toFixed(2)} adicionado para ${users.length} usuários` });
+      }
+      setBulkOpen(false);
+      setBulkAmount("");
+      fetchUsers();
+    } catch {
+      toast({ title: "Erro ao adicionar saldo em massa", variant: "destructive" });
+    } finally {
+      setBulkLoading(false);
+    }
   const filtered = users.filter(u =>
     (u.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
