@@ -21,6 +21,7 @@ type Stats = {
   todayDeposits: number;
   todayWithdrawals: number;
   todaySignups: number;
+  pageViews: number;
 };
 
 type RecentUser = {
