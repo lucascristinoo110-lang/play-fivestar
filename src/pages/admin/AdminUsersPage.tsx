@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Search, Ban, CheckCircle, DollarSign, Eye } from "lucide-react";
+import { Search, Ban, CheckCircle, DollarSign, Eye, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useOutletContext } from "react-router-dom";
@@ -17,6 +17,9 @@ export default function AdminUsersPage() {
   const [addBalanceUser, setAddBalanceUser] = useState<any>(null);
   const [balanceAmount, setBalanceAmount] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAmount, setBulkAmount] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
 
@@ -44,6 +47,32 @@ export default function AdminUsersPage() {
     fetchUsers();
   }
 
+  async function addBalanceToAll() {
+    const amount = parseFloat(bulkAmount);
+    if (isNaN(amount) || amount <= 0) { toast({ title: "Valor inválido", variant: "destructive" }); return; }
+    setBulkLoading(true);
+    try {
+      // Use RPC adjust_balance for each user to keep it atomic
+      const promises = users.map(u =>
+        supabase.rpc("adjust_balance", { p_user_id: u.user_id, p_amount: amount })
+      );
+      const results = await Promise.all(promises);
+      const errors = results.filter(r => r.error);
+      if (errors.length > 0) {
+        toast({ title: `${users.length - errors.length} atualizados, ${errors.length} erros`, variant: "destructive" });
+      } else {
+        toast({ title: `R$ ${amount.toFixed(2)} adicionado para ${users.length} usuários` });
+      }
+      setBulkOpen(false);
+      setBulkAmount("");
+      fetchUsers();
+    } catch {
+      toast({ title: "Erro ao adicionar saldo em massa", variant: "destructive" });
+    } finally {
+      setBulkLoading(false);
+    }
+  }
+
   const filtered = users.filter(u =>
     (u.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -62,11 +91,36 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar por nome, e-mail ou CPF..." value={search} onChange={e => setSearch(e.target.value)} className={cn("pl-10", light ? "bg-white border-slate-200" : "bg-secondary border-border/40")} />
         </div>
+        <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" variant="outline" className="gap-2">
+              <Users className="h-4 w-4" />
+              Saldo em massa
+            </Button>
+          </DialogTrigger>
+          <DialogContent className={cn("border", light ? "bg-white border-slate-200" : "bg-card border-border/40")}>
+            <DialogHeader>
+              <DialogTitle className={light ? "text-slate-800" : "text-foreground"}>Adicionar saldo para TODOS os usuários</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className={cn("text-sm", light ? "text-slate-500" : "text-muted-foreground")}>
+                O valor será adicionado ao saldo real de <strong>{users.length}</strong> usuários.
+              </p>
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input type="number" value={bulkAmount} onChange={e => setBulkAmount(e.target.value)} placeholder="10.00" className={light ? "bg-slate-50 border-slate-200" : "bg-secondary border-border/40"} />
+              </div>
+              <Button onClick={addBalanceToAll} className="w-full" disabled={bulkLoading}>
+                {bulkLoading ? "Processando..." : `Adicionar para ${users.length} usuários`}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
         <span className={cn("text-xs font-medium", light ? "text-slate-400" : "text-slate-500")}>
           {filtered.length} usuário{filtered.length !== 1 ? "s" : ""}
         </span>
