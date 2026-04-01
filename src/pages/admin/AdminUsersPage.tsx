@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
-import { Search, Ban, CheckCircle, DollarSign, Eye } from "lucide-react";
+import { Search, Ban, CheckCircle, DollarSign, Eye, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useOutletContext } from "react-router-dom";
@@ -17,6 +17,9 @@ export default function AdminUsersPage() {
   const [addBalanceUser, setAddBalanceUser] = useState<any>(null);
   const [balanceAmount, setBalanceAmount] = useState("");
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAmount, setBulkAmount] = useState("");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => { fetchUsers(); }, []);
 
