@@ -96,6 +96,7 @@ export default function AdminDashboardPage() {
       { count: pendKyc },
       { data: latestUsers },
       { data: latestTx },
+      { count: viewsCount },
     ] = await Promise.all([
       applyRange(supabase.from("profiles").select("*", { count: "exact", head: true })),
       applyRange(supabase.from("transactions").select("amount").eq("type", "deposit").eq("status", "completed")),
@@ -104,6 +105,7 @@ export default function AdminDashboardPage() {
       supabase.from("kyc_documents").select("*", { count: "exact", head: true }).eq("status", "pending"),
       applyRange(supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(8)),
       applyRange(supabase.from("transactions").select("*").in("type", ["deposit", "withdraw"]).order("created_at", { ascending: false }).limit(15)),
+      applyRange(supabase.from("page_views" as any).select("*", { count: "exact", head: true })),
     ]);
 
     const sumAmount = (data: any[] | null) => data?.reduce((s, t) => s + Number(t.amount), 0) || 0;
@@ -117,6 +119,7 @@ export default function AdminDashboardPage() {
       todayDeposits: sumAmount(allDeps),
       todayWithdrawals: sumAmount(allWds),
       todaySignups: users || 0,
+      pageViews: viewsCount || 0,
     });
     setRecentUsers((latestUsers as RecentUser[]) || []);
     setRecentTx((latestTx as RecentTx[]) || []);
