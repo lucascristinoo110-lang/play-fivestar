@@ -43,15 +43,38 @@ export default function Profile() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawPixKey, setWithdrawPixKey] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawReqs, setWithdrawReqs] = useState<{
+    minWithdraw: number; maxWithdraw: number; requireKyc: boolean; rollover: number;
+    kycApproved: boolean; totalWagered: number; requiredWager: number;
+  } | null>(null);
 
   async function loadUserData(userId: string) {
-    const [{ data: tx }, { data: docs }] = await Promise.all([
+    const [{ data: tx }, { data: docs }, { data: settings }] = await Promise.all([
       supabase.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
       supabase.from("kyc_documents").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("site_settings").select("min_withdraw, max_withdraw, rollover_multiplier, require_kyc_for_withdraw").limit(1).single(),
     ]);
 
     setTransactions((tx as Transaction[]) || []);
     setKycDocs((docs as KycDoc[]) || []);
+
+    // Calculate withdraw requirements
+    const minWithdraw = Number(settings?.min_withdraw ?? 50);
+    const maxWithdraw = Number(settings?.max_withdraw ?? 10000);
+    const requireKyc = settings?.require_kyc_for_withdraw ?? true;
+    const rollover = Number(settings?.rollover_multiplier ?? 1);
+    const kycApproved = (docs || []).some((d: any) => d.status === "approved");
+
+    const completedDeposits = ((tx as Transaction[]) || []).filter(t => t.type === "deposit" && t.status === "completed");
+    const totalDeposited = completedDeposits.reduce((s, t) => s + Number(t.amount), 0);
+
+    const { data: betsData } = await supabase.from("bets").select("amount").eq("user_id", userId);
+    const totalWagered = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
+    const currentBalance = Number(profile?.balance ?? 0);
+    const rolloverBase = Math.max(totalDeposited, currentBalance);
+    const requiredWager = rolloverBase * rollover;
+
+    setWithdrawReqs({ minWithdraw, maxWithdraw, requireKyc, rollover, kycApproved, totalWagered, requiredWager });
   }
 
   useEffect(() => {
