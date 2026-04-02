@@ -363,6 +363,33 @@ export default function Profile() {
                   <span className="text-[10px] sm:text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
 
+                {/* Requisitos de saque */}
+                {withdrawReqs && (
+                  <div className="rounded-lg bg-secondary/50 border border-border/40 p-3 space-y-1.5">
+                    <p className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-primary" /> Requisitos para saque
+                    </p>
+                    <div className="space-y-1">
+                      <p className={`text-[10px] flex items-center gap-1.5 ${availableToWithdraw >= withdrawReqs.minWithdraw ? "text-emerald-500" : "text-destructive"}`}>
+                        {availableToWithdraw >= withdrawReqs.minWithdraw ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        Saque mínimo: R$ {withdrawReqs.minWithdraw.toFixed(2)} / Máximo: R$ {withdrawReqs.maxWithdraw.toFixed(2)}
+                      </p>
+                      {withdrawReqs.requireKyc && (
+                        <p className={`text-[10px] flex items-center gap-1.5 ${withdrawReqs.kycApproved ? "text-emerald-500" : "text-destructive"}`}>
+                          {withdrawReqs.kycApproved ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          {withdrawReqs.kycApproved ? "Documentos verificados ✓" : "Documentos pendentes — envie na aba 'Documentos'"}
+                        </p>
+                      )}
+                      {withdrawReqs.rollover > 0 && (
+                        <p className={`text-[10px] flex items-center gap-1.5 ${withdrawReqs.totalWagered >= withdrawReqs.requiredWager ? "text-emerald-500" : "text-destructive"}`}>
+                          {withdrawReqs.totalWagered >= withdrawReqs.requiredWager ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          Rollover: R$ {withdrawReqs.totalWagered.toFixed(2)} / R$ {withdrawReqs.requiredWager.toFixed(2)} apostado
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-lg bg-accent/10 border border-accent/30 p-3">
                   <p className="text-[11px] text-accent font-medium">
                     ⚠️ A chave PIX informada deve pertencer a uma conta no mesmo CPF cadastrado na plataforma ({profile?.cpf || "não informado"}). Saques para contas de terceiros serão recusados.
