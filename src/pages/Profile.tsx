@@ -114,11 +114,48 @@ export default function Profile() {
       return;
     }
 
-    // Rollover check: user must have wagered (total deposits * rollover_multiplier) before withdrawing
+    // Fetch site settings for all validations
     try {
-      const { data: siteSettings } = await supabase.from("site_settings").select("rollover_multiplier").limit(1).single();
-      const rollover = Number(siteSettings?.rollover_multiplier ?? 1);
+      const { data: siteSettings } = await supabase
+        .from("site_settings")
+        .select("min_withdraw, max_withdraw, rollover_multiplier, require_kyc_for_withdraw")
+        .limit(1)
+        .single();
 
+      const minWithdraw = Number(siteSettings?.min_withdraw ?? 50);
+      const maxWithdraw = Number(siteSettings?.max_withdraw ?? 10000);
+      const rollover = Number(siteSettings?.rollover_multiplier ?? 1);
+      const requireKyc = siteSettings?.require_kyc_for_withdraw ?? true;
+
+      // Min/max withdraw check
+      if (amount < minWithdraw) {
+        toast({ title: "Valor mínimo não atingido", description: `O saque mínimo é R$ ${minWithdraw.toFixed(2)}.`, variant: "destructive" });
+        return;
+      }
+      if (amount > maxWithdraw) {
+        toast({ title: "Valor máximo excedido", description: `O saque máximo é R$ ${maxWithdraw.toFixed(2)}.`, variant: "destructive" });
+        return;
+      }
+
+      // KYC check
+      if (requireKyc) {
+        const { data: kycData } = await supabase
+          .from("kyc_documents")
+          .select("status")
+          .eq("user_id", user.id)
+          .eq("status", "approved");
+
+        if (!kycData || kycData.length === 0) {
+          toast({
+            title: "Verificação KYC necessária",
+            description: "Envie seus documentos na aba 'Documentos' e aguarde aprovação antes de solicitar um saque.",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Rollover check: user must have wagered (balance * rollover_multiplier) before withdrawing
       if (rollover > 0) {
         const { data: deposits } = await supabase
           .from("transactions")
@@ -128,7 +165,10 @@ export default function Profile() {
           .eq("status", "completed");
 
         const totalDeposited = (deposits || []).reduce((s, d) => s + Number(d.amount), 0);
-        const requiredWager = totalDeposited * rollover;
+        // Use the greater of total deposits or current balance for rollover base
+        // This prevents users with manually added balance from bypassing rollover
+        const rolloverBase = Math.max(totalDeposited, Number(profile?.balance ?? 0));
+        const requiredWager = rolloverBase * rollover;
 
         const { data: betsData } = await supabase
           .from("bets")
@@ -147,7 +187,9 @@ export default function Profile() {
         }
       }
     } catch (err) {
-      console.error("Rollover check error:", err);
+      console.error("Withdrawal validation error:", err);
+      toast({ title: "Erro na validação", description: "Tente novamente.", variant: "destructive" });
+      return;
     }
 
     setWithdrawing(true);
