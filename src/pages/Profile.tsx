@@ -43,15 +43,38 @@ export default function Profile() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawPixKey, setWithdrawPixKey] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawReqs, setWithdrawReqs] = useState<{
+    minWithdraw: number; maxWithdraw: number; requireKyc: boolean; rollover: number;
+    kycApproved: boolean; totalWagered: number; requiredWager: number;
+  } | null>(null);
 
   async function loadUserData(userId: string) {
-    const [{ data: tx }, { data: docs }] = await Promise.all([
+    const [{ data: tx }, { data: docs }, { data: settings }] = await Promise.all([
       supabase.from("transactions").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(50),
       supabase.from("kyc_documents").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+      supabase.from("site_settings").select("min_withdraw, max_withdraw, rollover_multiplier, require_kyc_for_withdraw").limit(1).single(),
     ]);
 
     setTransactions((tx as Transaction[]) || []);
     setKycDocs((docs as KycDoc[]) || []);
+
+    // Calculate withdraw requirements
+    const minWithdraw = Number(settings?.min_withdraw ?? 50);
+    const maxWithdraw = Number(settings?.max_withdraw ?? 10000);
+    const requireKyc = settings?.require_kyc_for_withdraw ?? true;
+    const rollover = Number(settings?.rollover_multiplier ?? 1);
+    const kycApproved = (docs || []).some((d: any) => d.status === "approved");
+
+    const completedDeposits = ((tx as Transaction[]) || []).filter(t => t.type === "deposit" && t.status === "completed");
+    const totalDeposited = completedDeposits.reduce((s, t) => s + Number(t.amount), 0);
+
+    const { data: betsData } = await supabase.from("bets").select("amount").eq("user_id", userId);
+    const totalWagered = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
+    const currentBalance = Number(profile?.balance ?? 0);
+    const rolloverBase = Math.max(totalDeposited, currentBalance);
+    const requiredWager = rolloverBase * rollover;
+
+    setWithdrawReqs({ minWithdraw, maxWithdraw, requireKyc, rollover, kycApproved, totalWagered, requiredWager });
   }
 
   useEffect(() => {
@@ -339,6 +362,33 @@ export default function Profile() {
                   <h4 className="text-sm font-semibold text-foreground">Solicitar saque via PIX</h4>
                   <span className="text-[10px] sm:text-xs text-muted-foreground">Disponível: R$ {availableToWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </div>
+
+                {/* Requisitos de saque */}
+                {withdrawReqs && (
+                  <div className="rounded-lg bg-secondary/50 border border-border/40 p-3 space-y-1.5">
+                    <p className="text-[11px] font-semibold text-foreground flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-primary" /> Requisitos para saque
+                    </p>
+                    <div className="space-y-1">
+                      <p className={`text-[10px] flex items-center gap-1.5 ${availableToWithdraw >= withdrawReqs.minWithdraw ? "text-emerald-500" : "text-destructive"}`}>
+                        {availableToWithdraw >= withdrawReqs.minWithdraw ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        Saque mínimo: R$ {withdrawReqs.minWithdraw.toFixed(2)} / Máximo: R$ {withdrawReqs.maxWithdraw.toFixed(2)}
+                      </p>
+                      {withdrawReqs.requireKyc && (
+                        <p className={`text-[10px] flex items-center gap-1.5 ${withdrawReqs.kycApproved ? "text-emerald-500" : "text-destructive"}`}>
+                          {withdrawReqs.kycApproved ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          {withdrawReqs.kycApproved ? "Documentos verificados ✓" : "Documentos pendentes — envie na aba 'Documentos'"}
+                        </p>
+                      )}
+                      {withdrawReqs.rollover > 0 && (
+                        <p className={`text-[10px] flex items-center gap-1.5 ${withdrawReqs.totalWagered >= withdrawReqs.requiredWager ? "text-emerald-500" : "text-destructive"}`}>
+                          {withdrawReqs.totalWagered >= withdrawReqs.requiredWager ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          Rollover: R$ {withdrawReqs.totalWagered.toFixed(2)} / R$ {withdrawReqs.requiredWager.toFixed(2)} apostado
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="rounded-lg bg-accent/10 border border-accent/30 p-3">
                   <p className="text-[11px] text-accent font-medium">
