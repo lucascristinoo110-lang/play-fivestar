@@ -340,6 +340,20 @@ export default function AdminGamesPage() {
                   <Input type="password" value={playfiverLiveSecret} onChange={(e) => setPlayfiverLiveSecret(e.target.value)} placeholder="Cole a secretKey do Live" className={inputClass} />
                 </div>
               </div>
+              <div className="space-y-1">
+                <Label className="text-xs">URL de Callback (copie e cole no painel Playfiver Live)</Label>
+                <div className="flex gap-2">
+                  <Input value={callbackUrl} readOnly className={cn(inputClass, "flex-1 text-[11px] select-all")} />
+                  <Button type="button" size="sm" variant="outline" className="h-9 px-3 shrink-0" onClick={() => {
+                    navigator.clipboard.writeText(callbackUrl);
+                    setCopiedCallback(true);
+                    setTimeout(() => setCopiedCallback(false), 2000);
+                    toast({ title: "URL copiada!" });
+                  }}>
+                    {copiedCallback ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className={cardClass}>
