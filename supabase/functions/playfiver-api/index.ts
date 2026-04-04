@@ -247,7 +247,6 @@ serve(async (req) => {
     const { data: profile } = await supabase.from("profiles").select("balance, user_id").eq("user_id", user_id).single();
     if (!profile) return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const isLiveGame = String(category || "").toLowerCase() === "live";
     console.log(`Launching game via VPS ${PLAYFIVER_API}/api/v2/game_launch for user ${user_id}, game ${game_code}, live=${isLiveGame}`);
 
     const normalizedProvider = String(provider).trim();
