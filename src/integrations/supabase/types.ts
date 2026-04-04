@@ -522,6 +522,9 @@ export type Database = {
           min_withdraw: number | null
           playfiver_api_key: string | null
           playfiver_api_url: string | null
+          playfiver_live_active: boolean | null
+          playfiver_live_api_key: string | null
+          playfiver_slots_active: boolean | null
           primary_color: string | null
           promo_message: string | null
           promo_message_active: boolean | null
@@ -564,6 +567,9 @@ export type Database = {
           min_withdraw?: number | null
           playfiver_api_key?: string | null
           playfiver_api_url?: string | null
+          playfiver_live_active?: boolean | null
+          playfiver_live_api_key?: string | null
+          playfiver_slots_active?: boolean | null
           primary_color?: string | null
           promo_message?: string | null
           promo_message_active?: boolean | null
@@ -606,6 +612,9 @@ export type Database = {
           min_withdraw?: number | null
           playfiver_api_key?: string | null
           playfiver_api_url?: string | null
+          playfiver_live_active?: boolean | null
+          playfiver_live_api_key?: string | null
+          playfiver_slots_active?: boolean | null
           primary_color?: string | null
           promo_message?: string | null
           promo_message_active?: boolean | null
