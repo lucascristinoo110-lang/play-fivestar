@@ -164,7 +164,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: `Ação inválida. Use: ${SUPPORTED_ACTIONS.join(", ")}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: settings } = await supabase.from("site_settings").select("playfiver_api_key").limit(1).single();
+    const { data: settings } = await supabase.from("site_settings").select("playfiver_api_key, playfiver_live_api_key, playfiver_live_active, playfiver_slots_active").limit(1).single();
 
     if (action === "list_games") {
       const { games, raw, rawTotal } = await fetchPlayfiverGames();
