@@ -229,7 +229,17 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "user_id, game_code e provider são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { token, secretKey } = parsePlayfiverCredentials(settings || {});
+    const isLiveGame = String(category || "").toLowerCase() === "live";
+
+    // Pick the right credential: if live game AND live key is active and configured, use it
+    let credentialSource = settings || {};
+    if (isLiveGame && settings?.playfiver_live_active && settings?.playfiver_live_api_key) {
+      credentialSource = { playfiver_api_key: settings.playfiver_live_api_key };
+    } else if (!isLiveGame && settings?.playfiver_slots_active === false) {
+      return new Response(JSON.stringify({ error: "Playfiver Slots está desativado no painel admin." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const { token, secretKey } = parsePlayfiverCredentials(credentialSource as PlayfiverSettings);
     if (!token || !secretKey) {
       return new Response(JSON.stringify({ error: "Playfiver não configurado corretamente. Preencha Agent Token e Secret Key no painel admin." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
