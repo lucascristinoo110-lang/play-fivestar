@@ -102,17 +102,30 @@ export default function AdminGamesPage() {
     [playfiverToken, playfiverSecret],
   );
 
+  const hasPlayfiverLiveCredential = useMemo(
+    () => Boolean(playfiverLiveToken.trim() && playfiverLiveSecret.trim()),
+    [playfiverLiveToken, playfiverLiveSecret],
+  );
+
   async function saveProviders() {
     if (!settings) return;
     if ((playfiverToken.trim() && !playfiverSecret.trim()) || (!playfiverToken.trim() && playfiverSecret.trim())) {
-      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key para salvar a Playfiver.", variant: "destructive" });
+      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key da Playfiver Slots.", variant: "destructive" });
+      return;
+    }
+    if ((playfiverLiveToken.trim() && !playfiverLiveSecret.trim()) || (!playfiverLiveToken.trim() && playfiverLiveSecret.trim())) {
+      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key da Playfiver Live.", variant: "destructive" });
       return;
     }
     const playfiverCredential = hasPlayfiverCredential ? `${playfiverToken.trim()}:${playfiverSecret.trim()}` : null;
+    const playfiverLiveCredential = hasPlayfiverLiveCredential ? `${playfiverLiveToken.trim()}:${playfiverLiveSecret.trim()}` : null;
     setLoading(true);
     const { error } = await supabase.from("site_settings").update({
       playfiver_api_key: playfiverCredential,
       playfiver_api_url: settings.playfiver_api_url,
+      playfiver_live_api_key: playfiverLiveCredential,
+      playfiver_live_active: settings.playfiver_live_active ?? false,
+      playfiver_slots_active: settings.playfiver_slots_active ?? true,
       igamewin_api_key: settings.igamewin_api_key,
       igamewin_api_url: settings.igamewin_api_url,
     }).eq("id", settings.id);
