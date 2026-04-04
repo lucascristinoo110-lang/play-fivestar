@@ -92,6 +92,9 @@ export default function AdminGamesPage() {
     const parsed = splitPlayfiverCredential(s?.playfiver_api_key);
     setPlayfiverToken(parsed.token);
     setPlayfiverSecret(parsed.secret);
+    const parsedLive = splitPlayfiverCredential(s?.playfiver_live_api_key);
+    setPlayfiverLiveToken(parsedLive.token);
+    setPlayfiverLiveSecret(parsedLive.secret);
   }
 
   const hasPlayfiverCredential = useMemo(
