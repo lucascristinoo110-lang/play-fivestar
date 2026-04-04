@@ -68,6 +68,8 @@ export default function AdminGamesPage() {
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [playfiverToken, setPlayfiverToken] = useState("");
   const [playfiverSecret, setPlayfiverSecret] = useState("");
+  const [playfiverLiveToken, setPlayfiverLiveToken] = useState("");
+  const [playfiverLiveSecret, setPlayfiverLiveSecret] = useState("");
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterProvider, setFilterProvider] = useState("all");
@@ -90,6 +92,9 @@ export default function AdminGamesPage() {
     const parsed = splitPlayfiverCredential(s?.playfiver_api_key);
     setPlayfiverToken(parsed.token);
     setPlayfiverSecret(parsed.secret);
+    const parsedLive = splitPlayfiverCredential(s?.playfiver_live_api_key);
+    setPlayfiverLiveToken(parsedLive.token);
+    setPlayfiverLiveSecret(parsedLive.secret);
   }
 
   const hasPlayfiverCredential = useMemo(
@@ -97,17 +102,30 @@ export default function AdminGamesPage() {
     [playfiverToken, playfiverSecret],
   );
 
+  const hasPlayfiverLiveCredential = useMemo(
+    () => Boolean(playfiverLiveToken.trim() && playfiverLiveSecret.trim()),
+    [playfiverLiveToken, playfiverLiveSecret],
+  );
+
   async function saveProviders() {
     if (!settings) return;
     if ((playfiverToken.trim() && !playfiverSecret.trim()) || (!playfiverToken.trim() && playfiverSecret.trim())) {
-      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key para salvar a Playfiver.", variant: "destructive" });
+      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key da Playfiver Slots.", variant: "destructive" });
+      return;
+    }
+    if ((playfiverLiveToken.trim() && !playfiverLiveSecret.trim()) || (!playfiverLiveToken.trim() && playfiverLiveSecret.trim())) {
+      toast({ title: "Credencial incompleta", description: "Preencha Agent Token e Secret Key da Playfiver Live.", variant: "destructive" });
       return;
     }
     const playfiverCredential = hasPlayfiverCredential ? `${playfiverToken.trim()}:${playfiverSecret.trim()}` : null;
+    const playfiverLiveCredential = hasPlayfiverLiveCredential ? `${playfiverLiveToken.trim()}:${playfiverLiveSecret.trim()}` : null;
     setLoading(true);
     const { error } = await supabase.from("site_settings").update({
       playfiver_api_key: playfiverCredential,
       playfiver_api_url: settings.playfiver_api_url,
+      playfiver_live_api_key: playfiverLiveCredential,
+      playfiver_live_active: settings.playfiver_live_active ?? false,
+      playfiver_slots_active: settings.playfiver_slots_active ?? true,
       igamewin_api_key: settings.igamewin_api_key,
       igamewin_api_url: settings.igamewin_api_url,
     }).eq("id", settings.id);
@@ -256,24 +274,29 @@ export default function AdminGamesPage() {
         {/* ── PROVIDERS TAB ── */}
         <TabsContent value="providers">
           <div className="max-w-2xl space-y-6">
+            {/* ── Playfiver SLOTS ── */}
             <div className={cardClass}>
-              <h2 className={cn("text-sm font-semibold flex items-center gap-2", light ? "text-gray-900" : "text-foreground")}>
-                <Gamepad2 className="h-4 w-4 text-primary" /> Provedor: Playfiver
-              </h2>
-              <Tabs defaultValue="token" className="space-y-3">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="token">Agent Token</TabsTrigger>
-                  <TabsTrigger value="secret">Secret Key</TabsTrigger>
-                </TabsList>
-                <TabsContent value="token" className="space-y-1">
+              <div className="flex items-center justify-between">
+                <h2 className={cn("text-sm font-semibold flex items-center gap-2", light ? "text-gray-900" : "text-foreground")}>
+                  <Gamepad2 className="h-4 w-4 text-primary" /> Playfiver — Slots
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-[10px] font-semibold", settings.playfiver_slots_active ? "text-primary" : "text-muted-foreground")}>
+                    {settings.playfiver_slots_active ? "Ativo" : "Desativado"}
+                  </span>
+                  <Switch checked={!!settings.playfiver_slots_active} onCheckedChange={v => setSettings({ ...settings, playfiver_slots_active: v })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
                   <Label className="text-xs">Agent Token</Label>
                   <Input value={playfiverToken} onChange={(e) => setPlayfiverToken(e.target.value)} placeholder="Cole o agentToken" className={inputClass} />
-                </TabsContent>
-                <TabsContent value="secret" className="space-y-1">
+                </div>
+                <div className="space-y-1">
                   <Label className="text-xs">Secret Key</Label>
                   <Input type="password" value={playfiverSecret} onChange={(e) => setPlayfiverSecret(e.target.value)} placeholder="Cole a secretKey" className={inputClass} />
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
               {field("URL da API (opcional)", "playfiver_api_url", "https://api.playfivers.com")}
               <div className="space-y-1">
                 <Label className="text-xs">URL de Callback (copie e cole no painel Playfiver)</Label>
@@ -288,9 +311,34 @@ export default function AdminGamesPage() {
                     {copiedCallback ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                   </Button>
                 </div>
-                <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
-                  Cole esta URL no campo "Callback URL" do painel da sua conta Playfiver.
-                </p>
+              </div>
+            </div>
+
+            {/* ── Playfiver LIVE ── */}
+            <div className={cardClass}>
+              <div className="flex items-center justify-between">
+                <h2 className={cn("text-sm font-semibold flex items-center gap-2", light ? "text-gray-900" : "text-foreground")}>
+                  <Gamepad2 className="h-4 w-4 text-accent" /> Playfiver — Live Casino (Evolution)
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className={cn("text-[10px] font-semibold", settings.playfiver_live_active ? "text-primary" : "text-muted-foreground")}>
+                    {settings.playfiver_live_active ? "Ativo" : "Desativado"}
+                  </span>
+                  <Switch checked={!!settings.playfiver_live_active} onCheckedChange={v => setSettings({ ...settings, playfiver_live_active: v })} />
+                </div>
+              </div>
+              <p className={cn("text-[10px]", light ? "text-gray-400" : "text-muted-foreground")}>
+                Use credenciais separadas para jogos ao vivo (Evolution). Quando ativo, jogos da categoria "live" usarão esta chave. Se desativado, usa a chave de Slots.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Agent Token (Live)</Label>
+                  <Input value={playfiverLiveToken} onChange={(e) => setPlayfiverLiveToken(e.target.value)} placeholder="Cole o agentToken do Live" className={inputClass} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Secret Key (Live)</Label>
+                  <Input type="password" value={playfiverLiveSecret} onChange={(e) => setPlayfiverLiveSecret(e.target.value)} placeholder="Cole a secretKey do Live" className={inputClass} />
+                </div>
               </div>
             </div>
 

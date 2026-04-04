@@ -164,7 +164,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: `Ação inválida. Use: ${SUPPORTED_ACTIONS.join(", ")}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { data: settings } = await supabase.from("site_settings").select("playfiver_api_key").limit(1).single();
+    const { data: settings } = await supabase.from("site_settings").select("playfiver_api_key, playfiver_live_api_key, playfiver_live_active, playfiver_slots_active").limit(1).single();
 
     if (action === "list_games") {
       const { games, raw, rawTotal } = await fetchPlayfiverGames();
@@ -229,7 +229,17 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "user_id, game_code e provider são obrigatórios" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { token, secretKey } = parsePlayfiverCredentials(settings || {});
+    const isLiveGame = String(category || "").toLowerCase() === "live";
+
+    // Pick the right credential: if live game AND live key is active and configured, use it
+    let credentialSource = settings || {};
+    if (isLiveGame && settings?.playfiver_live_active && settings?.playfiver_live_api_key) {
+      credentialSource = { playfiver_api_key: settings.playfiver_live_api_key };
+    } else if (!isLiveGame && settings?.playfiver_slots_active === false) {
+      return new Response(JSON.stringify({ error: "Playfiver Slots está desativado no painel admin." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const { token, secretKey } = parsePlayfiverCredentials(credentialSource as PlayfiverSettings);
     if (!token || !secretKey) {
       return new Response(JSON.stringify({ error: "Playfiver não configurado corretamente. Preencha Agent Token e Secret Key no painel admin." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -237,7 +247,6 @@ serve(async (req) => {
     const { data: profile } = await supabase.from("profiles").select("balance, user_id").eq("user_id", user_id).single();
     if (!profile) return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const isLiveGame = String(category || "").toLowerCase() === "live";
     console.log(`Launching game via VPS ${PLAYFIVER_API}/api/v2/game_launch for user ${user_id}, game ${game_code}, live=${isLiveGame}`);
 
     const normalizedProvider = String(provider).trim();
