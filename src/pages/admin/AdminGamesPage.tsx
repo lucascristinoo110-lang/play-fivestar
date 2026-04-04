@@ -68,6 +68,8 @@ export default function AdminGamesPage() {
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [playfiverToken, setPlayfiverToken] = useState("");
   const [playfiverSecret, setPlayfiverSecret] = useState("");
+  const [playfiverLiveToken, setPlayfiverLiveToken] = useState("");
+  const [playfiverLiveSecret, setPlayfiverLiveSecret] = useState("");
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [filterProvider, setFilterProvider] = useState("all");
