@@ -68,8 +68,18 @@ export default function Profile() {
     const completedDeposits = ((tx as Transaction[]) || []).filter(t => t.type === "deposit" && t.status === "completed");
     const totalDeposited = completedDeposits.reduce((s, t) => s + Number(t.amount), 0);
 
+    // Sports bets
     const { data: betsData } = await supabase.from("bets").select("amount").eq("user_id", userId);
-    const totalWagered = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
+    const sportsBets = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
+    // Casino game bets (game_bet from playfiver stores negative amounts, casino_bet from igamewin stores positive)
+    const { data: gameBets } = await supabase
+      .from("transactions")
+      .select("amount")
+      .eq("user_id", userId)
+      .in("type", ["game_bet", "casino_bet"])
+      .eq("status", "completed");
+    const casinoBets = (gameBets || []).reduce((s, b) => s + Math.abs(Number(b.amount)), 0);
+    const totalWagered = sportsBets + casinoBets;
     const currentBalance = Number(profile?.balance ?? 0);
     const rolloverBase = Math.max(totalDeposited, currentBalance);
     const requiredWager = rolloverBase * rollover;
@@ -193,12 +203,22 @@ export default function Profile() {
         const rolloverBase = Math.max(totalDeposited, Number(profile?.balance ?? 0));
         const requiredWager = rolloverBase * rollover;
 
+        // Sports bets
         const { data: betsData } = await supabase
           .from("bets")
           .select("amount")
           .eq("user_id", user.id);
+        const sportsBets = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
 
-        const totalWagered = (betsData || []).reduce((s, b) => s + Number(b.amount), 0);
+        // Casino game bets
+        const { data: gameBets } = await supabase
+          .from("transactions")
+          .select("amount")
+          .eq("user_id", user.id)
+          .in("type", ["game_bet", "casino_bet"])
+          .eq("status", "completed");
+        const casinoBets = (gameBets || []).reduce((s, b) => s + Math.abs(Number(b.amount)), 0);
+        const totalWagered = sportsBets + casinoBets;
 
         if (totalWagered < requiredWager) {
           toast({
