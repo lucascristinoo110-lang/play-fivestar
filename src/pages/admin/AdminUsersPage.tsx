@@ -35,13 +35,14 @@ export default function AdminUsersPage() {
     fetchUsers();
   }
 
-  async function addBalance() {
+  async function adjustUserBalance(add: boolean) {
     if (!addBalanceUser || !balanceAmount) return;
     const amount = parseFloat(balanceAmount);
     if (isNaN(amount) || amount <= 0) { toast({ title: "Valor inválido", variant: "destructive" }); return; }
-    const newBalance = Number(addBalanceUser.balance) + amount;
-    await supabase.from("profiles").update({ balance: newBalance }).eq("id", addBalanceUser.id);
-    toast({ title: `R$ ${amount.toFixed(2)} adicionado ao saldo` });
+    const signed = add ? amount : -amount;
+    const { error } = await supabase.rpc("adjust_balance", { p_user_id: addBalanceUser.user_id, p_amount: signed });
+    if (error) { toast({ title: error.message, variant: "destructive" }); return; }
+    toast({ title: `R$ ${amount.toFixed(2)} ${add ? "adicionado" : "removido"} do saldo` });
     setAddBalanceUser(null);
     setBalanceAmount("");
     fetchUsers();
