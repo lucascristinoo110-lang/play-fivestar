@@ -182,7 +182,10 @@ export default function AdminUsersPage() {
                             <Label>Valor (R$)</Label>
                             <Input type="number" value={balanceAmount} onChange={e => setBalanceAmount(e.target.value)} placeholder="100.00" className={light ? "bg-slate-50 border-slate-200" : "bg-secondary border-border/40"} />
                           </div>
-                          <Button onClick={addBalance} className="w-full">Adicionar</Button>
+                          <div className="flex gap-2">
+                            <Button onClick={() => adjustUserBalance(true)} className="flex-1">Adicionar</Button>
+                            <Button onClick={() => adjustUserBalance(false)} variant="destructive" className="flex-1">Remover</Button>
+                          </div>
                         </div>
                       </DialogContent>
                     </Dialog>
