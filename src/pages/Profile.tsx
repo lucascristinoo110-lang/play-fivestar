@@ -236,23 +236,35 @@ export default function Profile() {
     }
 
     setWithdrawing(true);
-    const { error } = await supabase.from("transactions").insert({
-      user_id: user.id,
-      type: "withdraw",
-      amount,
-      payment_method: "pix",
-      status: "pending",
-      metadata: { pix_key: withdrawPixKey.trim() },
-    });
-    setWithdrawing(false);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      // Debit balance immediately so user can't keep playing with it
+      const { error: debitError } = await supabase.rpc("debit_balance", {
+        p_user_id: user.id,
+        p_amount: amount,
+      });
+      if (debitError) throw debitError;
+
+      const { error } = await supabase.from("transactions").insert({
+        user_id: user.id,
+        type: "withdraw",
+        amount,
+        payment_method: "pix",
+        status: "pending",
+        metadata: { pix_key: withdrawPixKey.trim() },
+      });
+      if (error) {
+        // Refund if insert failed
+        await supabase.rpc("adjust_balance", { p_user_id: user.id, p_amount: amount });
+        throw error;
+      }
       toast({ title: "Saque solicitado!", description: "Aguarde aprovação." });
       setWithdrawAmount("");
       setWithdrawPixKey("");
       await loadUserData(user.id);
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
+    setWithdrawing(false);
   }
 
   const statusIcon = (s: string) => {
