@@ -453,22 +453,55 @@ export default function Profile() {
 
           {tab === "kyc" && (
             <div className="space-y-4">
-              <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow space-y-4">
-                <h3 className="text-sm font-semibold text-foreground">Enviar Documento de Identificação</h3>
-                <p className="text-xs text-muted-foreground">Para realizar saques, envie uma foto legível do seu RG ou CNH.</p>
-                <div className="flex gap-2">
-                  <button onClick={() => setDocType("rg")} className={`px-4 py-2 rounded-lg text-xs font-medium border ${docType === "rg" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40"}`}>
-                    RG
-                  </button>
-                  <button onClick={() => setDocType("cnh")} className={`px-4 py-2 rounded-lg text-xs font-medium border ${docType === "cnh" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40"}`}>
-                    CNH
-                  </button>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Input type="file" onChange={handleUploadDoc} className="bg-secondary border-border/40 text-sm" />
-                  {uploading && <span className="text-xs text-accent animate-pulse">Enviando...</span>}
-                </div>
-              </div>
+              {(() => {
+                const hasPending = kycDocs.some(d => d.status === "pending");
+                const allApproved = kycDocs.some(d => d.status === "approved");
+                if (allApproved) {
+                  return (
+                    <div className="rounded-xl bg-primary/10 border border-primary/30 p-4 sm:p-5 card-shadow flex items-center gap-3">
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                      <div>
+                        <h3 className="text-sm font-semibold text-primary">Documento Aprovado</h3>
+                        <p className="text-xs text-muted-foreground">Sua identidade foi verificada com sucesso.</p>
+                      </div>
+                    </div>
+                  );
+                }
+                if (hasPending) {
+                  return (
+                    <div className="rounded-xl bg-accent/10 border border-accent/30 p-4 sm:p-5 card-shadow flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-accent" />
+                      <div>
+                        <h3 className="text-sm font-semibold text-accent">Documento em Análise</h3>
+                        <p className="text-xs text-muted-foreground">Seu documento foi enviado e está sendo analisado pela nossa equipe. Aguarde a aprovação.</p>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow space-y-4">
+                    <h3 className="text-sm font-semibold text-foreground">Enviar Documento de Identificação</h3>
+                    <p className="text-xs text-muted-foreground">Para realizar saques, envie uma foto legível do seu RG ou CNH.</p>
+                    {kycDocs.some(d => d.status === "rejected") && (
+                      <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3">
+                        <p className="text-xs text-destructive font-medium">Seu documento anterior foi reprovado. Por favor, envie novamente.</p>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <button onClick={() => setDocType("rg")} className={`px-4 py-2 rounded-lg text-xs font-medium border ${docType === "rg" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40"}`}>
+                        RG
+                      </button>
+                      <button onClick={() => setDocType("cnh")} className={`px-4 py-2 rounded-lg text-xs font-medium border ${docType === "cnh" ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-foreground border-border/40"}`}>
+                        CNH
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Input type="file" onChange={handleUploadDoc} className="bg-secondary border-border/40 text-sm" />
+                      {uploading && <span className="text-xs text-accent animate-pulse">Enviando...</span>}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {kycDocs.length > 0 && (
                 <div className="rounded-xl bg-card border border-border/40 p-4 sm:p-5 card-shadow space-y-3">
