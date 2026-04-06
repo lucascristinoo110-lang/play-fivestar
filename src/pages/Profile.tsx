@@ -97,11 +97,8 @@ export default function Profile() {
 
   const totalDeposits = transactions.filter(t => t.type === "deposit" && t.status === "completed").reduce((s, t) => s + Number(t.amount), 0);
   const totalWithdrawals = transactions.filter(t => t.type === "withdraw" && t.status === "completed").reduce((s, t) => s + Number(t.amount), 0);
-  const pendingWithdrawals = transactions
-    .filter(t => t.type === "withdraw" && t.status === "pending")
-    .reduce((s, t) => s + Number(t.amount), 0);
   const balance = Number(profile?.balance ?? 0);
-  const availableToWithdraw = Math.max(0, balance - pendingWithdrawals);
+  const availableToWithdraw = balance;
 
   async function handleUploadDoc(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
