@@ -41,7 +41,7 @@ function FootballContent() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const staleUpcomingCutoff = Date.now() - 2 * 60 * 60 * 1000;
-  const [activeLeague, setActiveLeague] = useState("brasileirao");
+  const [activeLeague, setActiveLeague] = useState("todos");
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewTab, setViewTab] = useState<"proximos" | "encerrados">("proximos");
