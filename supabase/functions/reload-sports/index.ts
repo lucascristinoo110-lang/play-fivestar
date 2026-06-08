@@ -5,106 +5,58 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const TRACKED_LEAGUES: Record<string, string[]> = {
-  Brazil: ["Brasileirão Betano", "Brasileirão Série B", "Copa do Brasil"],
-  "South America": ["Copa Libertadores", "Copa Sudamericana"],
-  England: ["Premier League"],
-  Spain: ["LaLiga"],
-  Italy: ["Serie A"],
-  Germany: ["Bundesliga"],
-  France: ["Ligue 1"],
-  Europe: ["UEFA Champions League", "UEFA Europa League"],
-};
+// ESPN soccer league slugs we track
+const TRACKED_LEAGUES = [
+  "bra.1",
+  "bra.2",
+  "bra.copa_do_brazil",
+  "conmebol.libertadores",
+  "conmebol.sudamericana",
+  "eng.1",
+  "esp.1",
+  "ita.1",
+  "ger.1",
+  "fra.1",
+  "uefa.champions",
+  "uefa.europa",
+  "uefa.europa.conf",
+  "fifa.world",
+  "fifa.friendly",
+  "fifa.worldq.uefa",
+  "fifa.worldq.conmebol",
+  "club.fifa",
+];
 
 const LOOKBACK_DAYS = 1;
-const LOOKAHEAD_DAYS = 7;
+const LOOKAHEAD_DAYS = 10;
 const STALE_MATCH_GRACE_HOURS = 6;
 const FINISHED_RETENTION_DAYS = 14;
 
-function isTrackedLeague(category: string, tournament: string) {
-  return Object.entries(TRACKED_LEAGUES).some(([allowedCategory, allowedTournaments]) => {
-    const categoryMatches =
-      category === allowedCategory ||
-      (allowedCategory === "South America" && (category === "South America" || category === "World"));
+function formatDateForEspn(date: Date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${d}`;
+}
 
-    if (!categoryMatches) return false;
-
-    return allowedTournaments.some(
-      (label) => tournament.includes(label) || label.includes(tournament),
-    );
+async function fetchEspnLeagueDate(league: string, date: string) {
+  const url = `https://site.api.espn.com/apis/site/v2/sports/soccer/${league}/scoreboard?dates=${date}`;
+  const res = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": "Mozilla/5.0 (compatible; LovableSportsSync/1.0)",
+    },
   });
-}
-
-function formatDate(date: Date) {
-  return date.toISOString().split("T")[0];
-}
-
-function parseProxyJson(text: string) {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-
-  if (start === -1 || end === -1 || end <= start) {
-    throw new Error("Could not extract JSON from proxy response");
+  if (!res.ok) {
+    throw new Error(`ESPN ${league} ${date} HTTP ${res.status}`);
   }
-
-  return JSON.parse(text.slice(start, end + 1));
+  return await res.json();
 }
 
-function parseJsonResponse(text: string) {
-  const trimmed = text.trim();
-  if (trimmed.startsWith("{")) {
-    return JSON.parse(trimmed);
-  }
-
-  return parseProxyJson(text);
-}
-
-async function sleep(ms: number) {
-  await new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function fetchSofascoreDate(date: string) {
-  const sources = [
-    {
-      label: "direct",
-      url: `https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (compatible; LovableSportsSync/1.0)",
-      },
-    },
-    {
-      label: "proxy",
-      url: `https://r.jina.ai/http://https://api.sofascore.com/api/v1/sport/football/scheduled-events/${date}`,
-      headers: {
-        Accept: "text/plain, application/json",
-        "X-Return-Format": "text",
-      },
-    },
-  ];
-
-  const failures: string[] = [];
-
-  for (const source of sources) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      const res = await fetch(source.url, { headers: source.headers });
-
-      if (res.ok) {
-        const text = await res.text();
-        return parseJsonResponse(text);
-      }
-
-      failures.push(`${source.label} [${res.status}]`);
-
-      if (res.status !== 429 || attempt === 2) {
-        break;
-      }
-
-      await sleep(250 * attempt);
-    }
-  }
-
-  throw new Error(`Fetch failed for ${date}: ${failures.join(", ")}`);
+function mapStatus(state: string | undefined) {
+  if (state === "post") return "finished";
+  if (state === "in") return "live";
+  return "upcoming";
 }
 
 Deno.serve(async (req) => {
@@ -119,11 +71,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Allow cron calls (anon key or no meaningful user) by checking body
     let isCron = false;
-    let bodyJson: any = {};
     try {
-      bodyJson = await req.clone().json();
+      const bodyJson = await req.clone().json();
       isCron = bodyJson?.source === "cron";
     } catch { /* no body */ }
 
@@ -136,11 +86,7 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_ANON_KEY")!,
       );
 
-      const {
-        data: { user },
-        error: authErr,
-      } = await authClient.auth.getUser(token);
-
+      const { data: { user }, error: authErr } = await authClient.auth.getUser(token);
       if (authErr || !user) throw new Error("Unauthorized");
 
       const { data: roleData } = await adminClient
@@ -153,114 +99,102 @@ Deno.serve(async (req) => {
       if (!roleData) throw new Error("Not admin");
     }
 
-    console.log("Admin verified, starting sports reload...");
+    console.log("Starting sports reload from ESPN...");
 
     const baseDate = new Date();
     const dates: string[] = [];
     for (let offset = -LOOKBACK_DAYS; offset <= LOOKAHEAD_DAYS; offset++) {
       const d = new Date(baseDate);
-      d.setDate(d.getDate() + offset);
-      dates.push(formatDate(d));
+      d.setUTCDate(d.getUTCDate() + offset);
+      dates.push(formatDateForEspn(d));
     }
 
     let processed = 0;
     let errors = 0;
     const seenExternalIds = new Set<string>();
 
-    for (const date of dates) {
-      try {
-        console.log(`Fetching events for ${date}...`);
-        const payload = await fetchSofascoreDate(date);
-        const events = Array.isArray(payload?.events) ? payload.events : [];
-        console.log(`Fetched ${events.length} events for ${date}`);
+    for (const league of TRACKED_LEAGUES) {
+      for (const date of dates) {
+        try {
+          const payload = await fetchEspnLeagueDate(league, date);
+          const events = Array.isArray(payload?.events) ? payload.events : [];
+          if (events.length === 0) continue;
 
-        for (const event of events) {
-          const category = event?.tournament?.category?.name || "";
-          const tournament = event?.tournament?.name || "";
+          const leagueInfo = Array.isArray(payload?.leagues) ? payload.leagues[0] : null;
+          const leagueName = leagueInfo?.name || league;
+          const leagueApiId = String(leagueInfo?.id || league);
 
-          if (!isTrackedLeague(category, tournament)) continue;
+          for (const event of events) {
+            const eventId = event?.id;
+            const competition = Array.isArray(event?.competitions) ? event.competitions[0] : null;
+            const competitors = Array.isArray(competition?.competitors) ? competition.competitors : [];
+            if (!eventId || !competition || competitors.length < 2) continue;
 
-          const eventId = event?.id;
-          const homeTeam = event?.homeTeam?.name || "";
-          const awayTeam = event?.awayTeam?.name || "";
-          const startTimestamp = event?.startTimestamp;
+            const home = competitors.find((c: any) => c.homeAway === "home") || competitors[0];
+            const away = competitors.find((c: any) => c.homeAway === "away") || competitors[1];
+            const homeTeam = home?.team?.displayName || home?.team?.name || "";
+            const awayTeam = away?.team?.displayName || away?.team?.name || "";
+            const kickoff = event?.date || competition?.date;
+            if (!homeTeam || !awayTeam || !kickoff) continue;
 
-          if (!eventId || !homeTeam || !awayTeam || !startTimestamp) continue;
+            const externalId = `espn-${eventId}`;
+            if (seenExternalIds.has(externalId)) continue;
+            seenExternalIds.add(externalId);
 
-          const externalId = `sofascore-${eventId}`;
-          if (seenExternalIds.has(externalId)) continue;
-          seenExternalIds.add(externalId);
+            const status = mapStatus(event?.status?.type?.state);
 
-          const statusType = event?.status?.type || "notstarted";
-          const status = statusType === "finished"
-            ? "finished"
-            : statusType === "inprogress"
-              ? "live"
-              : "upcoming";
+            const homeScore = home?.score != null && home.score !== "" ? Number(home.score) : null;
+            const awayScore = away?.score != null && away.score !== "" ? Number(away.score) : null;
 
-          const row = {
-            external_id: externalId,
-            league_name: tournament,
-            league_api_id: String(event?.tournament?.uniqueTournament?.id || event?.tournament?.id || "0"),
-            home_team: homeTeam,
-            away_team: awayTeam,
-            home_badge: event?.homeTeam?.id
-              ? `https://api.sofascore.app/api/v1/team/${event.homeTeam.id}/image`
-              : null,
-            away_badge: event?.awayTeam?.id
-              ? `https://api.sofascore.app/api/v1/team/${event.awayTeam.id}/image`
-              : null,
-            kickoff: new Date(startTimestamp * 1000).toISOString(),
-            home_score: event?.homeScore?.current ?? null,
-            away_score: event?.awayScore?.current ?? null,
-            status,
-            venue: event?.venue?.stadium?.name || null,
-            city: event?.venue?.city?.name || null,
-            updated_at: new Date().toISOString(),
-          };
+            const row = {
+              external_id: externalId,
+              league_name: leagueName,
+              league_api_id: leagueApiId,
+              home_team: homeTeam,
+              away_team: awayTeam,
+              home_badge: home?.team?.logo || null,
+              away_badge: away?.team?.logo || null,
+              kickoff: new Date(kickoff).toISOString(),
+              home_score: Number.isFinite(homeScore) ? homeScore : null,
+              away_score: Number.isFinite(awayScore) ? awayScore : null,
+              status,
+              venue: competition?.venue?.fullName || null,
+              city: competition?.venue?.address?.city || competition?.venue?.address?.country || null,
+              updated_at: new Date().toISOString(),
+            };
 
-          const { error } = await adminClient
-            .from("sports_matches")
-            .upsert(row, { onConflict: "external_id" });
+            const { error } = await adminClient
+              .from("sports_matches")
+              .upsert(row, { onConflict: "external_id" });
 
-          if (error) {
-            errors += 1;
-            console.log(`Upsert failed for ${externalId}: ${error.message}`);
-            continue;
+            if (error) {
+              errors += 1;
+              console.log(`Upsert failed for ${externalId}: ${error.message}`);
+              continue;
+            }
+            processed += 1;
           }
-
-          processed += 1;
+        } catch (error) {
+          errors += 1;
+          console.log(`League ${league} date ${date} failed: ${error instanceof Error ? error.message : "unknown"}`);
         }
-      } catch (error) {
-        errors += 1;
-        console.log(`Date ${date} failed: ${error instanceof Error ? error.message : "unknown error"}`);
       }
     }
 
     const staleMatchCutoff = new Date(Date.now() - STALE_MATCH_GRACE_HOURS * 3600000).toISOString();
     const oldFinishedCutoff = new Date(Date.now() - FINISHED_RETENTION_DAYS * 86400000).toISOString();
 
-    const { error: staleCleanupError } = await adminClient
+    await adminClient
       .from("sports_matches")
       .delete()
       .in("status", ["upcoming", "live"])
       .lt("kickoff", staleMatchCutoff);
 
-    if (staleCleanupError) {
-      errors += 1;
-      console.log(`Stale match cleanup failed: ${staleCleanupError.message}`);
-    }
-
-    const { error: finishedCleanupError } = await adminClient
+    await adminClient
       .from("sports_matches")
       .delete()
       .eq("status", "finished")
       .lt("kickoff", oldFinishedCutoff);
-
-    if (finishedCleanupError) {
-      errors += 1;
-      console.log(`Finished match cleanup failed: ${finishedCleanupError.message}`);
-    }
 
     console.log(`Done! Processed: ${processed}, Errors: ${errors}`);
 
@@ -270,7 +204,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Fatal reload-sports error:", message);
-
     return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
