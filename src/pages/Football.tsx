@@ -13,20 +13,26 @@ import { MatchCard, type Match } from "@/components/sports/MatchCard";
 import { BetSlip } from "@/components/sports/BetSlip";
 import { supabase } from "@/integrations/supabase/client";
 
-type League = { id: string; name: string; country: string; dbFilter: string };
+type League = { id: string; name: string; country: string; apiIds: string[]; nameMatch?: string[] };
 
+// apiIds = ESPN league IDs from sports_matches.league_api_id
+// nameMatch fallback used via ilike on league_name
 const LEAGUES: League[] = [
-  { id: "brasileirao", name: "Brasileirão", country: "🇧🇷", dbFilter: "Brasileirão Betano" },
-  { id: "brasileirao-b", name: "Série B", country: "🇧🇷", dbFilter: "Brasileirão Série B" },
-  { id: "copa-brasil", name: "Copa do Brasil", country: "🇧🇷", dbFilter: "Copa do Brasil" },
-  { id: "libertadores", name: "Libertadores", country: "🌎", dbFilter: "Copa Libertadores" },
-  { id: "sulamericana", name: "Sul-Americana", country: "🌎", dbFilter: "Copa Sudamericana" },
-  { id: "premier", name: "Premier League", country: "🏴", dbFilter: "Premier League" },
-  { id: "laliga", name: "LaLiga", country: "🇪🇸", dbFilter: "LaLiga" },
-  { id: "seriea", name: "Serie A", country: "🇮🇹", dbFilter: "Serie A" },
-  { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", dbFilter: "Bundesliga" },
-  { id: "ligue1", name: "Ligue 1", country: "🇫🇷", dbFilter: "Ligue 1" },
-  { id: "todos", name: "Todos", country: "⚽", dbFilter: "" },
+  { id: "brasileirao", name: "Brasileirão", country: "🇧🇷", apiIds: ["325"], nameMatch: ["Brazilian Serie A", "Brasileirão"] },
+  { id: "brasileirao-b", name: "Série B", country: "🇧🇷", apiIds: ["4007"], nameMatch: ["Brazilian Serie B", "Série B"] },
+  { id: "copa-brasil", name: "Copa do Brasil", country: "🇧🇷", apiIds: ["1503"], nameMatch: ["Copa do Brasil"] },
+  { id: "libertadores", name: "Libertadores", country: "🌎", apiIds: ["242"], nameMatch: ["Libertadores"] },
+  { id: "sulamericana", name: "Sul-Americana", country: "🌎", apiIds: ["2241"], nameMatch: ["Sudamericana", "Sul-Americana"] },
+  { id: "premier", name: "Premier League", country: "🏴", apiIds: ["23"], nameMatch: ["Premier League"] },
+  { id: "laliga", name: "LaLiga", country: "🇪🇸", apiIds: ["15"], nameMatch: ["LaLiga", "La Liga"] },
+  { id: "seriea", name: "Serie A", country: "🇮🇹", apiIds: ["12"], nameMatch: ["Italian Serie A", "Serie A"] },
+  { id: "bundesliga", name: "Bundesliga", country: "🇩🇪", apiIds: ["10"], nameMatch: ["Bundesliga"] },
+  { id: "ligue1", name: "Ligue 1", country: "🇫🇷", apiIds: ["9"], nameMatch: ["Ligue 1"] },
+  { id: "champions", name: "Champions", country: "🏆", apiIds: ["2"], nameMatch: ["Champions League"] },
+  { id: "europa", name: "Europa League", country: "🏆", apiIds: ["2310"], nameMatch: ["Europa League"] },
+  { id: "copamundo", name: "Copa do Mundo", country: "🌍", apiIds: ["606"], nameMatch: ["World Cup"] },
+  { id: "amistosos", name: "Amistosos", country: "🤝", apiIds: ["3922"], nameMatch: ["Friendly"] },
+  { id: "todos", name: "Todos", country: "⚽", apiIds: [] },
 ];
 
 function FootballContent() {
@@ -49,8 +55,12 @@ function FootballContent() {
       .from("sports_matches")
       .select("*");
 
-    if (league.dbFilter) {
-      query = query.ilike("league_name", `%${league.dbFilter}%`);
+    if (league.apiIds.length > 0) {
+      const orParts = [
+        `league_api_id.in.(${league.apiIds.join(",")})`,
+        ...(league.nameMatch || []).map(n => `league_name.ilike.%${n}%`),
+      ];
+      query = query.or(orParts.join(","));
     }
 
     const { data } = await query.order("kickoff", { ascending: true });
