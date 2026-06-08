@@ -55,8 +55,12 @@ function FootballContent() {
       .from("sports_matches")
       .select("*");
 
-    if (league.dbFilter) {
-      query = query.ilike("league_name", `%${league.dbFilter}%`);
+    if (league.apiIds.length > 0) {
+      const orParts = [
+        `league_api_id.in.(${league.apiIds.join(",")})`,
+        ...(league.nameMatch || []).map(n => `league_name.ilike.%${n}%`),
+      ];
+      query = query.or(orParts.join(","));
     }
 
     const { data } = await query.order("kickoff", { ascending: true });
